@@ -44,6 +44,9 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, updates: Partial<InsertProject>): Promise<Project>;
   getActiveProjects(): Promise<Project[]>;
+  getUserProjects(userId: number): Promise<Project[]>;
+  assignUserToProject(userId: number, projectId: number, role: string): Promise<void>;
+  getUserProjectRole(userId: number, projectId: number): Promise<string | null>;
   
   // Incident operations
   getIncident(id: number): Promise<Incident | undefined>;
@@ -166,6 +169,54 @@ export class DatabaseStorage implements IStorage {
 
   async getActiveProjects(): Promise<Project[]> {
     return await db.select().from(projects).where(eq(projects.status, 'ACTIVE'));
+  }
+
+  async getUserProjects(userId: number): Promise<Project[]> {
+    return await db
+      .select({
+        id: projects.id,
+        number: projects.number,
+        name: projects.name,
+        client: projects.client,
+        contractor: projects.contractor,
+        location: projects.location,
+        status: projects.status,
+        startDate: projects.startDate,
+        endDate: projects.endDate,
+        description: projects.description,
+        emergencyContacts: projects.emergencyContacts,
+        assets: projects.assets,
+        goldManagerId: projects.goldManagerId,
+        documents: projects.documents,
+        createdAt: projects.createdAt,
+        updatedAt: projects.updatedAt,
+      })
+      .from(projects)
+      .innerJoin(projectAssignments, eq(projects.id, projectAssignments.projectId))
+      .where(and(
+        eq(projectAssignments.userId, userId),
+        eq(projects.status, 'ACTIVE')
+      ))
+      .orderBy(desc(projects.createdAt));
+  }
+
+  async assignUserToProject(userId: number, projectId: number, role: string): Promise<void> {
+    await db.insert(projectAssignments).values({
+      userId,
+      projectId,
+      role,
+    });
+  }
+
+  async getUserProjectRole(userId: number, projectId: number): Promise<string | null> {
+    const [assignment] = await db
+      .select({ role: projectAssignments.role })
+      .from(projectAssignments)
+      .where(and(
+        eq(projectAssignments.userId, userId),
+        eq(projectAssignments.projectId, projectId)
+      ));
+    return assignment?.role || null;
   }
 
   async getIncident(id: number): Promise<Incident | undefined> {

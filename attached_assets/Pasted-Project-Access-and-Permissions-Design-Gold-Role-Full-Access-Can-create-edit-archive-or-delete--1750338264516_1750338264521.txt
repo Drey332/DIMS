@@ -1,0 +1,86 @@
+Project Access and Permissions Design
+Gold Role:
+Full Access:
+
+Can create, edit, archive, or delete projects.
+
+Can assign/re-assign roles (Gold, Silver, Bronze) to projects.
+
+Can upload and edit project-specific documents, contacts, and master data.
+
+Can see all projects and switch between them.
+
+Silver and Bronze Roles:
+View-Only Access:
+
+Can see a Projects tab or dropdown on the dashboard.
+
+Can view all projects they are assigned to (and possibly, for audit/review, any non-sensitive projects).
+
+Can switch “active project” (like browser tabs) to work within that context:
+
+All Incidents, Assets, Communications, and Checklists shown are only for the currently selected project.
+
+They cannot edit the master project info (name, client, roles, etc.).
+
+Can interact within project context:
+
+Perform asset verifications, handle incidents, communicate, upload photos, etc.—only for the selected project.
+
+Example User Experience:
+Dashboard top bar:
+[Select Project ▼]
+
+Dropdown or tab list:
+
+Forcados ACOE (Shell)
+
+DeepBlue (Chevron)
+
+Demo Project
+
+Changing tabs/projects:
+
+Silver/Bronze click the project name/tab to “switch context.”
+
+All displayed data, checklists, incidents, and team assignments now reflect that project only.
+
+Gold sees all projects and the “+ New Project” button.
+
+Why This Works
+Gold keeps all the authority and audit control.
+
+Silver/Bronze get seamless access to necessary info for each job—no confusion, no data mix-up.
+
+Supports large companies or contractors working multiple jobs, with different clients, at once.
+
+Technical Implementation Tips:
+Projects are a database collection/table; each user’s assignments/roles are linked by user ID.
+
+Frontend:
+
+Project dropdown or tab bar always visible.
+
+On change, reload all context (assets, incidents, chat) for that project.
+
+Backend/API:
+
+All create/update endpoints for project master data are restricted to Gold.
+
+All read endpoints are open to assigned users for that project.
+
+Audit:
+
+All actions are logged with project ID and user role for traceability.
+
+Sample UI Sketch:
+sql
+Copier
+Modifier
++----------------------------------------------------------+
+| [ Select Project ▼ ]    [ + New Project ] (Gold only)    |
++----------------------------------------------------------+
+| [ Forcados ACOE ]  [ DeepBlue ]  [ Demo Project ]        | (tabs)
++----------------------------------------------------------+
+| --- Rest of dashboard (assets, comms, incidents) ------- |
+| -- All data filtered by current selected project -------- |

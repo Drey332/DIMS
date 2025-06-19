@@ -1,0 +1,118 @@
+
+1. Database Structure (Simple Example)
+js
+Copier
+Modifier
+// projects collection (MongoDB/JSON/SQL table example)
+{
+  id: "123",
+  name: "Forcados ACOE",
+  client: "Shell",
+  location: "Nigeria",
+  goldManager: "user_001",
+  silverManagers: ["user_002", "user_005"],
+  bronzeMembers: ["user_003", "user_004"],
+  contacts: { hospital: "...", ambulance: "...", ... },
+  docs: ["contract.pdf", "site_map.jpg"],
+  status: "Active"
+}
+2. Backend Permissions (Node/Express example)
+js
+Copier
+Modifier
+// Example middleware to restrict editing to Gold role only
+function requireGoldRole(req, res, next) {
+  if (req.user.role === "Gold") {
+    next();
+  } else {
+    res.status(403).json({ error: "Only Gold can edit projects" });
+  }
+}
+
+// Routes
+app.post('/api/projects', requireGoldRole, createProject);     // Create project
+app.put('/api/projects/:id', requireGoldRole, editProject);    // Edit project
+app.get('/api/projects', getProjects);                         // Everyone can view
+3. React Frontend Component: Project Tabs
+jsx
+Copier
+Modifier
+// Props: userRole, projects (array), activeProjectId, onSelect, onCreate (Gold only)
+
+function ProjectTabs({ userRole, projects, activeProjectId, onSelect, onCreate }) {
+  return (
+    <div className="flex items-center bg-gray-50 p-2 border-b">
+      <div className="flex space-x-2 flex-1">
+        {projects.map(project => (
+          <button
+            key={project.id}
+            className={`px-4 py-2 rounded-t-lg ${activeProjectId === project.id
+              ? 'bg-blue-500 text-white font-bold'
+              : 'bg-gray-200 text-gray-700'
+            }`}
+            onClick={() => onSelect(project.id)}
+          >
+            {project.name}
+          </button>
+        ))}
+      </div>
+      {userRole === 'Gold' && (
+        <button
+          className="ml-4 bg-green-500 text-white px-4 py-2 rounded"
+          onClick={onCreate}
+        >
+          + New Project
+        </button>
+      )}
+    </div>
+  );
+}
+4. Project Creation Modal (Gold Only)
+jsx
+Copier
+Modifier
+function ProjectModal({ isOpen, onSave, onClose }) {
+  // Use state for all fields: name, client, location, contacts, roles, etc.
+  return isOpen ? (
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center">
+      <form className="bg-white p-6 rounded-lg shadow-lg w-[400px]" onSubmit={onSave}>
+        <h2 className="text-xl font-bold mb-2">New Project</h2>
+        <input placeholder="Project Name" className="mb-2 w-full border p-2 rounded" required />
+        <input placeholder="Client Name" className="mb-2 w-full border p-2 rounded" required />
+        <input placeholder="Location" className="mb-2 w-full border p-2 rounded" required />
+        {/* More fields for dates, contacts, role assignments... */}
+        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Save</button>
+        <button type="button" onClick={onClose} className="ml-2 px-4 py-2">Cancel</button>
+      </form>
+    </div>
+  ) : null;
+}
+5. Switching Projects (Logic)
+When a user clicks a tab, update the active project in app state (e.g., setActiveProjectId(project.id))
+
+All dashboard components (assets, incidents, chat, etc.) should filter data by the active project.
+
+6. Putting It Together (Usage Example)
+jsx
+Copier
+Modifier
+<ProjectTabs
+  userRole={currentUser.role}
+  projects={projects}
+  activeProjectId={activeProjectId}
+  onSelect={setActiveProjectId}
+  onCreate={() => setShowProjectModal(true)}
+/>
+<ProjectModal
+  isOpen={showProjectModal}
+  onSave={handleCreateProject}
+  onClose={() => setShowProjectModal(false)}
+/>
+{/* Dashboard: pass activeProjectId to all child components */}
+How It Works:
+Gold users see a "+ New Project" button and can click any project to edit settings, assign roles, or upload docs.
+
+Silver/Bronze see all projects they are assigned to as tabs; they can switch between them and see project details and dashboard, but cannot edit project data.
+
+All incident management, assets, and communication are always tied to the currently active project.
+

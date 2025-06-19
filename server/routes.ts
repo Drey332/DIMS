@@ -91,6 +91,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's assigned projects
+  app.get('/api/user/projects', async (req: AuthenticatedRequest, res) => {
+    try {
+      const projects = await storage.getUserProjects(req.user!.id);
+      res.json(projects);
+    } catch (error) {
+      console.error("Error fetching user projects:", error);
+      res.status(500).json({ message: "Failed to fetch user projects" });
+    }
+  });
+
+  // Create new project (Gold only)
+  app.post('/api/projects', async (req: AuthenticatedRequest, res) => {
+    if (req.user!.role !== 'GOLD') {
+      return res.status(403).json({ message: 'Only Gold users can create projects' });
+    }
+    
+    try {
+      const projectData = {
+        ...req.body,
+        goldManagerId: req.user!.id,
+        number: `HDS-${Date.now()}`,
+        status: 'ACTIVE'
+      };
+      
+      const project = await storage.createProject(projectData);
+      await storage.assignUserToProject(req.user!.id, project.id, 'GOLD');
+      
+      res.status(201).json(project);
+    } catch (error) {
+      console.error("Error creating project:", error);
+      res.status(500).json({ message: "Failed to create project" });
+    }
+  });
+
   // Project routes
   app.get('/api/projects', async (req, res) => {
     try {

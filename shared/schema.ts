@@ -36,6 +36,8 @@ export const projects = pgTable("projects", {
   description: text("description"),
   emergencyContacts: jsonb("emergency_contacts"),
   assets: jsonb("assets"),
+  goldManagerId: integer("gold_manager_id").references(() => users.id),
+  documents: jsonb("documents"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

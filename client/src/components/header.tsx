@@ -1,5 +1,7 @@
 import { Droplets, Users, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ProjectSwitcher } from "@/components/project-switcher";
+import { useState } from "react";
 
 interface User {
   role: string;
@@ -20,6 +22,8 @@ interface HeaderProps {
 }
 
 export function Header({ user, project }: HeaderProps) {
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(1);
+
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'GOLD':
@@ -33,15 +37,36 @@ export function Header({ user, project }: HeaderProps) {
     }
   };
 
+  const currentUser = {
+    id: 1,
+    role: user.role,
+    name: user.name
+  };
+
+  const handleProjectChange = (projectId: number) => {
+    setActiveProjectId(projectId);
+    // In a full implementation, this would update global app state
+    // and trigger re-fetching of all project-specific data
+  };
+
   return (
     <header className="hydro-header">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-4">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2">
               <Droplets className="text-primary text-2xl" />
               <h1 className="text-2xl font-bold text-hydro-dark">HydroSafe</h1>
               <span className="text-sm text-gray-600">AI Emergency Response Co-Pilot</span>
+            </div>
+            
+            {/* Project Switcher */}
+            <div className="hidden md:block">
+              <ProjectSwitcher
+                currentUser={currentUser}
+                activeProjectId={activeProjectId}
+                onProjectChange={handleProjectChange}
+              />
             </div>
           </div>
           
