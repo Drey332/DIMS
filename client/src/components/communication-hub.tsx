@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MessageCircle, Send } from "lucide-react";
-import { Message } from "@/types";
+import { Message } from "@/types/index";
 import { apiRequest } from "@/lib/queryClient";
 import { useWebSocket } from "@/hooks/useWebSocket";
 
@@ -124,20 +124,23 @@ export function CommunicationHub() {
             <div className="text-center text-gray-500">Loading messages...</div>
           ) : (
             <div className="space-y-3">
-              {allMessages.map((message) => (
-                <div key={message.id} className="flex items-start space-x-2">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${getRoleColor(message.sender?.role || 'BRONZE')}`}>
-                    {getInitials(message.sender?.firstName || 'U', message.sender?.lastName || 'U')}
-                  </div>
-                  <div className="flex-1 bg-white rounded-lg p-2 shadow-sm">
-                    <div className="text-xs text-gray-500 mb-1">
-                      {message.sender?.firstName} {message.sender?.lastName} ({message.sender?.role}) • {' '}
-                      {new Date(message.createdAt).toLocaleTimeString()}
+              {allMessages.map((message) => {
+                const sender = message.sender || { firstName: 'Unknown', lastName: 'User', role: 'BRONZE' };
+                return (
+                  <div key={message.id} className="flex items-start space-x-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${getRoleColor(sender.role)}`}>
+                      {getInitials(sender.firstName, sender.lastName)}
                     </div>
-                    <div className="text-sm">{message.content}</div>
+                    <div className="flex-1 bg-white rounded-lg p-2 shadow-sm">
+                      <div className="text-xs text-gray-500 mb-1">
+                        {sender.firstName} {sender.lastName} ({sender.role}) • {' '}
+                        {new Date(message.createdAt).toLocaleTimeString()}
+                      </div>
+                      <div className="text-sm">{message.content}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </ScrollArea>

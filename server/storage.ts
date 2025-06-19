@@ -238,10 +238,29 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(messages.createdAt));
   }
 
-  async getMessagesByProject(projectId: number): Promise<Message[]> {
+  async getMessagesByProject(projectId: number): Promise<any[]> {
     return await db
-      .select()
+      .select({
+        id: messages.id,
+        incidentId: messages.incidentId,
+        projectId: messages.projectId,
+        senderId: messages.senderId,
+        recipientId: messages.recipientId,
+        messageType: messages.messageType,
+        content: messages.content,
+        attachments: messages.attachments,
+        isUrgent: messages.isUrgent,
+        readAt: messages.readAt,
+        createdAt: messages.createdAt,
+        sender: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          role: users.role,
+        }
+      })
       .from(messages)
+      .leftJoin(users, eq(messages.senderId, users.id))
       .where(eq(messages.projectId, projectId))
       .orderBy(desc(messages.createdAt));
   }
