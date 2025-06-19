@@ -9,6 +9,7 @@ import {
   generateProactiveRecommendations 
 } from "./openai";
 import { AIAuditReferee } from "./ai-audit";
+import { ComplianceGenerator } from "./compliance-generator";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -498,6 +499,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching compliance summary:", error);
       res.status(500).json({ message: "Failed to fetch compliance summary" });
+    }
+  });
+
+  // Compliance Documentation routes
+  app.post('/api/compliance/generate-report', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { projectId, timeframe } = req.body;
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID required" });
+      }
+
+      const project = await storage.getProject(projectId);
+      const user = await storage.getUser(req.user.id);
+      
+      if (!project || !user) {
+        return res.status(404).json({ message: "Project or user not found" });
+      }
+
+      const auditLogs = await storage.getAuditLogs({ projectId });
+      const incidents = await storage.getIncidentsByProject(projectId);
+      const files = await storage.getFileUploadsByProject(projectId);
+
+      const complianceData = {
+        project,
+        user,
+        auditLogs,
+        incidents,
+        files,
+        timeframe: timeframe || {
+          startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+          endDate: new Date()
+        }
+      };
+
+      const report = await ComplianceGenerator.generateComplianceReport(complianceData);
+      res.json(report);
+    } catch (error) {
+      console.error("Error generating compliance report:", error);
+      res.status(500).json({ message: "Failed to generate compliance report" });
+    }
+  });
+
+  app.post('/api/compliance/legal-defense-package', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { projectId } = req.body;
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID required" });
+      }
+
+      const legalPackage = await ComplianceGenerator.generateLegalDefensePackage(projectId, req.user.id);
+      res.json(legalPackage);
+    } catch (error) {
+      console.error("Error generating legal defense package:", error);
+      res.status(500).json({ message: "Failed to generate legal defense package" });
+    }
+  });
+
+  app.post('/api/compliance/executive-summary', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { projectId } = req.body;
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID required" });
+      }
+
+      const summary = await ComplianceGenerator.generateExecutiveSummary(projectId, req.user.id);
+      res.json({ summary });
+    } catch (error) {
+      console.error("Error generating executive summary:", error);
+      res.status(500).json({ message: "Failed to generate executive summary" });
     }
   });
 

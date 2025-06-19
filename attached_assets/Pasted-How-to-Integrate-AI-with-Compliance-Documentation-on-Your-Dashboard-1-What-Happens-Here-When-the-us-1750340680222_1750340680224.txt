@@ -1,0 +1,103 @@
+How to Integrate AI with Compliance Documentation on Your Dashboard
+1. What Happens Here
+When the user clicks “Generate Compliance PDF” or “Legal Defense Package”, your app:
+
+Collects all actions, files, audit logs, and evidence for the current project.
+
+Pulls in the relevant protocol excerpts (IMCA, IOGP, HydroDive) you’ve uploaded.
+
+Sends them to the backend for the AI to review and generate a report/check/audit summary.
+
+2. How to “Upload” or Use Docs for the AI
+A. Parsing Protocol Docs
+You already have uploaded docs (IMCA, HydroDive, IOGP).
+
+If you haven’t yet, extract key sections as text (copy-paste or with a PDF-to-text tool).
+
+Store them in your backend (as JSON, Markdown, or in your DB).
+
+B. Example JSON Structure (Backend)
+js
+Copier
+Modifier
+const protocolExcerpts = {
+  imca: [
+    { section: "D014 5.2", text: "Helicopter must be confirmed within 10 minutes..." },
+    { section: "D014 4.1", text: "Backup evacuation route must be documented..." }
+  ],
+  iogp: [
+    { section: "478 Sec. 8", text: "Triage required for multiple casualties..." }
+  ],
+  hydrodive: [
+    { section: "ERP 7.4", text: "All asset inspections require photographic proof..." }
+  ]
+};
+3. Backend Route Example (Node/Express)
+js
+Copier
+Modifier
+router.post('/api/generate-compliance', async (req, res) => {
+  const { projectId } = req.body;
+  // Fetch project data, audit log, files, etc. for this projectId
+  const projectData = ...;
+  const auditLog = ...;
+  const files = ...;
+  // Fetch relevant protocol excerpts
+  const protocolExcerpts = ...; // From above JSON
+
+  const prompt = `
+You are a compliance AI for offshore safety. 
+Protocols: ${JSON.stringify(protocolExcerpts)}
+Project: ${JSON.stringify(projectData)}
+Audit Trail: ${JSON.stringify(auditLog)}
+Files: ${JSON.stringify(files)}
+
+Review everything for this project. 
+- Confirm all protocol steps are followed and cite the section for each. 
+- Flag any gaps, missing evidence, or non-compliance. 
+- Generate a compliance summary (for PDF), an audit report, and a legal defense summary with evidence chain.
+  `;
+
+  const response = await openai.createChatCompletion({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: "You are a strict safety compliance AI for HydroSafe, always reference protocols." },
+      { role: "user", content: prompt }
+    ]
+  });
+  res.json({ aiReport: response.data.choices[0].message.content });
+});
+4. Frontend: Button Trigger
+jsx
+Copier
+Modifier
+async function handleComplianceReport() {
+  const response = await fetch('/api/generate-compliance', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectId: activeProjectId })
+  });
+  const { aiReport } = await response.json();
+  setComplianceReport(aiReport); // Show in modal, allow export as PDF
+}
+
+// Attach to button:
+<button onClick={handleComplianceReport}>Generate Compliance PDF</button>
+5. How the AI “Knows” All the Protocols
+By feeding in protocol excerpts from your uploaded docs (as shown above).
+
+The more you extract and organize (“section: text”), the more precise and defensible your AI output will be.
+
+You can expand this over time: each new protocol or standard, just add to your backend doc/DB.
+
+Summary/Checklist for You
+ UI is ready (your screenshot is excellent)
+
+ Backend route to OpenAI—include project data, logs, files, protocol excerpts
+
+ Protocol docs stored as text/JSON—extracted from PDFs
+
+ Button triggers AI compliance summary—shows PDF/defense package
+
+ All output references protocols by section/standard for audit & legal proof
+

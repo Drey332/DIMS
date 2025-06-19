@@ -1,0 +1,119 @@
+Step 1: Extract Key Protocols & Procedures for the AI
+Goal: Convert your PDF into a structured, machine-readable format so your AI agent can analyze compliance, generate reports, and flag issues in the system.
+
+A. Main Protocol Categories to Extract
+Command Roles & Responsibilities
+(Bronze – OSC, Silver – EC, Gold – GM; Pages 9–12)
+
+Emergency Response Chain
+(Flow, response times, notification procedures)
+
+Medevac & Casevac Procedures
+(Primary/secondary routes, decision triggers, response times, contacts; Pages 19–24)
+
+Emergency Scenarios & Response
+(Medical, fire, collision, grounding, oil spill, man overboard, security, piracy; Pages 26–36+)
+
+Diving Emergencies & Mitigations
+(Loss of comms, air supply, diver recovery, DDC, LARS failure; Pages 47–64)
+
+Contact Details & Assets
+(Appendices: all phone numbers, emails, asset readiness, hospitals, clinics, vessel info)
+
+B. How to Structure the Extracted Data
+Example JSON Format for Your App/AI:
+
+json
+Copier
+Modifier
+{
+  "roles": {
+    "bronze": "On Scene Coordinator (OSC), usually the Offshore Construction Manager...",
+    "silver": "Emergency Coordinator (EC), Project Manager or Designated Person Ashore...",
+    "gold": "General Manager (strategic lead)..."
+  },
+  "response_chain": {
+    "alarm_procedure": ["Raise alarm", "Notify OSC", "Apply first aid", "Contact EC & COSC"],
+    "reporting_format": ["TIME/DATE", "TYPE OF ACCIDENT", "PLACE", "NAMES", ...]
+  },
+  "medevac": {
+    "primary": {
+      "mode": "Helicopter",
+      "timeline": "Notification to helicopter arrival: 10 min confirm, 50 min flight",
+      "contacts": ["Prime Medical Consultants Clinic PHC", "+234 8033134822", ...]
+    },
+    "secondary": {
+      "mode": "Surfer Boat (Ose Anita 4)",
+      "timeline": "75–90 min depending on weather/current",
+      "contacts": [...]
+    }
+  },
+  "emergency_scenarios": [
+    { "name": "Serious Injury", "actions": [ ... ] },
+    { "name": "Fire Onboard", "actions": [ ... ] },
+    ...
+  ],
+  "diving_emergencies": [
+    { "name": "Loss of comms", "actions": [ ... ] },
+    ...
+  ],
+  "contacts": [
+    { "name": "HD Contender Captain", "phone": "+1 281 824 1970", "email": "captain@hdcontender.com" },
+    ...
+  ]
+}
+You can either:
+
+Manually extract and structure this data (for full control and accuracy, recommended for the first build)
+
+Use a PDF-to-Text tool, then organize the sections
+
+Step 2: Feed This Structured Data to the AI Agent
+When a user requests a compliance check or audit, the backend gives the AI all current actions, logs, files, and this protocol JSON.
+
+The AI then checks:
+
+Are all required roles present and assigned?
+
+Were the right contacts notified in the right order?
+
+Did the medevac happen within timelines?
+
+Were all forms and logs completed (with evidence: photos, timestamps)?
+
+Are there missing details, e.g., is an emergency contact out of date, was the backup route verified?
+
+Step 3: Example Prompt to Your AI Agent
+Here’s a sample prompt your API can send:
+
+sql
+Copier
+Modifier
+You are a compliance auditor for HydroDive.  
+Your reference protocols and procedures are:
+[INSERT STRUCTURED JSON ABOVE]
+
+A user is requesting an audit report for project [XYZ].  
+The following logs and actions have occurred:  
+[INSERT PROJECT DATA: incident logs, uploaded photos, actions, response times, personnel roles, etc.]
+
+Your job:
+- Check if every step in the protocol has been followed, with reference to section (cite exact section or page)
+- Flag any missing or overdue actions (e.g., overdue asset check, missing role, delay in medevac)
+- Generate a compliance summary (pass/fail for each main category), an audit log, and a list of any recommendations to be fully compliant
+Step 4: Connect the App Dashboard
+When user clicks “Generate Compliance PDF” or “Export Audit Report”:
+
+The app sends all project logs and structured protocol data to your OpenAI API function
+
+The AI returns a human-readable summary + PDF for download
+
+This output is stored/archived and available for audit and legal defense
+
+Step 5: Continue to Expand
+Over time, extract more rules (IMCA, IOGP, custom HydroDive manuals)
+
+Add “lessons learned” and feedback loops from real audits to your database
+
+Use the AI to flag trends (e.g., recurring overdue assets or delays)
+

@@ -27,6 +27,7 @@ import { AuditLog } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { AIChatAssistant } from "@/components/ai-chat-assistant";
+import { ComplianceDashboard } from "@/components/compliance-dashboard";
 
 export default function Reports() {
   const [filterType, setFilterType] = useState<string>("all");
@@ -379,6 +380,24 @@ export default function Reports() {
                     <Badge className="bg-green-100 text-green-800">Verified</Badge>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* AI-Powered Compliance Documentation */}
+          <div className="mt-8">
+            <Card className="hydro-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Shield className="w-5 h-5 mr-2 text-primary" />
+                  AI-Powered Compliance Documentation
+                </CardTitle>
+                <p className="text-sm text-gray-600">
+                  Generate legally defensible audit reports, compliance PDFs, and legal defense packages using AI analysis of project data against IMCA, IOGP, and HydroDive protocols.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <ComplianceDashboard projectId={1} />
               </CardContent>
             </Card>
           </div>
