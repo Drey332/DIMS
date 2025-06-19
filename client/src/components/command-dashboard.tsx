@@ -142,12 +142,12 @@ export function CommandDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Default team members for Forcados project */}
+              {/* Actual HydroDive personnel for Forcados project */}
               {[
-                { name: "David Mooney", role: "GOLD", title: "General Manager", initials: "DM", status: "Active" },
-                { name: "Dean Golding", role: "SILVER", title: "Diving Manager", initials: "DG", status: "On Duty" },
-                { name: "Kene Anyabolu", role: "SILVER", title: "HSE Manager", initials: "KA", status: "Available" },
-                { name: "Nick Roddy", role: "BRONZE", title: "Project Manager", initials: "NR", status: "Field Operations" },
+                { name: "Frank Ifedi", role: "GOLD", title: "MD/CEO - Gold Manager", initials: "FI", status: "Active" },
+                { name: "Dave Ward", role: "SILVER", title: "Marine Operations Director", initials: "DW", status: "On Duty" },
+                { name: "Afam Ejidike", role: "GOLD", title: "Project Manager", initials: "AE", status: "Active" },
+                { name: "Steve Hardy", role: "SILVER", title: "Marine Manager", initials: "SH", status: "Field Operations" },
               ].map((member) => (
                 <div key={member.name} className={cn("flex items-center justify-between p-3 rounded-lg border", getRoleColor(member.role))}>
                   <div className="flex items-center space-x-3">

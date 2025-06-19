@@ -20,67 +20,119 @@ import { User } from "@/types";
 import { cn } from "@/lib/utils";
 
 export default function TeamManagement() {
-  // Default team members for Forcados project
+  // Actual HydroDive personnel for Forcados project
   const teamMembers = [
     {
       id: 1,
-      firstName: "David",
-      lastName: "Mooney",
-      email: "d.mooney@hydrodive.com",
+      firstName: "Frank",
+      lastName: "Ifedi",
+      email: "f.ifedi@hydrodive.com",
       role: "GOLD",
-      title: "General Manager",
+      title: "MD/CEO - Gold Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:30:00Z",
       status: "Active",
-      location: "Aberdeen Office",
-      phone: "+44-1224-XXX-XXX"
+      location: "Corporate Office",
+      phone: "+234-803-XXXX-001"
     },
     {
       id: 2,
-      firstName: "Dean",
-      lastName: "Golding Perello",
-      email: "d.golding@hydrodive.com",
+      firstName: "Dave",
+      lastName: "Ward",
+      email: "d.ward@hydrodive.com",
       role: "SILVER",
-      title: "Diving Manager",
+      title: "Marine and Diving Operations Director",
       isActive: true,
       lastSeen: "2025-01-24T15:25:00Z",
       status: "On Duty",
       location: "Forcados Site",
-      phone: "+234-XXX-XXX-XXX"
+      phone: "+234-803-XXXX-002"
     },
     {
       id: 3,
-      firstName: "Kene",
-      lastName: "Anyabolu",
-      email: "k.anyabolu@hydrodive.com",
+      firstName: "Latifatu",
+      lastName: "Osagie",
+      email: "l.osagie@hydrodive.com",
       role: "SILVER",
-      title: "HSE Manager",
+      title: "Personnel Logistics Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:20:00Z",
       status: "Available",
       location: "Lagos Office",
-      phone: "+234-XXX-XXX-XXX"
+      phone: "+234-803-XXXX-003"
     },
     {
       id: 4,
-      firstName: "Nick",
-      lastName: "Roddy",
-      email: "n.roddy@hydrodive.com",
-      role: "BRONZE",
-      title: "Project Manager",
+      firstName: "Modupe",
+      lastName: "Oherein",
+      email: "m.oherein@hydrodive.com",
+      role: "SILVER",
+      title: "Human Resources Manager",
+      isActive: true,
+      lastSeen: "2025-01-24T15:15:00Z",
+      status: "Available",
+      location: "Lagos Office",
+      phone: "+234-803-XXXX-004"
+    },
+    {
+      id: 5,
+      firstName: "Stephan",
+      lastName: "Wessels",
+      email: "s.wessels@hydrodive.com",
+      role: "SILVER",
+      title: "Operations Manager",
+      isActive: true,
+      lastSeen: "2025-01-24T15:10:00Z",
+      status: "On Duty",
+      location: "Operations Center",
+      phone: "+234-803-XXXX-005"
+    },
+    {
+      id: 6,
+      firstName: "Steve",
+      lastName: "Hardy",
+      email: "s.hardy@hydrodive.com",
+      role: "SILVER",
+      title: "Marine Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:35:00Z",
       status: "Field Operations",
       location: "Forcados Site",
-      phone: "+234-XXX-XXX-XXX"
+      phone: "+234-803-XXXX-006"
+    },
+    {
+      id: 7,
+      firstName: "Afam",
+      lastName: "Ejidike",
+      email: "a.ejidike@hydrodive.com",
+      role: "GOLD",
+      title: "Project Manager",
+      isActive: true,
+      lastSeen: "2025-01-24T15:28:00Z",
+      status: "Active",
+      location: "Project Office",
+      phone: "+234-803-XXXX-007"
+    },
+    {
+      id: 8,
+      firstName: "Tochi",
+      lastName: "Nwogu",
+      email: "t.nwogu@hydrodive.com",
+      role: "GOLD",
+      title: "Legal Advisor",
+      isActive: true,
+      lastSeen: "2025-01-24T15:22:00Z",
+      status: "Available",
+      location: "Corporate Office",
+      phone: "+234-803-XXXX-008"
     }
   ];
 
   const user = {
     role: "GOLD",
-    name: "David Mooney",
-    title: "General Manager",
-    initials: "DM"
+    name: "Frank Ifedi",
+    title: "MD/CEO - Gold Manager",
+    initials: "FI"
   };
 
   const project = {
@@ -293,15 +345,15 @@ export default function TeamManagement() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Total Members:</span>
-                    <Badge variant="outline">4</Badge>
+                    <Badge variant="outline">8</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Active Now:</span>
-                    <Badge className="bg-green-100 text-green-800">4</Badge>
+                    <Badge className="bg-green-100 text-green-800">8</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">On-Site:</span>
-                    <Badge className="bg-blue-100 text-blue-800">2</Badge>
+                    <Badge className="bg-blue-100 text-blue-800">3</Badge>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Response Time:</span>

@@ -578,11 +578,11 @@ export default function ProjectSetup() {
                     <p className="text-sm text-gray-600 mb-3">Overall incident management and strategic decisions</p>
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-gold text-gold-foreground rounded-full flex items-center justify-center font-medium">
-                        DM
+                        FI
                       </div>
                       <div>
-                        <p className="font-medium">David Mooney</p>
-                        <p className="text-sm text-gray-600">General Manager</p>
+                        <p className="font-medium">Frank Ifedi</p>
+                        <p className="text-sm text-gray-600">MD/CEO - Gold Manager</p>
                       </div>
                     </div>
                   </div>
