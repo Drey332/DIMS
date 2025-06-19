@@ -1,0 +1,233 @@
+1. Install Replit DB
+Add this to your server/package.json dependencies if not already:
+
+json
+Copier
+Modifier
+"@replit/database": "^2.0.0"
+Then in the shell:
+
+bash
+Copier
+Modifier
+npm install @replit/database
+2. Set Up Your Database
+Create server/db.js:
+
+js
+Copier
+Modifier
+const Database = require("@replit/database");
+const db = new Database();
+module.exports = db;
+3. Create Project API Routes
+Create server/routes/projects.js:
+
+js
+Copier
+Modifier
+const express = require("express");
+const router = express.Router();
+const db = require("../db");
+const { v4: uuidv4 } = require("uuid");
+
+// Get all projects
+router.get("/", async (req, res) => {
+  const keys = await db.list("project_"); // only get project keys
+  const projects = [];
+  for (const key of keys) {
+    const project = await db.get(key);
+    projects.push({ ...project, id: key.replace("project_", "") });
+  }
+  res.json(projects);
+});
+
+// Create a new project
+router.post("/", async (req, res) => {
+  const {
+    name, client, location, startDate, endDate, goldManager, silverTeam, bronzeTeam, contacts
+  } = req.body;
+  const id = uuidv4();
+  const project = {
+    name, client, location, startDate, endDate,
+    goldManager, silverTeam: silverTeam || [], bronzeTeam: bronzeTeam || [],
+    contacts: contacts || [], createdAt: new Date().toISOString()
+  };
+  await db.set("project_" + id, project);
+  res.json({ ...project, id });
+});
+
+module.exports = router;
+Note:
+
+Make sure to add const projectsRouter = require("./routes/projects"); app.use("/api/projects", projectsRouter); in your main server/index.js.
+
+4. Example Project Schema (for Reference)
+js
+Copier
+Modifier
+{
+  id: "cfe2e3b4...", // UUID
+  name: "DeepBlue Bonga",
+  client: "Shell",
+  location: "Bonga FPSO",
+  startDate: "2024-07-01",
+  endDate: "2024-10-30",
+  goldManager: "user_001",
+  silverTeam: ["user_002", "user_003"],
+  bronzeTeam: ["user_004"],
+  contacts: [
+    { type: "hospital", name: "Lily Hospital", phone: "+234..." },
+    { type: "ambulance", name: "Prime Medical", phone: "+234..." }
+  ],
+  createdAt: "2024-06-19T16:01:00.000Z"
+}
+B. FRONTEND: React Project Management Page
+1. Create the Project Management Page
+File: client/src/pages/Projects.tsx
+
+tsx
+Copier
+Modifier
+import React, { useEffect, useState } from "react";
+
+const defaultForm = {
+  name: "",
+  client: "",
+  location: "",
+  startDate: "",
+  endDate: "",
+  goldManager: "",
+  silverTeam: "",
+  bronzeTeam: "",
+  contacts: "",
+};
+
+function ProjectsPage({ currentUser }) {
+  const [projects, setProjects] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(defaultForm);
+
+  // Load all projects on mount
+  useEffect(() => {
+    fetch("/api/projects")
+      .then(res => res.json())
+      .then(setProjects);
+  }, []);
+
+  // Handle form submission
+  function handleSubmit(e) {
+    e.preventDefault();
+    const data = {
+      ...form,
+      silverTeam: form.silverTeam.split(",").map(s => s.trim()).filter(Boolean),
+      bronzeTeam: form.bronzeTeam.split(",").map(s => s.trim()).filter(Boolean),
+      contacts: form.contacts.split(";").map(s => {
+        const [type, name, phone] = s.split(",");
+        return { type: type?.trim(), name: name?.trim(), phone: phone?.trim() };
+      }).filter(c => c.type && c.name && c.phone)
+    };
+    fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    })
+      .then(res => res.json())
+      .then(newProj => setProjects([...projects, newProj]));
+    setShowForm(false);
+    setForm(defaultForm);
+  }
+
+  // Only Gold can create projects
+  const isGold = currentUser?.role === "Gold";
+
+  return (
+    <div className="p-6 max-w-3xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">Projects</h1>
+      {isGold && (
+        <button className="bg-blue-500 text-white px-4 py-2 rounded mb-6"
+          onClick={() => setShowForm(true)}
+        >
+          + Add New Project
+        </button>
+      )}
+
+      {showForm && (
+        <form onSubmit={handleSubmit} className="mb-6 p-4 border rounded bg-white shadow-lg">
+          <h2 className="text-xl mb-2 font-bold">New Project</h2>
+          <input className="border p-2 mb-2 w-full rounded"
+            placeholder="Project Name" required
+            value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+          <input className="border p-2 mb-2 w-full rounded"
+            placeholder="Client" required
+            value={form.client} onChange={e => setForm({ ...form, client: e.target.value })} />
+          <input className="border p-2 mb-2 w-full rounded"
+            placeholder="Location"
+            value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+          <input className="border p-2 mb-2 w-full rounded"
+            type="date" placeholder="Start Date"
+            value={form.startDate} onChange={e => setForm({ ...form, startDate: e.target.value })} />
+          <input className="border p-2 mb-2 w-full rounded"
+            type="date" placeholder="End Date"
+            value={form.endDate} onChange={e => setForm({ ...form, endDate: e.target.value })} />
+          <input className="border p-2 mb-2 w-full rounded"
+            placeholder="Gold Manager UserID"
+            value={form.goldManager} onChange={e => setForm({ ...form, goldManager: e.target.value })} />
+          <input className="border p-2 mb-2 w-full rounded"
+            placeholder="Silver Team UserIDs (comma separated)"
+            value={form.silverTeam} onChange={e => setForm({ ...form, silverTeam: e.target.value })} />
+          <input className="border p-2 mb-2 w-full rounded"
+            placeholder="Bronze Team UserIDs (comma separated)"
+            value={form.bronzeTeam} onChange={e => setForm({ ...form, bronzeTeam: e.target.value })} />
+          <input className="border p-2 mb-2 w-full rounded"
+            placeholder="Contacts (type,name,phone;type,name,phone...)"
+            value={form.contacts} onChange={e => setForm({ ...form, contacts: e.target.value })} />
+          <div className="flex gap-4 mt-2">
+            <button className="bg-green-600 text-white px-4 py-2 rounded" type="submit">Save</button>
+            <button className="bg-gray-400 text-white px-4 py-2 rounded" onClick={() => setShowForm(false)} type="button">Cancel</button>
+          </div>
+        </form>
+      )}
+
+      <div>
+        <h2 className="text-xl font-bold mb-2">All Projects</h2>
+        <div className="grid gap-4">
+          {projects.length === 0 && <div>No projects found.</div>}
+          {projects.map(proj => (
+            <div className="border rounded-lg p-4 shadow bg-white" key={proj.id}>
+              <h3 className="text-lg font-semibold">{proj.name}</h3>
+              <div className="text-gray-600 mb-1">Client: {proj.client}</div>
+              <div className="text-gray-500 mb-1">Location: {proj.location}</div>
+              <div className="text-gray-400 mb-1">
+                Dates: {proj.startDate} to {proj.endDate}
+              </div>
+              <div className="text-gray-400 text-xs mb-1">Gold: {proj.goldManager}</div>
+              <div className="text-gray-400 text-xs mb-1">Silver: {proj.silverTeam?.join(", ")}</div>
+              <div className="text-gray-400 text-xs mb-1">Bronze: {proj.bronzeTeam?.join(", ")}</div>
+              <div className="text-gray-400 text-xs mb-1">
+                Contacts: {proj.contacts?.map(c => `${c.type}: ${c.name} (${c.phone})`).join(" | ")}
+              </div>
+              <div className="text-gray-300 text-xs">Created: {new Date(proj.createdAt).toLocaleString()}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ProjectsPage;
+How it looks:
+“Add New Project” button (Gold only)
+
+Modal form for new project info
+
+List/grid of all projects, showing all major details in neat cards
+
+All data saved to Replit DB, displayed immediately after creation
+
+To Link Projects to Other Features:
+When creating an emergency, asset, or chat, always include/select the projectId.
+
+Other pages will GET /api/projects and let user select one as “active project context.”
+

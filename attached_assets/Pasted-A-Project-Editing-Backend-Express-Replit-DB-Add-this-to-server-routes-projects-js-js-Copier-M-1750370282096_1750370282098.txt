@@ -1,0 +1,141 @@
+A. Project Editing
+Backend (Express + Replit DB)
+Add this to server/routes/projects.js:
+
+js
+Copier
+Modifier
+// Edit (update) a project
+router.put("/:id", async (req, res) => {
+  const projectId = req.params.id;
+  const existing = await db.get("project_" + projectId);
+  if (!existing) return res.status(404).json({ error: "Project not found" });
+
+  const updated = { ...existing, ...req.body, updatedAt: new Date().toISOString() };
+  await db.set("project_" + projectId, updated);
+  res.json({ ...updated, id: projectId });
+});
+Frontend (React)
+Add an Edit button on each project card:
+
+tsx
+Copier
+Modifier
+// ...in your project list/grid
+<button className="ml-2 text-blue-500 underline"
+  onClick={() => {
+    setForm(proj);  // fill form with current project data
+    setShowForm(true);
+    setEditingId(proj.id);  // track if we're editing
+  }}
+>
+  Edit
+</button>
+Modify your form submit logic to handle both add and edit:
+
+tsx
+Copier
+Modifier
+function handleSubmit(e) {
+  e.preventDefault();
+  // ...build `data` as before
+  const method = editingId ? "PUT" : "POST";
+  const url = editingId ? `/api/projects/${editingId}` : "/api/projects";
+
+  fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  })
+    .then(res => res.json())
+    .then(newProj => {
+      if (editingId) {
+        setProjects(projects.map(p => (p.id === editingId ? newProj : p)));
+      } else {
+        setProjects([...projects, newProj]);
+      }
+      setEditingId(null);
+    });
+  setShowForm(false);
+  setForm(defaultForm);
+}
+B. Project Deletion
+Backend
+Add to server/routes/projects.js:
+
+js
+Copier
+Modifier
+// Delete a project
+router.delete("/:id", async (req, res) => {
+  const projectId = req.params.id;
+  await db.delete("project_" + projectId);
+  res.json({ success: true });
+});
+Frontend
+Add a Delete button to each project card:
+
+tsx
+Copier
+Modifier
+<button className="ml-2 text-red-500 underline"
+  onClick={() => {
+    if (window.confirm("Delete this project?")) {
+      fetch(`/api/projects/${proj.id}`, { method: "DELETE" })
+        .then(() => setProjects(projects.filter(p => p.id !== proj.id)));
+    }
+  }}
+>
+  Delete
+</button>
+C. “Activate/Select” a Project for Other Features
+The “active project” context is key for multi-project use.
+
+When a user clicks/selects a project in your list or grid, save the activeProjectId to React state (or a global store/context if you use Redux/Context API).
+
+Pass activeProjectId as a prop or context to all other pages/components (emergency logging, assets, comms, etc.).
+
+Example at top of ProjectsPage:
+
+tsx
+Copier
+Modifier
+const [activeProjectId, setActiveProjectId] = useState(null);
+
+return (
+  <>
+    <h1>Projects</h1>
+    <div>
+      {projects.map(proj => (
+        <div key={proj.id} className="mb-2">
+          <span
+            onClick={() => setActiveProjectId(proj.id)}
+            className={`cursor-pointer ${activeProjectId === proj.id ? "font-bold text-blue-700" : "text-gray-700"}`}
+          >
+            {proj.name}
+          </span>
+          {/* ...Edit/Delete buttons here */}
+        </div>
+      ))}
+    </div>
+    {activeProjectId && (
+      <div className="mt-4 p-4 border rounded bg-blue-50">
+        <b>Active Project:</b> {projects.find(p => p.id === activeProjectId)?.name}
+        {/* Render other features/components with this project context */}
+      </div>
+    )}
+  </>
+);
+Then pass activeProjectId to other feature components:
+
+tsx
+Copier
+Modifier
+<Emergencies projectId={activeProjectId} />
+<AssetVerification projectId={activeProjectId} />
+Summary Table
+Feature	Backend Route	Frontend Logic
+Edit	PUT /api/projects/:id	Edit button & form, update UI
+Delete	DELETE /api/projects/:id	Delete button, update UI
+Activate	N/A (frontend only)	Select project, set as context
+
