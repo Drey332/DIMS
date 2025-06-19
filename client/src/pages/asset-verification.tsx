@@ -281,54 +281,70 @@ export default function AssetVerification() {
               </Card>
             </div>
 
-            {/* Assets Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {assets.map((asset) => (
-                <Card key={asset.id} className="hover:shadow-lg transition-shadow border border-gray-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        {getStatusIcon(asset.status)}
-                        <h3 className="font-semibold text-lg text-hydro-dark">{asset.name}</h3>
-                      </div>
-                      {getStatusBadge(asset.status)}
-                    </div>
-                    
-                    <div className="space-y-3 mb-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Category:</span>
-                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                          {asset.category}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">Location:</span>
-                        <span className="text-sm font-medium text-right">{asset.location}</span>
-                      </div>
-                      
-                      {asset.lastVerified && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">Last verified:</span>
-                          <span className="text-sm font-medium text-right">
-                            {new Date(asset.lastVerified).toLocaleDateString()}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <Button
-                      size="sm"
-                      className="w-full hydro-button-primary"
-                      onClick={() => handleVerifyAsset(asset)}
-                    >
-                      <Camera className="w-4 h-4 mr-2" />
-                      Verify Asset
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {/* Assets Table */}
+            <Card className="shadow-sm border border-gray-200">
+              <CardHeader className="bg-gray-50 border-b">
+                <CardTitle className="flex items-center text-lg font-semibold">
+                  <Package className="w-5 h-5 mr-2" />
+                  Asset Verification Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-100 border-b">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Asset</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Category</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Location</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Last Verified</th>
+                        <th className="text-center py-3 px-4 font-semibold text-gray-700">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {assets.map((asset) => (
+                        <tr key={asset.id} className="hover:bg-gray-50">
+                          <td className="py-4 px-4">
+                            <div className="flex items-center space-x-3">
+                              {getStatusIcon(asset.status)}
+                              <span className="font-medium text-gray-900">{asset.name}</span>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4">
+                            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                              {asset.category}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-600">
+                            {asset.location}
+                          </td>
+                          <td className="py-4 px-4">
+                            {getStatusBadge(asset.status)}
+                          </td>
+                          <td className="py-4 px-4 text-sm text-gray-600">
+                            {asset.lastVerified 
+                              ? new Date(asset.lastVerified).toLocaleDateString()
+                              : 'Never'
+                            }
+                          </td>
+                          <td className="py-4 px-4 text-center">
+                            <Button
+                              size="sm"
+                              className="hydro-button-primary"
+                              onClick={() => handleVerifyAsset(asset)}
+                            >
+                              <Camera className="w-4 h-4 mr-1" />
+                              Verify
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Upload Modal */}
             {isUploadModalOpen && selectedAsset && (
