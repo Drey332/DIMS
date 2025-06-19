@@ -38,13 +38,16 @@ export function Header({ user, project }: HeaderProps = {}) {
     queryFn: () => fetch('/api/user/projects').then(res => res.json())
   });
 
-  // Use provided user or fallback to API data
+  // Use provided user or fallback to API data with safe role access
   const effectiveUser = user || currentUserData || {
     role: 'BRONZE',
     name: 'Loading...',
     title: 'Team Member',
     initials: 'LO'
   };
+
+  // Ensure role is always defined
+  const safeRole = effectiveUser?.role || 'BRONZE';
 
   // Use provided project or first project from API
   const effectiveProject = project || (projects && projects[0] ? {
@@ -77,7 +80,7 @@ export function Header({ user, project }: HeaderProps = {}) {
 
   const currentUser = {
     id: currentUserData?.id || 1,
-    role: effectiveUser.role,
+    role: safeRole,
     name: effectiveUser.name
   };
 
@@ -109,9 +112,9 @@ export function Header({ user, project }: HeaderProps = {}) {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Badge className={`px-3 py-1 ${getRoleColor(effectiveUser.role)}/20 text-${getRoleColor(effectiveUser.role)} border-${getRoleColor(effectiveUser.role)}/30`}>
-              <div className={`w-3 h-3 ${getRoleColor(effectiveUser.role)} rounded-full mr-2`}></div>
-              {effectiveUser.role} Command
+            <Badge className={`px-3 py-1 ${getRoleColor(safeRole)}/20 text-${getRoleColor(safeRole)} border-${getRoleColor(safeRole)}/30`}>
+              <div className={`w-3 h-3 ${getRoleColor(safeRole)} rounded-full mr-2`}></div>
+              {safeRole} Command
             </Badge>
             <div className="text-right">
               <div className="font-medium">{effectiveUser.name}</div>
