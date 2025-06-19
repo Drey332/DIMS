@@ -1,0 +1,130 @@
+HydroSafe – Asset Verification Tab: “Better” Design
+Design Goals:
+Instantly visualize asset status (safe, pending, overdue)
+
+Make verification actions and uploads easy and obvious
+
+Clear, modern look with large icons, soft cards, status highlights, and clear dates
+
+Easy audit: every photo/verification is timestamped and linked
+
+UI Components & Layout
+less
+Copier
+Modifier
++----------------------------------------------------------+
+| [Asset Verification]       [Verified: 3] [Pending: 2] [Overdue: 1] |
++----------------------------------------------------------+
+
+| [ Search assets...      ] [ + Add Asset ]        [ Export Audit Log ]
++----------------------------------------------------------+
+
+|  [ Green Card ] --------------------------------------|
+|   ✔️ Emergency Generator Set #1                       |
+|   Power Systems | Deck A, Port Side                   |
+|   Last verified: 2025-01-15  by Steve Hardy           |
+|   [ 📷 1 Photo ]      [ 🔍 View Details ]             |
+|-------------------------------------------------------|
+
+|  [ Yellow Card ] -------------------------------------|
+|   ⏳ Boat #1 (Port)                                   |
+|   Safety Equipment | Deck B                           |
+|   Pending verification (due: 2025-01-29)              |
+|   [ 📷 Upload Photo ]   [ ✔️ Mark as Verified ]       |
+|-------------------------------------------------------|
+
+|  [ Red Card ] ----------------------------------------|
+|   ⚠️ Fire Suppression System                          |
+|   Safety Equipment | Engine Room                      |
+|   OVERDUE! Last verified: 2024-12-20                 |
+|   [ 📷 Upload Photo ]   [ ✔️ Mark as Verified ]       |
+|   [ 🔔 Notify Team ]                                  |
+|-------------------------------------------------------|
+
+|  [ Green Card ] --------------------------------------|
+|   ✔️ Communication Radio Array                        |
+|   Communications | Bridge                             |
+|   Last verified: 2025-01-22  by Nick Roddy            |
+|   [ 📷 2 Photos ]   [ 🔍 View Details ]               |
+|-------------------------------------------------------|
+Design Details
+Color Coding:
+
+Green: Verified/safe asset
+
+Yellow: Pending verification
+
+Red: Overdue/critical asset
+
+Card Shape:
+
+Soft, rounded corners, drop shadow, padding
+
+Content:
+
+Asset name: Bold, large, clear status icon (✔️ ⏳ ⚠️)
+
+Category & location: Smaller, grey text
+
+Verification info: Date, user, and photo evidence
+
+Action buttons:
+
+“Upload Photo” (always available for new verification)
+
+“Mark as Verified” (after upload)
+
+“View Details” (shows photo history, comments, audit log)
+
+“Notify Team” (for overdue assets)
+
+Top Summary Bar:
+
+Quick stats: Verified (green), Pending (yellow), Overdue (red), Total assets (grey/blue)
+
+Export/Audit button always visible
+
+Photo Evidence:
+
+Small camera icon with photo count
+
+Clicking “View Details” opens a modal/lightbox with thumbnails, full-size view, and timestamps
+
+Responsive:
+
+Grid or stack on desktop/tablet; single column on mobile
+
+How It Looks Visually (Text Sketch):
+less
+Copier
+Modifier
++--------------------------------------------------------------+
+| ✔️ Emergency Generator Set #1         (Verified: Green)       |
+| Power Systems | Deck A, Port Side                             |
+| Last verified: 2025-01-15  by Steve Hardy                     |
+| [ 📷 1 Photo ]   [ 🔍 View Details ]                           |
++--------------------------------------------------------------+
+
+| ⏳ Boat #1 (Port)                    (Pending: Yellow)        |
+| Safety Equipment | Deck B                                   |
+| Pending verification (due: 2025-01-29)                       |
+| [ 📷 Upload Photo ]   [ ✔️ Mark as Verified ]                 |
++--------------------------------------------------------------+
+
+| ⚠️ Fire Suppression System            (Overdue: Red)         |
+| Safety Equipment | Engine Room                              |
+| OVERDUE! Last verified: 2024-12-20                           |
+| [ 📷 Upload Photo ]   [ ✔️ Mark as Verified ]   [ 🔔 Notify ] |
++--------------------------------------------------------------+
+Style Guide:
+Font: Inter, Roboto, or similar clean sans-serif
+
+Icon Set: Material Icons or Heroicons
+
+Buttons: Bold, pill-shaped, blue for actions, red for alerts
+
+Shadows: Soft, for depth (not harsh)
+
+Spacing: 16–24px between cards, 12–16px padding inside
+
+Hover/Focus: Cards lift subtly; buttons change shade

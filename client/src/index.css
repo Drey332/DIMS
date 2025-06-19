@@ -209,4 +209,26 @@
   .bg-hydro-light {
     background-color: var(--hydro-light);
   }
+  
+  /* HydroSafe Asset Status Cards */
+  .hydro-card-verified {
+    @apply bg-gradient-to-r from-green-50 to-green-100 border border-green-200 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .hydro-card-pending {
+    @apply bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  .hydro-card-overdue {
+    @apply bg-gradient-to-r from-red-50 to-red-100 border border-red-200 shadow-sm hover:shadow-md transition-all duration-200;
+  }
+
+  /* HydroSafe Action Buttons */
+  .hydro-button-verify {
+    @apply bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg px-3 py-1 transition-colors duration-200;
+  }
+
+  .hydro-button-warning {
+    @apply border-orange-600 text-orange-600 hover:bg-orange-50 font-medium rounded-lg px-3 py-1 transition-colors duration-200;
+  }
 }

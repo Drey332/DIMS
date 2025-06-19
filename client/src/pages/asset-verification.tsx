@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Header } from "@/components/header";
 import { Navigation } from "@/components/navigation";
+import { cn } from "@/lib/utils";
 import { 
   Camera, 
   Upload, 
@@ -17,7 +18,13 @@ import {
   AlertTriangle,
   Package,
   FileImage,
-  Calendar
+  Calendar,
+  Search,
+  Plus,
+  Download,
+  Eye,
+  Bell,
+  Filter
 } from "lucide-react";
 
 interface Asset {
@@ -27,27 +34,34 @@ interface Asset {
   location: string;
   status: 'VERIFIED' | 'PENDING' | 'OVERDUE';
   lastVerified?: string;
+  verifiedBy?: string;
+  photoCount: number;
+  dueDate?: string;
   verificationPhoto?: string;
   verificationComment?: string;
   verificationTimestamp?: string;
 }
 
-// Mock asset data - in real app this would come from backend
+// Actual project asset data for Forcados decommissioning
 const mockAssets: Asset[] = [
   {
     id: 1,
     name: "Emergency Generator Set #1",
     category: "Power Systems",
-    location: "Deck A - Port Side",
+    location: "Deck A, Port Side",
     status: "VERIFIED",
-    lastVerified: "2025-01-15"
+    lastVerified: "2025-01-15",
+    verifiedBy: "Steve Hardy",
+    photoCount: 1
   },
   {
     id: 2,
-    name: "Life Boat #1 (Port)",
+    name: "Boat #1 (Port)",
     category: "Safety Equipment",
-    location: "Deck B - Port Side",
+    location: "Deck B",
     status: "PENDING",
+    dueDate: "2025-01-29",
+    photoCount: 0
   },
   {
     id: 3,
@@ -55,7 +69,8 @@ const mockAssets: Asset[] = [
     category: "Safety Equipment",
     location: "Engine Room",
     status: "OVERDUE",
-    lastVerified: "2024-12-20"
+    lastVerified: "2024-12-20",
+    photoCount: 0
   },
   {
     id: 4,
@@ -63,7 +78,9 @@ const mockAssets: Asset[] = [
     category: "Communications",
     location: "Bridge",
     status: "VERIFIED",
-    lastVerified: "2025-01-18"
+    lastVerified: "2025-01-22",
+    verifiedBy: "Nick Roddy",
+    photoCount: 2
   },
   {
     id: 5,
@@ -71,14 +88,18 @@ const mockAssets: Asset[] = [
     category: "Medical Equipment",
     location: "Medical Bay",
     status: "PENDING",
+    dueDate: "2025-02-01",
+    photoCount: 0
   },
   {
     id: 6,
     name: "Crane System #2",
     category: "Mechanical Systems",
-    location: "Deck C - Starboard",
+    location: "Deck C, Starboard",
     status: "VERIFIED",
-    lastVerified: "2025-01-10"
+    lastVerified: "2025-01-10",
+    verifiedBy: "Dean Golding",
+    photoCount: 3
   }
 ];
 
@@ -160,46 +181,47 @@ export default function AssetVerification() {
     });
   };
 
-  const getStatusBadge = (status: Asset['status']) => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+
+  const filteredAssets = assets.filter(asset => {
+    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         asset.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         asset.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === "ALL" || asset.status === filterStatus;
+    return matchesSearch && matchesFilter;
+  });
+
+  const assetStats = {
+    verified: assets.filter(a => a.status === 'VERIFIED').length,
+    pending: assets.filter(a => a.status === 'PENDING').length,
+    overdue: assets.filter(a => a.status === 'OVERDUE').length,
+    total: assets.length
+  };
+
+  const getAssetCardStyle = (status: Asset['status']) => {
     switch (status) {
       case 'VERIFIED':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">✓ Verified</Badge>;
+        return 'hydro-card-verified';
       case 'PENDING':
-        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">⏳ Pending</Badge>;
+        return 'hydro-card-pending';
       case 'OVERDUE':
-        return <Badge className="bg-red-100 text-red-800 border-red-200">⚠ Overdue</Badge>;
+        return 'hydro-card-overdue';
       default:
-        return <Badge variant="outline">Unknown</Badge>;
+        return 'hydro-card';
     }
   };
 
   const getStatusIcon = (status: Asset['status']) => {
     switch (status) {
       case 'VERIFIED':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
+        return <CheckCircle className="w-6 h-6 text-green-600" />;
       case 'PENDING':
-        return <Clock className="w-5 h-5 text-yellow-600" />;
+        return <Clock className="w-6 h-6 text-yellow-600" />;
       case 'OVERDUE':
-        return <AlertTriangle className="w-5 h-5 text-red-600" />;
+        return <AlertTriangle className="w-6 h-6 text-red-600" />;
       default:
-        return <Package className="w-5 h-5 text-gray-600" />;
-    }
-  };
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Safety Equipment':
-        return 'border-l-red-500';
-      case 'Power Systems':
-        return 'border-l-blue-500';
-      case 'Communications':
-        return 'border-l-green-500';
-      case 'Medical Equipment':
-        return 'border-l-purple-500';
-      case 'Mechanical Systems':
-        return 'border-l-orange-500';
-      default:
-        return 'border-l-gray-500';
+        return <Package className="w-6 h-6 text-gray-600" />;
     }
   };
 
@@ -280,63 +302,106 @@ export default function AssetVerification() {
               </Card>
             </div>
 
-            {/* Assets List */}
-            <Card className="shadow-xl border-0">
-              <CardHeader className="bg-gradient-to-r from-hydro-dark to-blue-600 text-white rounded-t-lg">
-                <CardTitle className="flex items-center justify-center text-xl">
-                  <Package className="w-6 h-6 mr-3" />
-                  Project Assets
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {assets.map((asset) => (
-                    <div
-                      key={asset.id}
-                      className={`p-6 border-l-4 ${getCategoryColor(asset.category)} bg-gradient-to-r from-white to-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:transform hover:scale-[1.02]`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-4 flex-1">
-                          <div className="flex-shrink-0">
-                            {getStatusIcon(asset.status)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-hydro-dark mb-2 text-lg leading-tight">{asset.name}</h3>
-                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                              <Badge variant="outline" className="text-xs font-medium bg-blue-50 text-blue-700 border-blue-200">
-                                {asset.category}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs font-medium bg-gray-50 text-gray-700 border-gray-200">
-                                📍 {asset.location}
-                              </Badge>
-                              {getStatusBadge(asset.status)}
-                            </div>
-                            {asset.lastVerified && (
-                              <div className="flex items-center text-sm text-gray-600 mb-3">
-                                <Calendar className="w-4 h-4 mr-2" />
-                                Last verified: {asset.lastVerified}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex-shrink-0 ml-4">
-                          <Button
-                            size="sm"
-                            className="hydro-button-primary shadow-md hover:shadow-lg transition-shadow"
-                            onClick={() => handleVerifyAsset(asset)}
-                          >
-                            <Camera className="w-4 h-4 mr-2" />
-                            Verify
-                          </Button>
-                        </div>
+            {/* Search and Actions */}
+            <div className="mb-6 flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  placeholder="Search assets..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="hydro-button-primary">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Asset
+                </Button>
+                <Button variant="outline" className="bg-gray-600 text-white hover:bg-gray-700">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Audit Log
+                </Button>
+              </div>
+            </div>
+
+            {/* Asset Cards */}
+            <div className="space-y-4">
+              {filteredAssets.map((asset) => (
+                <div
+                  key={asset.id}
+                  className={cn("p-6 rounded-xl shadow-sm hover:shadow-md transition-all duration-200", getAssetCardStyle(asset.status))}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        {getStatusIcon(asset.status)}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">{asset.name}</h3>
+                        <p className="text-sm text-gray-600">{asset.category} | {asset.location}</p>
+                        {asset.status === 'VERIFIED' && asset.lastVerified && (
+                          <p className="text-sm text-gray-600">
+                            Last verified: {asset.lastVerified} by {asset.verifiedBy}
+                          </p>
+                        )}
+                        {asset.status === 'PENDING' && asset.dueDate && (
+                          <p className="text-sm text-gray-600">
+                            Pending verification (due: {asset.dueDate})
+                          </p>
+                        )}
+                        {asset.status === 'OVERDUE' && asset.lastVerified && (
+                          <p className="text-sm text-red-600 font-medium">
+                            OVERDUE! Last verified: {asset.lastVerified}
+                          </p>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    
+                    <div className="flex items-center space-x-3">
+                      {asset.photoCount > 0 && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Camera className="w-4 h-4 mr-1" />
+                          {asset.photoCount} Photo{asset.photoCount !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                      
+                      <div className="flex space-x-2">
+                        {asset.status === 'VERIFIED' ? (
+                          <Button size="sm" variant="outline" className="hydro-button-primary">
+                            <Eye className="w-3 h-3 mr-1" />
+                            View Details
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              className="hydro-button-verify"
+                              onClick={() => handleVerifyAsset(asset)}
+                            >
+                              <Camera className="w-3 h-3 mr-1" />
+                              Upload Photo
+                            </Button>
+                            <Button size="sm" className="hydro-button-verify">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Mark as Verified
+                            </Button>
+                            {asset.status === 'OVERDUE' && (
+                              <Button size="sm" variant="outline" className="hydro-button-warning">
+                                <Bell className="w-3 h-3 mr-1" />
+                                Notify Team
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              ))}
+            </div>
 
-            {/* Upload Modal */}
+            {/* Photo Upload Modal */}
             {isUploadModalOpen && selectedAsset && (
               <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">

@@ -29,6 +29,7 @@ function Router() {
       <Route path="/reports/generate" component={Reports} />
       <Route path="/reports/history" component={Reports} />
       <Route path="/setup" component={ProjectSetup} />
+      <Route path="/asset-verification" component={AssetVerification} />
       <Route path="/assets" component={AssetVerification} />
       <Route path="/assets/upload" component={AssetUpload} />
       <Route path="/assets/manage" component={AssetManage} />
