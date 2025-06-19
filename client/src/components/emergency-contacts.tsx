@@ -141,17 +141,21 @@ export function EmergencyContacts() {
                 </h4>
                 <div className="space-y-3">
                   {displayContacts.map((contact) => (
-                    <div key={contact.id} className={`p-3 ${getContactColor(contact.contactType)} border rounded-lg`}>
-                      <div className={`font-medium ${getContactTextColor(contact.contactType)}`}>
-                        {contact.contactType === 'HOSPITAL' ? 'Primary Hospital' :
-                         contact.contactType === 'MEDEVAC' ? 'MEDEVAC Service' :
-                         contact.contactType === 'MARINE_RESCUE' ? 'Marine Emergency' :
-                         contact.contactType}
+                    <div key={contact.id} className={`p-3 ${getContactColor(contact.contactType)} border rounded-lg cursor-pointer hover:shadow-md transition-shadow`}
+                         onClick={() => window.open(`tel:${contact.phone}`, '_self')}>
+                      <div className={`font-medium ${getContactTextColor(contact.contactType)} flex items-center justify-between`}>
+                        <span>
+                          {contact.contactType === 'HOSPITAL' ? 'Primary Hospital' :
+                           contact.contactType === 'MEDEVAC' ? 'MEDEVAC Service' :
+                           contact.contactType === 'MARINE_RESCUE' ? 'Marine Emergency' :
+                           contact.contactType}
+                        </span>
+                        <Phone className="w-4 h-4 text-green-600" />
                       </div>
                       <div className={`text-sm ${getContactSubTextColor(contact.contactType)}`}>
                         {contact.name}
                       </div>
-                      <div className={`text-sm ${getContactSubTextColor(contact.contactType)}`}>
+                      <div className={`text-sm font-mono ${getContactSubTextColor(contact.contactType)} hover:underline`}>
                         {contact.phone}
                       </div>
                       <div className={`text-xs ${getContactTimeColor(contact.contactType)} mt-1 flex items-center`}>

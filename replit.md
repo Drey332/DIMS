@@ -118,6 +118,9 @@ The system combines real-time incident management, intelligent decision-making s
 
 Changelog:
 - June 19, 2025. Initial setup
+- June 19, 2025. Implemented real-time activity tracking system with WebSocket connections
+- June 19, 2025. Added clickable emergency contacts with direct phone call functionality
+- June 19, 2025. Fixed database foreign key constraints and accessibility warnings
 
 ## User Preferences
 

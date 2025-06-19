@@ -313,9 +313,10 @@ export default function ProjectSetup() {
                             </h4>
                             <p className="text-sm text-gray-600">{contact.name}</p>
                             <div className="mt-2 space-y-1">
-                              <div className="flex items-center text-sm text-gray-600">
+                              <div className="flex items-center text-sm text-gray-600 cursor-pointer hover:text-green-600 transition-colors"
+                                   onClick={() => window.open(`tel:${contact.phone}`, '_self')}>
                                 <Phone className="w-3 h-3 mr-2" />
-                                {contact.phone}
+                                <span className="hover:underline font-mono">{contact.phone}</span>
                               </div>
                               {contact.email && (
                                 <div className="flex items-center text-sm text-gray-600">
@@ -337,6 +338,14 @@ export default function ProjectSetup() {
                           </div>
                         </div>
                         <div className="flex space-x-2">
+                          <Button 
+                            size="sm" 
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => window.open(`tel:${contact.phone}`, '_self')}
+                          >
+                            <Phone className="w-3 h-3 mr-1" />
+                            Call
+                          </Button>
                           <Button 
                             size="sm" 
                             variant="outline"
