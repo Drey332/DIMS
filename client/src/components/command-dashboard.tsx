@@ -75,8 +75,8 @@ export function CommandDashboard() {
       <div className="lg:col-span-2">
         <Card className="hydro-card">
           <CardHeader className="flex flex-row items-center justify-between pb-6">
-            <CardTitle className="text-xl font-bold text-hydro-dark flex items-center">
-              <AlertTriangle className="text-orange-500 mr-3" />
+            <CardTitle className="text-2xl font-bold text-hydro-dark flex items-center">
+              <AlertTriangle className="text-orange-500 mr-3 h-6 w-6" />
               Active Incidents & Operations
             </CardTitle>
             <Button className="hydro-button-emergency">
@@ -87,14 +87,17 @@ export function CommandDashboard() {
           <CardContent>
             <div className="space-y-4">
               {activeIncidents.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No active incidents at this time
+                <div className="text-center py-12">
+                  <div className="inline-flex items-center px-6 py-3 rounded-full bg-green-50 text-green-800 font-medium">
+                    <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                    No incidents at this time
+                  </div>
                 </div>
               ) : (
                 activeIncidents.map((incident) => (
-                  <div key={incident.id} className={cn("rounded-lg p-4", getPriorityColor(incident.priority))}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-3">
+                  <div key={incident.id} className={cn("rounded-xl p-5 border", getPriorityColor(incident.priority))}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-4">
                         <div className={cn(
                           "w-4 h-4 rounded-full",
                           incident.priority === 'CRITICAL' ? 'bg-red-500 animate-pulse' :
