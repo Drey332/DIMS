@@ -263,12 +263,10 @@ Return JSON format:
   const protocolKey = emergencyType.toUpperCase() as keyof typeof EMERGENCY_PROTOCOLS;
   const protocol = EMERGENCY_PROTOCOLS[protocolKey] || EMERGENCY_PROTOCOLS.MEDICAL_EMERGENCY;
   
-  // Enhance with current conditions
-  const enhancedRiskAssessment = `${protocol.riskAssessment} Current conditions: ${JSON.stringify(currentConditions)}. Project: ${projectContext.projectName || 'Offshore operations'}.`;
-  
+  // Clean risk assessment without verbose JSON
   return {
     ...protocol,
-    riskAssessment: enhancedRiskAssessment
+    riskAssessment: `${protocol.riskAssessment} Project: ${projectContext.projectName || 'Offshore operations'}.`
   };
 }
 

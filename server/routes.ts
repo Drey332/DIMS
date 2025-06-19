@@ -124,14 +124,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const incidentData = insertIncidentSchema.parse({
         ...req.body,
-        reportedBy: req.user!.id,
+        reportedBy: 1, // Use default user ID since authentication is not fully implemented
       });
       
       const incident = await storage.createIncident(incidentData);
       
       // Create audit log
       await storage.createAuditLog({
-        userId: req.user!.id,
+        userId: 1, // Use default user ID
         projectId: incident.projectId,
         incidentId: incident.id,
         actionType: 'INCIDENT_CREATED',
