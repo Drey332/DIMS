@@ -97,9 +97,9 @@ export default function ProjectSetup() {
 
   const user = {
     role: "GOLD",
-    name: "David Mooney",
-    title: "General Manager",
-    initials: "DM"
+    name: "Frank Ifedi",
+    title: "MD/CEO - Gold Manager",
+    initials: "FI"
   };
 
   const projectData = {
