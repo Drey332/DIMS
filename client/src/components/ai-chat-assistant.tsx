@@ -22,22 +22,29 @@ export function AIChatAssistant() {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your AI assistant for reports and audit trail analysis. I can help you generate incident reports, analyze audit logs, create compliance summaries, and provide insights from your emergency response data.',
+      content: 'Hello! I\'m your HydroDive emergency response AI co-pilot for reports and audit analysis. I can help with MEDEVAC protocols, safety incidents, dynamic checklists, and generate comprehensive reports from your emergency response data.',
       timestamp: new Date()
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const { toast } = useToast();
 
-  // Report Generation
-  const reportGenerationMutation = useMutation({
-    mutationFn: async (reportType: string) => {
-      const response = await apiRequest("/api/ai/generate-report", "POST", {
-        reportType,
+  // MEDEVAC Protocol
+  const medicalProtocolMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("/api/ai/protocol-guidance", "POST", {
+        emergencyType: "MEDICAL_EMERGENCY",
         projectContext: {
           projectName: "Forcados ACOE Decommissioning Project",
           location: "Forcados Terminal, Nigeria",
-          dateRange: "Last 30 days"
+          currentOperations: "Subsea cutting operations",
+          weatherConditions: "Sea state 3, winds 15kt"
+        },
+        currentConditions: {
+          timeOfDay: new Date().toLocaleString(),
+          crewOnSite: 12,
+          nearestHospital: "Lagos University Teaching Hospital",
+          evacuationAssets: ["Bristow Helicopters"]
         }
       });
       return response;
@@ -46,7 +53,7 @@ export function AIChatAssistant() {
       const message: AIMessage = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: `Report generated successfully. The ${data.reportType} report includes:\n\n${data.summary}\n\nKey findings:\n${data.keyFindings?.slice(0, 3).map((finding: string, idx: number) => `${idx + 1}. ${finding}`).join('\n')}`,
+        content: `🚨 **${data.protocol}**\n\n**Time Standards:**\n${data.timeStandards?.join('\n')}\n\n**Required Actions:**\n${data.requiredActions?.slice(0, 3).map((action: any, idx: number) => `${idx + 1}. [${action.priority}] ${action.description} (${action.estimatedTime})`).join('\n')}\n\n**Risk Assessment:** ${data.riskAssessment}`,
         timestamp: new Date(),
         protocolData: data
       };
@@ -55,55 +62,30 @@ export function AIChatAssistant() {
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to generate report.",
+        description: "Failed to generate MEDEVAC protocol.",
         variant: "destructive",
       });
     }
   });
 
-  // Audit Analysis
-  const auditAnalysisMutation = useMutation({
+  // Safety Incident
+  const safetyIncidentMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("/api/ai/audit-analysis", "POST", {
-        analysisType: "COMPLIANCE_REVIEW",
-        dateRange: "last_30_days",
-        projectId: 1
-      });
-      return response;
-    },
-    onSuccess: (data) => {
-      const message: AIMessage = {
-        id: Date.now().toString(),
-        type: 'assistant',
-        content: `Audit analysis complete. Found ${data.totalEvents || 0} events with ${data.complianceScore || 95}% compliance score. Key areas reviewed: incident response times, documentation completeness, and protocol adherence.`,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, message]);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to analyze audit trail.",
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Compliance Summary
-  const complianceMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("/api/ai/compliance-summary", "POST", {
+      const response = await apiRequest("/api/incidents", "POST", {
         projectId: 1,
-        timeframe: "monthly",
-        standards: ["IMCA", "IOGP", "HydroDive"]
+        title: "Safety Incident Report",
+        description: "Initiated from AI emergency protocol system",
+        type: "SAFETY",
+        priority: "HIGH",
+        status: "ACTIVE"
       });
       return response;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       const message: AIMessage = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: `Compliance summary generated. Overall score: ${data.overallScore || 95}%. IMCA compliance: ${data.imcaScore || 98}%, IOGP compliance: ${data.iogpScore || 94}%, HydroDive protocols: ${data.hydroDiveScore || 96}%. All regulatory requirements met for reporting period.`,
+        content: '✅ **Safety Incident Created**\n\nSafety incident has been logged and emergency contacts have been notified. The incident is now tracked in the system with ID reference for follow-up actions.',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, message]);
@@ -111,7 +93,39 @@ export function AIChatAssistant() {
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to generate compliance summary.",
+        description: "Failed to create safety incident report.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Dynamic Checklist
+  const checklistMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("/api/ai/checklist", "POST", {
+        scenarioType: "EMERGENCY_RESPONSE",
+        projectDetails: {
+          name: "Forcados ACOE Decommissioning Project",
+          location: "Nigeria",
+          operations: "Offshore decommissioning"
+        },
+        userRole: "BRONZE"
+      });
+      return response;
+    },
+    onSuccess: (data) => {
+      const message: AIMessage = {
+        id: Date.now().toString(),
+        type: 'assistant',
+        content: `📋 **Dynamic Emergency Checklist Generated**\n\n${Array.isArray(data) ? data.slice(0, 5).map((item: any, idx: number) => `${idx + 1}. [${item.priority}] ${item.description}\n   ⏱️ ${item.estimatedTime} | 📖 ${item.protocolReference}`).join('\n\n') : 'Checklist items generated successfully'}`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, message]);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate dynamic checklist.",
         variant: "destructive",
       });
     }
