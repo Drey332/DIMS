@@ -10,12 +10,16 @@ import Incidents from "@/pages/incidents";
 import TeamManagement from "@/pages/team-management";
 import Reports from "@/pages/reports";
 import ProjectSetup from "@/pages/project-setup";
+import Login from "@/pages/login";
+import Register from "@/pages/register";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
       <Route path="/incidents" component={Incidents} />
       <Route path="/team" component={TeamManagement} />
       <Route path="/reports" component={Reports} />

@@ -13,6 +13,17 @@ import path from "path";
 import fs from "fs";
 import { z } from "zod";
 import { insertIncidentSchema, insertMessageSchema, insertIncidentActionSchema, insertEmergencyContactSchema } from "@shared/schema";
+import { 
+  loginUser, 
+  registerUser, 
+  getCurrentUser, 
+  authenticateToken,
+  initiateGoogleAuth,
+  initiateAppleAuth,
+  handleGoogleCallback,
+  handleAppleCallback,
+  type AuthRequest
+} from "./auth";
 
 // File upload configuration
 const uploadDir = path.join(process.cwd(), 'uploads');
@@ -52,7 +63,18 @@ const authenticateUser = async (req: AuthenticatedRequest, res: Response, next: 
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Apply authentication middleware to all API routes
+  // Authentication routes (no auth middleware required)
+  app.post('/api/auth/login', loginUser);
+  app.post('/api/auth/register', registerUser);
+  app.get('/api/auth/user', authenticateToken, getCurrentUser);
+  
+  // OAuth routes
+  app.get('/auth/google', initiateGoogleAuth);
+  app.get('/auth/apple', initiateAppleAuth);
+  app.get('/auth/google/callback', handleGoogleCallback);
+  app.post('/auth/apple/callback', handleAppleCallback);
+
+  // Apply authentication middleware to protected API routes
   app.use('/api', authenticateUser);
 
   // User routes
