@@ -123,33 +123,42 @@ export default function ProjectSetup() {
   const defaultContacts = [
     {
       id: 1,
+      projectId: 1,
       contactType: "HOSPITAL",
       name: "Warri Central Hospital",
       phone: "+234-803-XXX-XXXX",
       email: "emergency@warricentral.ng",
       responseTime: undefined,
       lastVerified: "2025-01-20",
-      isActive: true
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
     },
     {
       id: 2,
+      projectId: 1,
       contactType: "MEDEVAC",
       name: "Nigeria Air Rescue",
       phone: "+234-805-XXX-XXXX",
       email: "dispatch@nigeriaairrescue.com",
       responseTime: "25 minutes",
       lastVerified: "2025-01-18",
-      isActive: true
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
     },
     {
       id: 3,
+      projectId: 1,
       contactType: "MARINE_RESCUE",
       name: "Nigerian Maritime Rescue",
       phone: "+234-807-XXX-XXXX",
       email: "ops@nimasa.gov.ng",
       responseTime: undefined,
       lastVerified: "2025-01-15",
-      isActive: true
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
   ];
 
@@ -160,7 +169,7 @@ export default function ProjectSetup() {
     saveContactMutation.mutate(data);
   };
 
-  const handleEditContact = (contact: EmergencyContact) => {
+  const handleEditContact = (contact: any) => {
     setEditingContact(contact);
     contactForm.reset({
       contactType: contact.contactType,
@@ -369,7 +378,7 @@ export default function ProjectSetup() {
                   <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
                       <h3 className="text-xl font-bold text-hydro-dark mb-4">
-                        {editingContact ? 'Edit Contact' : 'Add Emergency Contact'}
+                        {editingContact ? 'Update Contact' : 'Add Contact'}
                       </h3>
                       
                       <Form {...contactForm}>
@@ -457,7 +466,7 @@ export default function ProjectSetup() {
                               className="flex-1 hydro-button-primary"
                               disabled={saveContactMutation.isPending}
                             >
-                              {saveContactMutation.isPending ? "Saving..." : "Save Contact"}
+                              {saveContactMutation.isPending ? "Saving..." : (editingContact ? "Update Contact" : "Add Contact")}
                             </Button>
                             <Button 
                               type="button" 
