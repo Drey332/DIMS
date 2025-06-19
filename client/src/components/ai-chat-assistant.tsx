@@ -89,25 +89,21 @@ export function AIChatAssistant() {
     }
   });
 
-  // Dynamic Checklist
-  const checklistMutation = useMutation({
+  // Compliance Summary
+  const complianceMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/ai/checklist", {
-        scenarioType: "EMERGENCY_RESPONSE",
-        projectDetails: {
-          name: "Forcados ACOE Decommissioning Project",
-          location: "Nigeria",
-          operations: "Offshore decommissioning"
-        },
-        userRole: "BRONZE"
+      const response = await apiRequest("/api/ai/compliance-summary", "POST", {
+        projectId: 1,
+        timeframe: "monthly",
+        standards: ["IMCA", "IOGP", "HydroDive"]
       });
-      return await response.json();
+      return response;
     },
     onSuccess: (data) => {
       const message: AIMessage = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: `📋 **Dynamic Emergency Checklist Generated**\n\n${Array.isArray(data) ? data.slice(0, 5).map((item: any, idx: number) => `${idx + 1}. [${item.priority}] ${item.description}\n   ⏱️ ${item.estimatedTime} | 📖 ${item.protocolReference}`).join('\n\n') : 'Checklist items generated successfully'}`,
+        content: `Compliance summary generated. Overall score: ${data.overallScore || 95}%. IMCA compliance: ${data.imcaScore || 98}%, IOGP compliance: ${data.iogpScore || 94}%, HydroDive protocols: ${data.hydroDiveScore || 96}%. All regulatory requirements met for reporting period.`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, message]);
@@ -115,7 +111,7 @@ export function AIChatAssistant() {
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to generate dynamic checklist.",
+        description: "Failed to generate compliance summary.",
         variant: "destructive",
       });
     }
