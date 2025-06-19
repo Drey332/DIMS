@@ -438,43 +438,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize sample data for Forcados project
   app.post('/api/init-sample-data', async (req, res) => {
     try {
-      // Create HydroDive personnel
+      // Create HydroDive personnel with real command structure
       const users = [
         {
-          username: 'david.mooney',
+          username: 'frank.ifedi',
           password: 'hydrosafe2025',
-          firstName: 'David',
-          lastName: 'Mooney',
-          email: 'd.mooney@hydrodive.com',
+          firstName: 'Frank',
+          lastName: 'Ifedi',
+          email: 'f.ifedi@hydrodive.com',
           role: 'GOLD',
-          title: 'General Manager',
+          title: 'MD/CEO - Gold Manager',
         },
         {
-          username: 'dean.golding',
+          username: 'dave.ward',
           password: 'hydrosafe2025',
-          firstName: 'Dean',
-          lastName: 'Golding Perello',
-          email: 'd.golding@hydrodive.com',
+          firstName: 'Dave',
+          lastName: 'Ward',
+          email: 'd.ward@hydrodive.com',
           role: 'SILVER',
-          title: 'Diving Manager',
+          title: 'Marine and Diving Operations Director',
         },
         {
-          username: 'kene.anyabolu',
+          username: 'latifatu.osagie',
           password: 'hydrosafe2025',
-          firstName: 'Kene',
-          lastName: 'Anyabolu',
-          email: 'k.anyabolu@hydrodive.com',
+          firstName: 'Latifatu',
+          lastName: 'Osagie',
+          email: 'l.osagie@hydrodive.com',
           role: 'SILVER',
-          title: 'HSE Manager',
+          title: 'Personnel Logistics Manager',
         },
         {
-          username: 'nick.roddy',
+          username: 'modupe.oherein',
           password: 'hydrosafe2025',
-          firstName: 'Nick',
-          lastName: 'Roddy',
-          email: 'n.roddy@hydrodive.com',
-          role: 'BRONZE',
+          firstName: 'Modupe',
+          lastName: 'Oherein',
+          email: 'm.oherein@hydrodive.com',
+          role: 'SILVER',
+          title: 'Human Resources Manager',
+        },
+        {
+          username: 'stephan.wessels',
+          password: 'hydrosafe2025',
+          firstName: 'Stephan',
+          lastName: 'Wessels',
+          email: 's.wessels@hydrodive.com',
+          role: 'SILVER',
+          title: 'Operations Manager',
+        },
+        {
+          username: 'steve.hardy',
+          password: 'hydrosafe2025',
+          firstName: 'Steve',
+          lastName: 'Hardy',
+          email: 's.hardy@hydrodive.com',
+          role: 'SILVER',
+          title: 'Marine Manager',
+        },
+        {
+          username: 'afam.ejidike',
+          password: 'hydrosafe2025',
+          firstName: 'Afam',
+          lastName: 'Ejidike',
+          email: 'a.ejidike@hydrodive.com',
+          role: 'GOLD',
           title: 'Project Manager',
+        },
+        {
+          username: 'tochi.nwogu',
+          password: 'hydrosafe2025',
+          firstName: 'Tochi',
+          lastName: 'Nwogu',
+          email: 't.nwogu@hydrodive.com',
+          role: 'GOLD',
+          title: 'Legal Advisor',
         },
       ];
       
@@ -527,13 +563,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
       
+      let project;
       try {
-        await storage.createProject(projectData);
+        project = await storage.createProject(projectData);
       } catch (error) {
         console.log('Project already exists, skipping...');
+        project = await storage.getProjectByNumber('863-01-24');
       }
       
-      res.json({ message: 'Sample data initialized successfully' });
+      // Create emergency contacts for HydroDive command structure
+      if (project) {
+        const emergencyContacts = [
+          {
+            projectId: project.id,
+            contactType: 'GOLD_MANAGER',
+            name: 'Frank Ifedi',
+            title: 'MD/CEO - Gold Manager',
+            role: 'GOLD',
+            phone: '+234-803-XXXX-001',
+            email: 'f.ifedi@hydrodive.com',
+            responsibilities: 'Overall responsibility for incident till final close out at corporate level',
+            priority: 'CRITICAL',
+          },
+          {
+            projectId: project.id,
+            contactType: 'MARINE_OPERATIONS',
+            name: 'Dave Ward',
+            title: 'Marine and Diving Operations Director',
+            role: 'SILVER',
+            phone: '+234-803-XXXX-002',
+            email: 'd.ward@hydrodive.com',
+            responsibilities: 'Delegated Gold Coordinator or Silver controller, marine operational decisions',
+            priority: 'HIGH',
+          },
+          {
+            projectId: project.id,
+            contactType: 'LOGISTICS',
+            name: 'Latifatu Osagie',
+            title: 'Personnel Logistics Manager',
+            role: 'SILVER',
+            phone: '+234-803-XXXX-003',
+            email: 'l.osagie@hydrodive.com',
+            responsibilities: 'Logistics control, repatriation, family liaison for expatriate workers',
+            priority: 'HIGH',
+          },
+          {
+            projectId: project.id,
+            contactType: 'MEDICAL',
+            name: 'Modupe Oherein',
+            title: 'Human Resources Manager',
+            role: 'SILVER',
+            phone: '+234-803-XXXX-004',
+            email: 'm.oherein@hydrodive.com',
+            responsibilities: 'Authorizing and coordination of medical treatment on shore',
+            priority: 'CRITICAL',
+          },
+          {
+            projectId: project.id,
+            contactType: 'OPERATIONS',
+            name: 'Stephan Wessels',
+            title: 'Operations Manager',
+            role: 'SILVER',
+            phone: '+234-803-XXXX-005',
+            email: 's.wessels@hydrodive.com',
+            responsibilities: 'Logistics and equipment concerns, mobilisation support to Silver EC',
+            priority: 'HIGH',
+          },
+          {
+            projectId: project.id,
+            contactType: 'MARINE_ADVISOR',
+            name: 'Steve Hardy',
+            title: 'Marine Manager',
+            role: 'SILVER',
+            phone: '+234-803-XXXX-006',
+            email: 's.hardy@hydrodive.com',
+            responsibilities: 'Senior advisor, Silver Controller for marine incidents, marine capacity advisor',
+            priority: 'HIGH',
+          },
+          {
+            projectId: project.id,
+            contactType: 'PROJECT_MANAGER',
+            name: 'Afam Ejidike',
+            title: 'Project Manager',
+            role: 'GOLD',
+            phone: '+234-803-XXXX-007',
+            email: 'a.ejidike@hydrodive.com',
+            responsibilities: 'Command and control, strategy, media, shareholder reporting, Silver Team chair',
+            priority: 'CRITICAL',
+          },
+          {
+            projectId: project.id,
+            contactType: 'LEGAL',
+            name: 'Tochi Nwogu',
+            title: 'Legal Advisor',
+            role: 'GOLD',
+            phone: '+234-803-XXXX-008',
+            email: 't.nwogu@hydrodive.com',
+            responsibilities: 'Legal ramifications, company implications, legal responsibilities advice',
+            priority: 'HIGH',
+          },
+        ];
+        
+        for (const contact of emergencyContacts) {
+          try {
+            await storage.createEmergencyContact(contact);
+          } catch (error) {
+            console.log(`Emergency contact ${contact.name} already exists, skipping...`);
+          }
+        }
+      }
+      
+      res.json({ message: 'Sample data initialized with HydroDive command structure' });
     } catch (error) {
       console.error("Error initializing sample data:", error);
       res.status(500).json({ message: "Failed to initialize sample data" });

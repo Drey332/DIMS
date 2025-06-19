@@ -22,7 +22,7 @@ export function AIChatAssistant() {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your emergency response AI co-pilot. I can help with MEDEVAC protocols, safety incidents, dynamic checklists, and emergency guidance following IMCA and IOGP standards.',
+      content: 'Hello! I\'m your HydroDive emergency response AI co-pilot. I work with your Gold-Silver-Bronze command structure including Frank Ifedi (Gold Manager), Dave Ward (Marine Operations), and the full Forcados project team. I can help with MEDEVAC protocols, safety incidents, and dynamic checklists.',
       timestamp: new Date()
     }
   ]);
