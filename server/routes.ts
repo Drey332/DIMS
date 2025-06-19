@@ -586,6 +586,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Asset verification routes
+  app.post('/api/asset-verifications', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const assetData = req.body;
+      const asset = await storage.createAssetVerification({
+        ...assetData,
+        verifiedBy: req.user.id,
+      });
+
+      // Log the asset verification action
+      await storage.createAuditLog({
+        actionType: 'ASSET_VERIFIED',
+        description: `Asset ${assetData.assetName} verified`,
+        userId: req.user.id,
+        projectId: assetData.projectId,
+        oldData: null,
+        newData: asset,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        sessionId: null
+      });
+
+      res.json(asset);
+    } catch (error) {
+      console.error("Error creating asset verification:", error);
+      res.status(500).json({ message: "Failed to create asset verification" });
+    }
+  });
+
+  app.get('/api/asset-verifications/:projectId', async (req: AuthenticatedRequest, res) => {
+    try {
+      const projectId = parseInt(req.params.projectId);
+      const assets = await storage.getAssetVerificationsByProject(projectId);
+      res.json(assets);
+    } catch (error) {
+      console.error("Error fetching asset verifications:", error);
+      res.status(500).json({ message: "Failed to fetch asset verifications" });
+    }
+  });
+
+  app.put('/api/asset-verifications/:id', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const updatedAsset = await storage.updateAssetVerification(id, {
+        ...updates,
+        verifiedBy: req.user.id,
+        lastChecked: new Date(),
+      });
+
+      // Log the asset update action
+      await storage.createAuditLog({
+        actionType: 'ASSET_UPDATED',
+        description: `Asset verification ${id} updated`,
+        userId: req.user.id,
+        projectId: updatedAsset.projectId,
+        oldData: null,
+        newData: updatedAsset,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        sessionId: null
+      });
+
+      res.json(updatedAsset);
+    } catch (error) {
+      console.error("Error updating asset verification:", error);
+      res.status(500).json({ message: "Failed to update asset verification" });
+    }
+  });
+
   // File upload routes
   app.post('/api/upload', upload.single('file'), async (req: AuthenticatedRequest, res) => {
     try {

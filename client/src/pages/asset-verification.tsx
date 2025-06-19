@@ -43,11 +43,29 @@ interface Asset {
   verificationTimestamp?: string;
 }
 
-// Actual project asset data for Forcados decommissioning
-const mockAssets: Asset[] = [
+interface AssetVerification {
+  id: number;
+  projectId: number;
+  assetName: string;
+  assetType: string;
+  status: 'VERIFIED' | 'PENDING' | 'OVERDUE' | 'FAILED';
+  lastChecked?: string;
+  nextCheckDue?: string;
+  verifiedBy?: number;
+  photoId?: number;
+  comments?: string;
+  complianceNotes?: string;
+  protocolReference?: string;
+  checklistData?: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Default assets that should be verified for offshore projects
+const defaultAssetTypes = [
   {
-    id: 1,
     name: "Emergency Generator Set #1",
+    type: "POWER_GENERATION",
     category: "Power Systems",
     location: "Deck A, Port Side",
     status: "VERIFIED",

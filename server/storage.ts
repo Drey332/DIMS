@@ -8,6 +8,7 @@ import {
   auditLogs,
   emergencyContacts,
   fileUploads,
+  assetVerifications,
   type User,
   type InsertUser,
   type Project,
@@ -24,6 +25,8 @@ import {
   type InsertEmergencyContact,
   type FileUpload,
   type InsertFileUpload,
+  type AssetVerification,
+  type InsertAssetVerification,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql } from "drizzle-orm";
@@ -79,6 +82,12 @@ export interface IStorage {
   createFileUpload(file: InsertFileUpload): Promise<FileUpload>;
   getFileUploadsByIncident(incidentId: number): Promise<FileUpload[]>;
   getFileUploadsByProject(projectId: number): Promise<FileUpload[]>;
+  
+  // Asset verification operations
+  createAssetVerification(asset: InsertAssetVerification): Promise<AssetVerification>;
+  updateAssetVerification(id: number, updates: Partial<InsertAssetVerification>): Promise<AssetVerification>;
+  getAssetVerificationsByProject(projectId: number): Promise<AssetVerification[]>;
+  getAssetVerification(id: number): Promise<AssetVerification | undefined>;
   
   // Dashboard analytics
   getDashboardStats(projectId?: number): Promise<{
@@ -430,6 +439,37 @@ export class DatabaseStorage implements IStorage {
       filesArchived: filesArchivedResult[0]?.count || 0,
       complianceScore,
     };
+  }
+
+  // Asset verification operations
+  async createAssetVerification(insertAsset: InsertAssetVerification): Promise<AssetVerification> {
+    const [asset] = await db.insert(assetVerifications).values(insertAsset).returning();
+    return asset;
+  }
+
+  async updateAssetVerification(id: number, updates: Partial<InsertAssetVerification>): Promise<AssetVerification> {
+    const [asset] = await db
+      .update(assetVerifications)
+      .set(updates)
+      .where(eq(assetVerifications.id, id))
+      .returning();
+    return asset;
+  }
+
+  async getAssetVerificationsByProject(projectId: number): Promise<AssetVerification[]> {
+    return await db
+      .select()
+      .from(assetVerifications)
+      .where(eq(assetVerifications.projectId, projectId))
+      .orderBy(desc(assetVerifications.createdAt));
+  }
+
+  async getAssetVerification(id: number): Promise<AssetVerification | undefined> {
+    const [asset] = await db
+      .select()
+      .from(assetVerifications)
+      .where(eq(assetVerifications.id, id));
+    return asset;
   }
 }
 

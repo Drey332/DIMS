@@ -160,6 +160,25 @@ export const fileUploads = pgTable("file_uploads", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Asset verifications for project assets
+export const assetVerifications = pgTable("asset_verifications", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").references(() => projects.id).notNull(),
+  assetName: text("asset_name").notNull(),
+  assetType: text("asset_type").notNull(), // FIRE_SUPPRESSION, LIFE_SUPPORT, COMMUNICATION, etc.
+  status: text("status").default("PENDING"), // PENDING, VERIFIED, OVERDUE, FAILED
+  lastChecked: timestamp("last_checked"),
+  nextCheckDue: timestamp("next_check_due"),
+  verifiedBy: integer("verified_by").references(() => users.id),
+  photoId: integer("photo_id").references(() => fileUploads.id),
+  comments: text("comments"),
+  complianceNotes: text("compliance_notes"),
+  protocolReference: text("protocol_reference"),
+  checklistData: jsonb("checklist_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   projectAssignments: many(projectAssignments),
@@ -178,6 +197,7 @@ export const projectsRelations = relations(projects, ({ many }) => ({
   emergencyContacts: many(emergencyContacts),
   auditLogs: many(auditLogs),
   fileUploads: many(fileUploads),
+  assetVerifications: many(assetVerifications),
 }));
 
 export const incidentsRelations = relations(incidents, ({ one, many }) => ({
@@ -247,6 +267,12 @@ export const insertFileUploadSchema = createInsertSchema(fileUploads).omit({
   timestamp: true,
 });
 
+export const insertAssetVerificationSchema = createInsertSchema(assetVerifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -264,3 +290,5 @@ export type EmergencyContact = typeof emergencyContacts.$inferSelect;
 export type InsertEmergencyContact = z.infer<typeof insertEmergencyContactSchema>;
 export type FileUpload = typeof fileUploads.$inferSelect;
 export type InsertFileUpload = z.infer<typeof insertFileUploadSchema>;
+export type AssetVerification = typeof assetVerifications.$inferSelect;
+export type InsertAssetVerification = z.infer<typeof insertAssetVerificationSchema>;

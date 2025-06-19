@@ -1,0 +1,141 @@
+1. Database Design: Core Collections/Tables
+a. Projects
+Field	Type	Description
+id	string	Unique project ID
+name	string	Project name
+client	string	Client name
+location	string	Site/location info
+goldManager	string	User ID (Gold)
+team	[string]	Assigned users
+startDate	date	
+endDate	date	
+contacts	[object]	Emergency contacts, etc.
+createdAt	date	Timestamp
+
+b. Emergencies/Incidents
+Field	Type	Description
+id	string	Unique emergency ID
+projectId	string	Linked project
+type	string	Emergency type
+description	string	User-entered desc
+status	string	Open/closed/etc.
+createdBy	string	User ID
+createdAt	date	Timestamp
+photos	[string]	Array of file URLs/paths
+notes	[object]	Timeline actions, updates
+
+c. Asset Verifications
+Field	Type	Description
+id	string	Unique ID
+projectId	string	Linked project
+assetName	string	Name
+status	string	Pending/verified/overdue
+lastChecked	date	
+verifiedBy	string	User ID
+photo	string	File URL
+comments	string	
+
+d. File Uploads
+Field	Type	Description
+id	string	File ID
+projectId	string	Linked project
+emergencyId	string	Linked emergency (if any)
+url	string	File storage URL
+uploadedBy	string	User ID
+description	string	Caption/desc
+timestamp	date	
+
+2. How the Buttons Should Work
+New Emergency:
+
+On click, opens a modal/form
+
+User selects project, enters details, can add photos
+
+Submits to /api/emergencies endpoint
+
+Backend creates a new record in the Emergencies collection, linked to the selected project
+
+New Project:
+
+Gold only: opens a modal/form
+
+On submit, creates a new Project record in DB
+
+Projects appear everywhere (in incident/project dropdowns, in reports)
+
+Upload Photo:
+
+Takes/selects file, adds description
+
+POSTs to /api/uploads
+
+Stores file (in Replit’s storage, S3, or local), saves record in DB with project, emergency, and user linkage
+
+3. How to Retrieve for Reports & AI
+When generating a report or audit:
+
+Query all relevant collections for project:
+
+All incidents/emergencies linked to project
+
+All asset verifications for project
+
+All uploaded files/descriptions
+
+All timeline notes/actions
+
+Pass structured data to AI for compliance scoring and analysis
+
+4. Backend/API Example (Node/Express, but easily adaptable to Flask)
+js
+Copier
+Modifier
+// Example: Create New Emergency
+app.post('/api/emergencies', async (req, res) => {
+  const { projectId, type, description, createdBy } = req.body;
+  // Save to Emergencies collection with timestamp
+  const newEmergency = await db.emergencies.insertOne({
+    projectId, type, description, status: "open", createdBy, createdAt: new Date(), photos: [], notes: []
+  });
+  res.json(newEmergency);
+});
+
+// Example: Get all projects (for dropdowns, reports, etc.)
+app.get('/api/projects', async (req, res) => {
+  const projects = await db.projects.find({}); // Filter by user/team as needed
+  res.json(projects);
+});
+
+// Example: Upload photo (simplified)
+app.post('/api/uploads', upload.single('file'), async (req, res) => {
+  const { projectId, emergencyId, description, uploadedBy } = req.body;
+  const fileUrl = req.file.path; // Or S3 URL, etc.
+  await db.uploads.insertOne({ projectId, emergencyId, url: fileUrl, description, uploadedBy, timestamp: new Date() });
+  res.json({ url: fileUrl });
+});
+5. How to Fix Photo Upload Issues
+If uploads are failing:
+
+Check file size/type restrictions in your backend
+
+Check if your storage path/folder exists and is writable
+
+For Replit, consider storing small files in the uploads/ folder, or use a cloud service for more storage
+
+6. How AI Pulls All Info for Compliance
+Your compliance/audit backend endpoint should query these DB collections, filter by project, and assemble all relevant data.
+
+Send all structured data to OpenAI (as shown in previous messages) for analysis.
+
+TL;DR – Action Checklist
+ Use a real database for all key data (projects, emergencies, assets, uploads)
+
+ Make every button POST data to the backend DB
+
+ Always link records by projectId (so you can filter everything per project)
+
+ When generating reports/audits, pull all linked data and feed it to your AI/report module
+
+ Fix upload issues by checking file size/type/storage config
+
