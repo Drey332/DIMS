@@ -122,6 +122,7 @@ Changelog:
 - June 19, 2025. Added clickable emergency contacts with direct phone call functionality
 - June 19, 2025. Fixed database foreign key constraints and accessibility warnings
 - June 19, 2025. Completed comprehensive authentication system with email/password, Google, and Apple login options
+- June 19, 2025. Fixed emergency contact update functionality and changed button text to "Add/Update Contact" with proper form state management
 
 ## User Preferences
 

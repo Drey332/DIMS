@@ -299,13 +299,19 @@ export default function ProjectSetup() {
                   <Button 
                     onClick={() => {
                       setEditingContact(null);
-                      contactForm.reset();
+                      contactForm.reset({
+                        contactType: "",
+                        name: "",
+                        phone: "",
+                        email: "",
+                        responseTime: "",
+                      });
                       setIsContactModalOpen(true);
                     }}
                     className="hydro-button-primary"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Contact
+                    Add/Update Contact
                   </Button>
                 </CardTitle>
               </CardHeader>
