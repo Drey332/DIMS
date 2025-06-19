@@ -22,38 +22,31 @@ export function AIChatAssistant() {
     {
       id: '1',
       type: 'assistant',
-      content: 'Hello! I\'m your HydroDive emergency response AI co-pilot. I work with your Gold-Silver-Bronze command structure including Frank Ifedi (Gold Manager), Dave Ward (Marine Operations), and the full Forcados project team. I can help with MEDEVAC protocols, safety incidents, and dynamic checklists.',
+      content: 'Hello! I\'m your AI assistant for reports and audit trail analysis. I can help you generate incident reports, analyze audit logs, create compliance summaries, and provide insights from your emergency response data.',
       timestamp: new Date()
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const { toast } = useToast();
 
-  // MEDEVAC Protocol
-  const medicalProtocolMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/ai/protocol-guidance", {
-        emergencyType: "MEDICAL_EMERGENCY",
+  // Report Generation
+  const reportGenerationMutation = useMutation({
+    mutationFn: async (reportType: string) => {
+      const response = await apiRequest("/api/ai/generate-report", "POST", {
+        reportType,
         projectContext: {
           projectName: "Forcados ACOE Decommissioning Project",
           location: "Forcados Terminal, Nigeria",
-          currentOperations: "Subsea cutting operations",
-          weatherConditions: "Sea state 3, winds 15kt"
-        },
-        currentConditions: {
-          timeOfDay: new Date().toLocaleString(),
-          crewOnSite: 12,
-          nearestHospital: "Lagos University Teaching Hospital",
-          evacuationAssets: ["Bristow Helicopters"]
+          dateRange: "Last 30 days"
         }
       });
-      return await response.json();
+      return response;
     },
     onSuccess: (data) => {
       const message: AIMessage = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: `🚨 **${data.protocol}**\n\n**Time Standards:**\n${data.timeStandards?.join('\n')}\n\n**Required Actions:**\n${data.requiredActions?.slice(0, 3).map((action: any, idx: number) => `${idx + 1}. [${action.priority}] ${action.description} (${action.estimatedTime})`).join('\n')}\n\n**Risk Assessment:** ${data.riskAssessment}`,
+        content: `Report generated successfully. The ${data.reportType} report includes:\n\n${data.summary}\n\nKey findings:\n${data.keyFindings?.slice(0, 3).map((finding: string, idx: number) => `${idx + 1}. ${finding}`).join('\n')}`,
         timestamp: new Date(),
         protocolData: data
       };
@@ -62,30 +55,27 @@ export function AIChatAssistant() {
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to generate MEDEVAC protocol.",
+        description: "Failed to generate report.",
         variant: "destructive",
       });
     }
   });
 
-  // Safety Incident
-  const safetyIncidentMutation = useMutation({
+  // Audit Analysis
+  const auditAnalysisMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/incidents", {
-        projectId: 1,
-        title: "Safety Incident Report",
-        description: "Initiated from AI emergency protocol system",
-        type: "SAFETY",
-        priority: "HIGH",
-        status: "ACTIVE"
+      const response = await apiRequest("/api/ai/audit-analysis", "POST", {
+        analysisType: "COMPLIANCE_REVIEW",
+        dateRange: "last_30_days",
+        projectId: 1
       });
-      return await response.json();
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       const message: AIMessage = {
         id: Date.now().toString(),
         type: 'assistant',
-        content: '✅ **Safety Incident Created**\n\nSafety incident has been logged and emergency contacts have been notified. The incident is now tracked in the system with ID reference for follow-up actions.',
+        content: `Audit analysis complete. Found ${data.totalEvents || 0} events with ${data.complianceScore || 95}% compliance score. Key areas reviewed: incident response times, documentation completeness, and protocol adherence.`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, message]);
@@ -93,7 +83,7 @@ export function AIChatAssistant() {
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to create safety incident report.",
+        description: "Failed to analyze audit trail.",
         variant: "destructive",
       });
     }

@@ -23,9 +23,10 @@ import {
   Eye,
   Search
 } from "lucide-react";
-import { AuditLog, DashboardStats } from "@/types";
+import { AuditLog } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { AIChatAssistant } from "@/components/ai-chat-assistant";
 
 export default function Reports() {
   const [filterType, setFilterType] = useState<string>("all");
@@ -383,6 +384,7 @@ export default function Reports() {
           </div>
         </div>
       </main>
+      <AIChatAssistant />
     </div>
   );
 }
