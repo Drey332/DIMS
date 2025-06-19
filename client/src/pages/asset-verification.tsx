@@ -17,8 +17,7 @@ import {
   AlertTriangle,
   Package,
   FileImage,
-  Calendar,
-  MapPin
+  Calendar
 } from "lucide-react";
 
 interface Asset {
@@ -92,9 +91,9 @@ export default function AssetVerification() {
 
   const user = {
     role: "GOLD",
-    name: "Frank Ifedi",
-    title: "MD/CEO - Gold Manager",
-    initials: "FI"
+    name: "David Mooney",
+    title: "General Manager",
+    initials: "DM"
   };
 
   const projectData = {
@@ -282,50 +281,42 @@ export default function AssetVerification() {
             </div>
 
             {/* Assets List */}
-            <Card className="shadow-lg border border-gray-200">
-              <CardHeader className="bg-gradient-to-r from-hydro-dark to-blue-600 text-white">
-                <CardTitle className="flex items-center text-xl font-semibold">
+            <Card className="shadow-xl border-0">
+              <CardHeader className="bg-gradient-to-r from-hydro-dark to-blue-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center justify-center text-xl">
                   <Package className="w-6 h-6 mr-3" />
-                  Project Assets - Verification Status
+                  Project Assets
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-gray-200">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {assets.map((asset) => (
                     <div
                       key={asset.id}
-                      className={`p-6 border-l-4 ${getCategoryColor(asset.category)} bg-white hover:bg-gray-50 transition-colors duration-200`}
+                      className={`p-6 border-l-4 ${getCategoryColor(asset.category)} bg-gradient-to-r from-white to-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:transform hover:scale-[1.02]`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4 flex-1">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-4 flex-1">
                           <div className="flex-shrink-0">
                             {getStatusIcon(asset.status)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between mb-3">
-                              <h3 className="font-semibold text-hydro-dark text-lg">{asset.name}</h3>
+                            <h3 className="font-bold text-hydro-dark mb-2 text-lg leading-tight">{asset.name}</h3>
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                              <Badge variant="outline" className="text-xs font-medium bg-blue-50 text-blue-700 border-blue-200">
+                                {asset.category}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs font-medium bg-gray-50 text-gray-700 border-gray-200">
+                                📍 {asset.location}
+                              </Badge>
                               {getStatusBadge(asset.status)}
                             </div>
-                            
-                            <div className="space-y-2 mb-4">
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Badge variant="outline" className="mr-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                  {asset.category}
-                                </Badge>
+                            {asset.lastVerified && (
+                              <div className="flex items-center text-sm text-gray-600 mb-3">
+                                <Calendar className="w-4 h-4 mr-2" />
+                                Last verified: {asset.lastVerified}
                               </div>
-                              
-                              <div className="flex items-center text-sm text-gray-600">
-                                <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                                <span>{asset.location}</span>
-                              </div>
-                              
-                              {asset.lastVerified && (
-                                <div className="flex items-center text-sm text-gray-600">
-                                  <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                                  <span>Last verified: {new Date(asset.lastVerified).toLocaleDateString()}</span>
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
                         </div>
                         <div className="flex-shrink-0 ml-4">

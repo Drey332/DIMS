@@ -89,9 +89,9 @@ export default function Reports() {
 
   const user = {
     role: "GOLD",
-    name: "Frank Ifedi",
-    title: "MD/CEO - Gold Manager",
-    initials: "FI"
+    name: "David Mooney",
+    title: "General Manager",
+    initials: "DM"
   };
 
   const project = {
