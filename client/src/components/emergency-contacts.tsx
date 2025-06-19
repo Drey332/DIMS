@@ -223,7 +223,7 @@ export function EmergencyContacts() {
             <div className="mt-6 flex space-x-3">
               <Button className="hydro-button-primary">
                 <Edit className="w-4 h-4 mr-2" />
-                Update Contacts
+                Add/Update Contacts
               </Button>
               <Button className="bg-green-600 text-white hover:bg-green-700 transition-colors">
                 <CheckCircle className="w-4 h-4 mr-2" />
