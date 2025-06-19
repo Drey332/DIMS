@@ -20,28 +20,21 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/incidents", label: "Incidents", icon: AlertTriangle },
-  { href: "/team", label: "Team Management", icon: Users },
   { 
-    href: "/assets", 
-    label: "Assets", 
-    icon: Package,
+    href: "/management", 
+    label: "Management", 
+    icon: Settings,
     children: [
       { href: "/assets", label: "Asset Verification", icon: Package },
       { href: "/assets/upload", label: "Upload Assets", icon: Package },
-      { href: "/assets/manage", label: "Manage Assets", icon: Package }
-    ]
-  },
-  { 
-    href: "/reports", 
-    label: "Reports", 
-    icon: FileText,
-    children: [
+      { href: "/assets/manage", label: "Manage Assets", icon: Package },
       { href: "/reports", label: "Reports & Audit", icon: FileText },
       { href: "/reports/generate", label: "Generate Report", icon: FileText },
       { href: "/reports/history", label: "Report History", icon: FileText }
     ]
   },
+  { href: "/incidents", label: "Incidents", icon: AlertTriangle },
+  { href: "/team", label: "Team Management", icon: Users },
   { href: "/setup", label: "Project Setup", icon: Settings },
 ];
 

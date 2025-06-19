@@ -131,3 +131,4 @@ Changelog:
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Navigation preferences: Single dropdown menu to avoid congestion - prefer one "Management" dropdown containing Assets and Reports options rather than multiple separate dropdowns.
