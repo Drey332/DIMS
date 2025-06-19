@@ -8,42 +8,62 @@ export function useWebSocket() {
   const [lastMessage, setLastMessage] = useState<any>(null);
 
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    let reconnectTimeout: NodeJS.Timeout;
     
-    ws.current = new WebSocket(wsUrl);
-    
-    ws.current.onopen = () => {
-      console.log('WebSocket connected');
-      setIsConnected(true);
-    };
-    
-    ws.current.onmessage = (event) => {
+    const connect = () => {
       try {
-        const data = JSON.parse(event.data);
-        setLastMessage(data);
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
         
-        if (data.type === 'NEW_MESSAGE') {
-          setMessages(prev => [data.message, ...prev]);
-        }
+        ws.current = new WebSocket(wsUrl);
+        
+        ws.current.onopen = () => {
+          console.log('WebSocket connected');
+          setIsConnected(true);
+        };
+        
+        ws.current.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            setLastMessage(data);
+            
+            if (data.type === 'NEW_MESSAGE') {
+              setMessages(prev => [data.message, ...prev]);
+            }
+          } catch (error) {
+            console.error('Error parsing WebSocket message:', error);
+          }
+        };
+        
+        ws.current.onclose = (event) => {
+          console.log('WebSocket disconnected', event.code, event.reason);
+          setIsConnected(false);
+          
+          // Reconnect after 3 seconds if not a normal closure
+          if (event.code !== 1000) {
+            reconnectTimeout = setTimeout(connect, 3000);
+          }
+        };
+        
+        ws.current.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          setIsConnected(false);
+        };
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        console.error('Failed to create WebSocket connection:', error);
+        setIsConnected(false);
+        reconnectTimeout = setTimeout(connect, 3000);
       }
     };
     
-    ws.current.onclose = () => {
-      console.log('WebSocket disconnected');
-      setIsConnected(false);
-    };
-    
-    ws.current.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setIsConnected(false);
-    };
+    connect();
     
     return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
       if (ws.current) {
-        ws.current.close();
+        ws.current.close(1000, 'Component unmounting');
       }
     };
   }, []);
