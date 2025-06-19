@@ -222,114 +222,110 @@ export default function AssetVerification() {
       <Header user={user} project={projectData} />
       <div className="flex">
         <Navigation />
-        <div className="flex-1 p-6">
-          <div className="max-w-6xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold text-hydro-dark mb-2">Asset Verification</h1>
-              <p className="text-gray-600">Verify and document all project assets with photos and comments</p>
+        <div className="flex-1 p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-hydro-dark mb-3">Asset Verification</h1>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Verify and document all project assets with photos and detailed comments to maintain compliance and safety standards
+              </p>
             </div>
 
             {/* Asset Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center">
-                    <CheckCircle className="w-8 h-8 text-green-600 mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600">Verified</p>
-                      <p className="text-xl font-bold text-hydro-dark">
-                        {assets.filter(a => a.status === 'VERIFIED').length}
-                      </p>
-                    </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-green-700 mb-1">Verified Assets</p>
+                    <p className="text-3xl font-bold text-green-800">
+                      {assets.filter(a => a.status === 'VERIFIED').length}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center">
-                    <Clock className="w-8 h-8 text-yellow-600 mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600">Pending</p>
-                      <p className="text-xl font-bold text-hydro-dark">
-                        {assets.filter(a => a.status === 'PENDING').length}
-                      </p>
-                    </div>
+              <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <Clock className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-yellow-700 mb-1">Pending Verification</p>
+                    <p className="text-3xl font-bold text-yellow-800">
+                      {assets.filter(a => a.status === 'PENDING').length}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center">
-                    <AlertTriangle className="w-8 h-8 text-red-600 mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600">Overdue</p>
-                      <p className="text-xl font-bold text-hydro-dark">
-                        {assets.filter(a => a.status === 'OVERDUE').length}
-                      </p>
-                    </div>
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <AlertTriangle className="w-12 h-12 text-red-600 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-red-700 mb-1">Overdue Assets</p>
+                    <p className="text-3xl font-bold text-red-800">
+                      {assets.filter(a => a.status === 'OVERDUE').length}
+                    </p>
                   </div>
                 </CardContent>
               </Card>
               
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center">
-                    <Package className="w-8 h-8 text-hydro-dark mr-3" />
-                    <div>
-                      <p className="text-sm text-gray-600">Total Assets</p>
-                      <p className="text-xl font-bold text-hydro-dark">{assets.length}</p>
-                    </div>
+              <Card className="bg-gradient-to-br from-hydro-light to-blue-100 border-blue-200 hover:shadow-lg transition-shadow">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <Package className="w-12 h-12 text-hydro-dark mx-auto mb-3" />
+                    <p className="text-sm font-medium text-hydro-dark mb-1">Total Assets</p>
+                    <p className="text-3xl font-bold text-hydro-dark">{assets.length}</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Assets List */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Package className="w-5 h-5 mr-2" />
+            <Card className="shadow-xl border-0">
+              <CardHeader className="bg-gradient-to-r from-hydro-dark to-blue-600 text-white rounded-t-lg">
+                <CardTitle className="flex items-center justify-center text-xl">
+                  <Package className="w-6 h-6 mr-3" />
                   Project Assets
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {assets.map((asset) => (
                     <div
                       key={asset.id}
-                      className={`p-4 border-l-4 ${getCategoryColor(asset.category)} bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow`}
+                      className={`p-6 border-l-4 ${getCategoryColor(asset.category)} bg-gradient-to-r from-white to-gray-50 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:transform hover:scale-[1.02]`}
                     >
                       <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-4">
-                          {getStatusIcon(asset.status)}
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-hydro-dark mb-1">{asset.name}</h3>
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <Badge variant="outline" className="text-xs">
+                        <div className="flex items-start space-x-4 flex-1">
+                          <div className="flex-shrink-0">
+                            {getStatusIcon(asset.status)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-hydro-dark mb-2 text-lg leading-tight">{asset.name}</h3>
+                            <div className="flex flex-wrap items-center gap-2 mb-3">
+                              <Badge variant="outline" className="text-xs font-medium bg-blue-50 text-blue-700 border-blue-200">
                                 {asset.category}
                               </Badge>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs font-medium bg-gray-50 text-gray-700 border-gray-200">
                                 📍 {asset.location}
                               </Badge>
                               {getStatusBadge(asset.status)}
                             </div>
                             {asset.lastVerified && (
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Calendar className="w-4 h-4 mr-1" />
+                              <div className="flex items-center text-sm text-gray-600 mb-3">
+                                <Calendar className="w-4 h-4 mr-2" />
                                 Last verified: {asset.lastVerified}
                               </div>
                             )}
                           </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex-shrink-0 ml-4">
                           <Button
                             size="sm"
-                            className="hydro-button-primary"
+                            className="hydro-button-primary shadow-md hover:shadow-lg transition-shadow"
                             onClick={() => handleVerifyAsset(asset)}
                           >
-                            <Camera className="w-4 h-4 mr-1" />
+                            <Camera className="w-4 h-4 mr-2" />
                             Verify
                           </Button>
                         </div>
