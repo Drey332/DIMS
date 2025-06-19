@@ -15,6 +15,10 @@ export const users = pgTable("users", {
   title: text("title").notNull(),
   isActive: boolean("is_active").default(true),
   lastSeen: timestamp("last_seen").defaultNow(),
+  lastActivity: timestamp("last_activity").defaultNow(),
+  isOnline: boolean("is_online").default(false),
+  activityStatus: text("activity_status").default("OFFLINE"), // ONLINE, IDLE, OFFLINE
+  sessionId: text("session_id"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

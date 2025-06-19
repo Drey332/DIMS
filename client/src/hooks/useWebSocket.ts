@@ -5,6 +5,7 @@ export function useWebSocket() {
   const ws = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [lastMessage, setLastMessage] = useState<any>(null);
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -19,8 +20,12 @@ export function useWebSocket() {
     
     ws.current.onmessage = (event) => {
       try {
-        const message = JSON.parse(event.data);
-        setMessages(prev => [message, ...prev]);
+        const data = JSON.parse(event.data);
+        setLastMessage(data);
+        
+        if (data.type === 'NEW_MESSAGE') {
+          setMessages(prev => [data.message, ...prev]);
+        }
       } catch (error) {
         console.error('Error parsing WebSocket message:', error);
       }
@@ -53,5 +58,6 @@ export function useWebSocket() {
     isConnected,
     messages,
     sendMessage,
+    lastMessage,
   };
 }

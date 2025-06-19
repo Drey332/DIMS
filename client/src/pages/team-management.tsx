@@ -4,6 +4,7 @@ import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { UserStatus } from "@/components/user-status";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Users, 
@@ -31,6 +32,7 @@ export default function TeamManagement() {
       title: "MD/CEO - Gold Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:30:00Z",
+      activityStatus: "ONLINE",
       status: "Active",
       location: "Corporate Office",
       phone: "+234-803-XXXX-001"
@@ -44,6 +46,7 @@ export default function TeamManagement() {
       title: "Marine and Diving Operations Director",
       isActive: true,
       lastSeen: "2025-01-24T15:25:00Z",
+      activityStatus: "IDLE",
       status: "On Duty",
       location: "Forcados Site",
       phone: "+234-803-XXXX-002"
@@ -57,6 +60,7 @@ export default function TeamManagement() {
       title: "Personnel Logistics Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:20:00Z",
+      activityStatus: "ONLINE",
       status: "Available",
       location: "Lagos Office",
       phone: "+234-803-XXXX-003"
@@ -70,6 +74,7 @@ export default function TeamManagement() {
       title: "Human Resources Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:15:00Z",
+      activityStatus: "OFFLINE",
       status: "Available",
       location: "Lagos Office",
       phone: "+234-803-XXXX-004"
@@ -83,6 +88,7 @@ export default function TeamManagement() {
       title: "Operations Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:10:00Z",
+      activityStatus: "IDLE",
       status: "On Duty",
       location: "Operations Center",
       phone: "+234-803-XXXX-005"
@@ -96,6 +102,7 @@ export default function TeamManagement() {
       title: "Marine Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:35:00Z",
+      activityStatus: "ONLINE",
       status: "Field Operations",
       location: "Forcados Site",
       phone: "+234-803-XXXX-006"
@@ -109,6 +116,7 @@ export default function TeamManagement() {
       title: "Project Manager",
       isActive: true,
       lastSeen: "2025-01-24T15:28:00Z",
+      activityStatus: "ONLINE",
       status: "Active",
       location: "Project Office",
       phone: "+234-803-XXXX-007"
@@ -122,6 +130,7 @@ export default function TeamManagement() {
       title: "Legal Advisor",
       isActive: true,
       lastSeen: "2025-01-24T15:22:00Z",
+      activityStatus: "IDLE",
       status: "Available",
       location: "Corporate Office",
       phone: "+234-803-XXXX-008"
@@ -259,8 +268,11 @@ export default function TeamManagement() {
                             {member.role} Command
                           </Badge>
                           <div className="flex items-center justify-end space-x-2">
-                            <div className={cn("w-2 h-2 rounded-full", getStatusColor(member.status))}></div>
-                            <span className="text-sm font-medium text-green-700">{member.status}</span>
+                            <UserStatus 
+                              userId={member.id} 
+                              initialStatus={member.activityStatus || 'OFFLINE'} 
+                              className="text-xs"
+                            />
                           </div>
                         </div>
                       </div>

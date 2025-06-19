@@ -34,6 +34,8 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<InsertUser>): Promise<User>;
+  updateUserActivity(id: number, activity: { lastActivity: Date; isOnline: boolean; activityStatus: string; sessionId?: string | null }): Promise<User>;
+  getActiveUsers(): Promise<User[]>;
   
   // Project operations
   getProject(id: number): Promise<Project | undefined>;
@@ -106,6 +108,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return user;
+  }
+
+  async updateUserActivity(id: number, activity: { lastActivity: Date; isOnline: boolean; activityStatus: string; sessionId?: string | null }): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        lastSeen: activity.lastActivity,
+        isOnline: activity.isOnline,
+        activityStatus: activity.activityStatus,
+        sessionId: activity.sessionId,
+      })
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    return user;
+  }
+
+  async getActiveUsers(): Promise<User[]> {
+    const allUsers = await db.select().from(users).where(eq(users.isActive, true));
+    return allUsers;
   }
 
   async getProject(id: number): Promise<Project | undefined> {

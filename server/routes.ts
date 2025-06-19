@@ -688,23 +688,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     path: '/ws' 
   });
   
-  const clients = new Set<WebSocket>();
+  const clients = new Map<WebSocket, { userId?: number; sessionId?: string }>();
   
   wss.on('connection', (ws) => {
     console.log('New WebSocket connection');
-    clients.add(ws);
+    clients.set(ws, {});
     
-    ws.on('message', (data) => {
+    ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString());
-        // Broadcast message to all connected clients
-        broadcastMessage(message);
+        
+        // Handle activity tracking messages
+        if (message.type === 'ACTIVITY_UPDATE' || message.type === 'HEARTBEAT') {
+          const clientInfo = clients.get(ws);
+          if (clientInfo) {
+            clientInfo.sessionId = message.sessionId;
+            
+            // Update user activity in database
+            try {
+              await storage.updateUserActivity(1, {
+                lastActivity: new Date(),
+                isOnline: true,
+                activityStatus: 'ONLINE',
+                sessionId: message.sessionId
+              });
+              
+              // Broadcast activity update to all clients
+              broadcastMessage({
+                type: 'USER_STATUS_UPDATE',
+                userId: 1,
+                status: 'ONLINE',
+                timestamp: message.timestamp
+              });
+            } catch (error) {
+              console.error('Error updating user activity:', error);
+            }
+          }
+        } else if (message.type === 'USER_AWAY') {
+          const clientInfo = clients.get(ws);
+          if (clientInfo) {
+            try {
+              await storage.updateUserActivity(1, {
+                lastActivity: new Date(),
+                isOnline: true,
+                activityStatus: 'IDLE',
+                sessionId: message.sessionId
+              });
+              
+              broadcastMessage({
+                type: 'USER_STATUS_UPDATE',
+                userId: 1,
+                status: 'IDLE',
+                timestamp: message.timestamp
+              });
+            } catch (error) {
+              console.error('Error updating user away status:', error);
+            }
+          }
+        } else if (message.type === 'USER_OFFLINE') {
+          const clientInfo = clients.get(ws);
+          if (clientInfo) {
+            try {
+              await storage.updateUserActivity(1, {
+                lastActivity: new Date(),
+                isOnline: false,
+                activityStatus: 'OFFLINE',
+                sessionId: null
+              });
+              
+              broadcastMessage({
+                type: 'USER_STATUS_UPDATE',
+                userId: 1,
+                status: 'OFFLINE',
+                timestamp: message.timestamp
+              });
+            } catch (error) {
+              console.error('Error updating user offline status:', error);
+            }
+          }
+        } else {
+          // Broadcast other messages to all connected clients
+          broadcastMessage(message);
+        }
       } catch (error) {
         console.error('Error processing WebSocket message:', error);
       }
     });
     
-    ws.on('close', () => {
+    ws.on('close', async () => {
+      const clientInfo = clients.get(ws);
+      if (clientInfo && clientInfo.sessionId) {
+        try {
+          await storage.updateUserActivity(1, {
+            lastActivity: new Date(),
+            isOnline: false,
+            activityStatus: 'OFFLINE',
+            sessionId: null
+          });
+          
+          broadcastMessage({
+            type: 'USER_STATUS_UPDATE',
+            userId: 1,
+            status: 'OFFLINE',
+            timestamp: Date.now()
+          });
+        } catch (error) {
+          console.error('Error updating user offline status on disconnect:', error);
+        }
+      }
       clients.delete(ws);
     });
     
@@ -716,12 +807,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   function broadcastMessage(message: any) {
     const messageStr = JSON.stringify(message);
-    clients.forEach((client) => {
+    clients.forEach((clientInfo, client) => {
       if (client.readyState === WebSocket.OPEN) {
         client.send(messageStr);
       }
     });
   }
+
+  // Background process to update user statuses based on activity timing
+  const statusUpdateInterval = setInterval(async () => {
+    try {
+      const allUsers = await storage.getActiveUsers();
+      const now = Date.now();
+      
+      for (const user of allUsers) {
+        if (!user.lastActivity) continue;
+        
+        const timeSinceActivity = now - new Date(user.lastActivity).getTime();
+        const threeMinutes = 3 * 60 * 1000; // 3 minutes
+        const oneHourThreeMinutes = 63 * 60 * 1000; // 1 hour 3 minutes
+        
+        let newStatus = user.activityStatus;
+        
+        if (timeSinceActivity > oneHourThreeMinutes) {
+          // Red: User hasn't been active for over 1 hour 3 minutes
+          newStatus = 'OFFLINE';
+        } else if (timeSinceActivity > threeMinutes) {
+          // Orange: User hasn't been active for over 3 minutes
+          newStatus = 'IDLE';
+        } else {
+          // Green: User is currently active (within 3 minutes)
+          newStatus = 'ONLINE';
+        }
+        
+        // Update status if it has changed
+        if (newStatus !== user.activityStatus) {
+          await storage.updateUserActivity(user.id, {
+            lastActivity: user.lastActivity ? user.lastActivity : new Date(),
+            isOnline: newStatus === 'ONLINE',
+            activityStatus: newStatus,
+            sessionId: newStatus === 'OFFLINE' ? null : user.sessionId
+          });
+          
+          // Broadcast status change to all clients
+          broadcastMessage({
+            type: 'USER_STATUS_UPDATE',
+            userId: user.id,
+            status: newStatus,
+            timestamp: now,
+            timeSinceActivity: Math.floor(timeSinceActivity / 1000) // in seconds
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating user statuses:', error);
+    }
+  }, 30000); // Check every 30 seconds
+
+  // Cleanup interval on server shutdown
+  process.on('SIGTERM', () => {
+    clearInterval(statusUpdateInterval);
+  });
+
+  process.on('SIGINT', () => {
+    clearInterval(statusUpdateInterval);
+  });
 
   return httpServer;
 }
