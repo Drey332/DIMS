@@ -6,7 +6,8 @@ import {
   FileText, 
   Settings,
   Package,
-  ChevronDown
+  ChevronDown,
+  Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -23,7 +24,7 @@ const navItems: NavItem[] = [
   { 
     href: "/tools", 
     label: "Tools", 
-    icon: Settings,
+    icon: Wrench,
     children: [
       { href: "/assets", label: "Asset Verification", icon: Package },
       { href: "/assets/upload", label: "Upload Assets", icon: Package },
