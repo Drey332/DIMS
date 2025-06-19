@@ -21,8 +21,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { 
-    href: "/management", 
-    label: "Management", 
+    href: "/tools", 
+    label: "Tools", 
     icon: Settings,
     children: [
       { href: "/assets", label: "Asset Verification", icon: Package },
