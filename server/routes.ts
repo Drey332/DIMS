@@ -254,7 +254,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Emergency contacts
   app.get('/api/emergency-contacts', async (req, res) => {
     try {
-      const projectId = parseInt(req.query.projectId as string);
+      const projectIdParam = req.query.projectId as string;
+      const projectId = projectIdParam && !isNaN(parseInt(projectIdParam)) ? parseInt(projectIdParam) : 1;
       const contacts = await storage.getEmergencyContactsByProject(projectId);
       res.json(contacts);
     } catch (error) {

@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Brain, Play, Bot } from "lucide-react";
+import { Brain, Play, Bot, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface DecisionStep {
   id: string;
@@ -54,6 +57,101 @@ const decisionSteps: DecisionStep[] = [
 
 export function DecisionMakingModel() {
   const [selectedStep, setSelectedStep] = useState<string | null>(null);
+  const [emergencyGuidance, setEmergencyGuidance] = useState<any>(null);
+  const { toast } = useToast();
+
+  // Medical emergency protocol mutation
+  const medicalProtocolMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/ai/protocol-guidance", {
+        emergencyType: "MEDICAL_EMERGENCY",
+        projectContext: {
+          projectName: "Forcados ACOE Decommissioning Project",
+          location: "Forcados Terminal, Nigeria",
+          currentOperations: "Subsea cutting operations",
+          weatherConditions: "Sea state 3, winds 15kt"
+        },
+        currentConditions: {
+          timeOfDay: new Date().toLocaleString(),
+          crewOnSite: 12,
+          nearestHospital: "Lagos University Teaching Hospital",
+          evacuationAssets: ["Bristow Helicopters"]
+        }
+      });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      setEmergencyGuidance(data);
+      toast({
+        title: "Medical Emergency Protocol Generated",
+        description: "AI has generated step-by-step medical emergency guidance based on current conditions.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to generate medical emergency protocol. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Safety incident reporting mutation
+  const safetyIncidentMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/incidents", {
+        projectId: 1,
+        title: "Safety Incident Report",
+        description: "Initiated from AI emergency protocol system",
+        type: "SAFETY",
+        priority: "HIGH",
+        status: "ACTIVE"
+      });
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Safety Incident Created",
+        description: "Safety incident has been logged and emergency contacts notified.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create safety incident report.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Dynamic checklist generation mutation
+  const checklistMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/ai/checklist", {
+        scenarioType: "EMERGENCY_RESPONSE",
+        projectDetails: {
+          name: "Forcados ACOE Decommissioning Project",
+          location: "Nigeria",
+          operations: "Offshore decommissioning"
+        },
+        userRole: "BRONZE"
+      });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Dynamic Checklist Generated",
+        description: `Generated ${Array.isArray(data) ? data.length : 'multiple'} emergency response actions based on current scenario.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate dynamic checklist.",
+        variant: "destructive",
+      });
+    }
+  });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -82,22 +180,82 @@ export function DecisionMakingModel() {
           </div>
           
           <div className="space-y-3">
-            <Button className="w-full bg-red-600 text-white hover:bg-red-700 transition-colors">
+            <Button 
+              className="w-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+              onClick={() => medicalProtocolMutation.mutate()}
+              disabled={medicalProtocolMutation.isPending}
+            >
               <div className="flex items-center justify-center">
-                🚑 Initiate MEDEVAC Protocol
+                {medicalProtocolMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  "🚑"
+                )}
+                {medicalProtocolMutation.isPending ? "Generating..." : "Initiate MEDEVAC Protocol"}
               </div>
             </Button>
-            <Button className="w-full bg-orange-600 text-white hover:bg-orange-700 transition-colors">
+            <Button 
+              className="w-full bg-orange-600 text-white hover:bg-orange-700 transition-colors"
+              onClick={() => safetyIncidentMutation.mutate()}
+              disabled={safetyIncidentMutation.isPending}
+            >
               <div className="flex items-center justify-center">
-                ⚠️ Report Safety Incident
+                {safetyIncidentMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  "⚠️"
+                )}
+                {safetyIncidentMutation.isPending ? "Creating..." : "Report Safety Incident"}
               </div>
             </Button>
-            <Button className="w-full hydro-button-primary">
+            <Button 
+              className="w-full hydro-button-primary"
+              onClick={() => checklistMutation.mutate()}
+              disabled={checklistMutation.isPending}
+            >
               <div className="flex items-center justify-center">
-                📋 Generate Dynamic Checklist
+                {checklistMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  "📋"
+                )}
+                {checklistMutation.isPending ? "Generating..." : "Generate Dynamic Checklist"}
               </div>
             </Button>
           </div>
+          
+          {/* Display Emergency Guidance Results */}
+          {emergencyGuidance && (
+            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <h4 className="font-bold text-red-900 mb-3">🚨 {emergencyGuidance.protocol}</h4>
+              <div className="space-y-3">
+                <div>
+                  <h5 className="font-medium text-red-800 mb-1">Time Standards:</h5>
+                  <ul className="text-sm text-red-700 list-disc list-inside">
+                    {emergencyGuidance.timeStandards?.map((standard: string, idx: number) => (
+                      <li key={idx}>{standard}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h5 className="font-medium text-red-800 mb-1">Required Actions:</h5>
+                  <div className="space-y-2">
+                    {emergencyGuidance.requiredActions?.slice(0, 3).map((action: any, idx: number) => (
+                      <div key={idx} className="flex items-center text-sm text-red-700">
+                        <Badge variant="outline" className="mr-2 text-xs">
+                          {action.priority}
+                        </Badge>
+                        {action.description}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-red-600 mt-2">
+                  Risk Assessment: {emergencyGuidance.riskAssessment}
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
       
