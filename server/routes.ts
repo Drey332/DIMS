@@ -14,7 +14,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { z } from "zod";
-import { insertIncidentSchema, insertMessageSchema, insertIncidentActionSchema, insertEmergencyContactSchema } from "@shared/schema";
+import { insertIncidentSchema, insertMessageSchema, insertIncidentActionSchema, insertEmergencyContactSchema, insertClientSchema } from "@shared/schema";
 import { 
   loginUser, 
   registerUser, 
@@ -703,6 +703,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error uploading file:", error);
       res.status(500).json({ message: "Failed to upload file" });
+    }
+  });
+
+  // Client management endpoints
+  app.get('/api/clients', async (req: AuthenticatedRequest, res) => {
+    try {
+      const clients = await storage.getClients();
+      res.json(clients);
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+      res.status(500).json({ message: "Failed to fetch clients" });
+    }
+  });
+
+  app.post('/api/clients', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const clientData = insertClientSchema.parse(req.body);
+      const client = await storage.createClient(clientData);
+
+      // Create audit log
+      await storage.createAuditLog({
+        userId: req.user.id,
+        actionType: 'CLIENT_CREATED',
+        description: `Client created: ${client.name}`,
+        newData: client,
+      });
+
+      res.status(201).json(client);
+    } catch (error) {
+      console.error("Error creating client:", error);
+      res.status(500).json({ message: "Failed to create client" });
+    }
+  });
+
+  app.put('/api/clients/:id', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      
+      const oldClient = await storage.getClient(id);
+      const updatedClient = await storage.updateClient(id, updates);
+
+      // Create audit log
+      await storage.createAuditLog({
+        userId: req.user.id,
+        actionType: 'CLIENT_UPDATED',
+        description: `Client updated: ${updatedClient.name}`,
+        oldData: oldClient,
+        newData: updatedClient,
+      });
+
+      res.json(updatedClient);
+    } catch (error) {
+      console.error("Error updating client:", error);
+      res.status(500).json({ message: "Failed to update client" });
+    }
+  });
+
+  app.delete('/api/clients/:id', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const id = parseInt(req.params.id);
+      const client = await storage.getClient(id);
+      
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      await storage.deleteClient(id);
+
+      // Create audit log
+      await storage.createAuditLog({
+        userId: req.user.id,
+        actionType: 'CLIENT_DELETED',
+        description: `Client deleted: ${client.name}`,
+        oldData: client,
+      });
+
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      res.status(500).json({ message: "Failed to delete client" });
     }
   });
 

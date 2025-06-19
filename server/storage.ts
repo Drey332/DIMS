@@ -9,6 +9,7 @@ import {
   emergencyContacts,
   fileUploads,
   assetVerifications,
+  clients,
   type User,
   type InsertUser,
   type Project,
@@ -27,6 +28,8 @@ import {
   type InsertFileUpload,
   type AssetVerification,
   type InsertAssetVerification,
+  type Client,
+  type InsertClient,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql } from "drizzle-orm";
@@ -88,6 +91,13 @@ export interface IStorage {
   updateAssetVerification(id: number, updates: Partial<InsertAssetVerification>): Promise<AssetVerification>;
   getAssetVerificationsByProject(projectId: number): Promise<AssetVerification[]>;
   getAssetVerification(id: number): Promise<AssetVerification | undefined>;
+  
+  // Client operations
+  getClients(): Promise<Client[]>;
+  getClient(id: number): Promise<Client | undefined>;
+  createClient(client: InsertClient): Promise<Client>;
+  updateClient(id: number, updates: Partial<InsertClient>): Promise<Client>;
+  deleteClient(id: number): Promise<void>;
   
   // Dashboard analytics
   getDashboardStats(projectId?: number): Promise<{
@@ -470,6 +480,45 @@ export class DatabaseStorage implements IStorage {
       .from(assetVerifications)
       .where(eq(assetVerifications.id, id));
     return asset;
+  }
+
+  // Client operations
+  async getClients(): Promise<Client[]> {
+    return await db
+      .select()
+      .from(clients)
+      .orderBy(desc(clients.createdAt));
+  }
+
+  async getClient(id: number): Promise<Client | undefined> {
+    const [client] = await db
+      .select()
+      .from(clients)
+      .where(eq(clients.id, id));
+    return client;
+  }
+
+  async createClient(insertClient: InsertClient): Promise<Client> {
+    const [client] = await db
+      .insert(clients)
+      .values(insertClient)
+      .returning();
+    return client;
+  }
+
+  async updateClient(id: number, updates: Partial<InsertClient>): Promise<Client> {
+    const [client] = await db
+      .update(clients)
+      .set(updates)
+      .where(eq(clients.id, id))
+      .returning();
+    return client;
+  }
+
+  async deleteClient(id: number): Promise<void> {
+    await db
+      .delete(clients)
+      .where(eq(clients.id, id));
   }
 }
 

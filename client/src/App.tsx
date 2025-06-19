@@ -13,6 +13,7 @@ import ProjectSetup from "@/pages/project-setup";
 import AssetVerification from "@/pages/asset-verification";
 import AssetUpload from "@/pages/asset-upload";
 import AssetManage from "@/pages/asset-manage";
+import Clients from "@/pages/clients";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import NotFound from "@/pages/not-found";
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/assets" component={AssetVerification} />
       <Route path="/assets/upload" component={AssetUpload} />
       <Route path="/assets/manage" component={AssetManage} />
+      <Route path="/clients" component={Clients} />
       <Route component={NotFound} />
     </Switch>
   );
