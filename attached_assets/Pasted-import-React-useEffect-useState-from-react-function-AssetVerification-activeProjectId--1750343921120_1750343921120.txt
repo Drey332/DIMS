@@ -1,0 +1,87 @@
+import React, { useEffect, useState } from "react";
+
+function AssetVerification({ activeProjectId }) {
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setError("No project selected.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    fetch(`/api/assets?projectId=${activeProjectId}`)
+      .then(res => {
+        if (!res.ok) throw new Error("API error: " + res.status);
+        return res.json();
+      })
+      .then(data => {
+        if (!Array.isArray(data)) throw new Error("Invalid asset data format");
+        setAssets(data);
+        setLoading(false);
+      })
+      .catch(e => {
+        setError(e.message || "Unknown error loading assets.");
+        setLoading(false);
+      });
+  }, [activeProjectId]);
+
+  if (loading) return <div>Loading assets…</div>;
+  if (error) return <div style={{ color: "red" }}>Asset Error: {error}</div>;
+
+  if (!assets.length) {
+    return <div>No assets found for this project. Please add or verify assets.</div>;
+  }
+
+  return (
+    <div>
+      <h2>Asset Verification</h2>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+        {assets.map(asset => {
+          if (!asset || !asset.id || !asset.name || !asset.status)
+            return (
+              <div key={Math.random()} style={{ color: "orange" }}>
+                Incomplete asset data.
+              </div>
+            );
+          return (
+            <div
+              key={asset.id}
+              style={{
+                border: "1px solid #eee",
+                borderRadius: "12px",
+                padding: "16px",
+                background: asset.status === "Verified"
+                  ? "#dcfce7"
+                  : asset.status === "Pending"
+                  ? "#fef9c3"
+                  : "#fee2e2",
+                minWidth: "220px"
+              }}
+            >
+              <h3>{asset.name}</h3>
+              <div>Status: <b>{asset.status}</b></div>
+              {asset.lastChecked && (
+                <div>Last checked: {new Date(asset.lastChecked).toLocaleString()}</div>
+              )}
+              {asset.photo && (
+                <img
+                  src={asset.photo}
+                  alt="Asset"
+                  style={{ maxWidth: "180px", borderRadius: "8px", marginTop: "8px" }}
+                  onError={e => (e.target.style.display = "none")}
+                />
+              )}
+              {asset.comments && <div>Comments: {asset.comments}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export default AssetVerification;

@@ -2,6 +2,7 @@ import { Droplets, Users, Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface User {
   role: string;
@@ -17,12 +18,49 @@ interface Project {
 }
 
 interface HeaderProps {
-  user: User;
-  project: Project;
+  user?: User;
+  project?: Project;
 }
 
-export function Header({ user, project }: HeaderProps) {
-  const [activeProjectId, setActiveProjectId] = useState<number | null>(1);
+export function Header({ user, project }: HeaderProps = {}) {
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
+
+  // Get current user from API if not provided via props
+  const { data: currentUserData } = useQuery({
+    queryKey: ['/api/user/profile'],
+    queryFn: () => fetch('/api/user/profile').then(res => res.json()),
+    enabled: !user
+  });
+
+  // Get projects from API
+  const { data: projects } = useQuery({
+    queryKey: ['/api/user/projects'],
+    queryFn: () => fetch('/api/user/projects').then(res => res.json())
+  });
+
+  // Use provided user or fallback to API data
+  const effectiveUser = user || currentUserData || {
+    role: 'BRONZE',
+    name: 'Loading...',
+    title: 'Team Member',
+    initials: 'LO'
+  };
+
+  // Use provided project or first project from API
+  const effectiveProject = project || (projects && projects[0] ? {
+    name: projects[0].name,
+    number: projects[0].number,
+    client: projects[0].client || 'HydroDive Operations'
+  } : {
+    name: 'Loading Project...',
+    number: '---',
+    client: 'HydroDive Operations'
+  });
+
+  // Set active project from projects data
+  if (projects && projects.length > 0 && !activeProjectId) {
+    setActiveProjectId(projects[0].id);
+  }
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -38,9 +76,9 @@ export function Header({ user, project }: HeaderProps) {
   };
 
   const currentUser = {
-    id: 1,
-    role: user.role,
-    name: user.name
+    id: currentUserData?.id || 1,
+    role: effectiveUser.role,
+    name: effectiveUser.name
   };
 
   const handleProjectChange = (projectId: number) => {
@@ -71,16 +109,16 @@ export function Header({ user, project }: HeaderProps) {
           </div>
           
           <div className="flex items-center space-x-4">
-            <Badge className={`px-3 py-1 ${getRoleColor(user.role)}/20 text-${getRoleColor(user.role)} border-${getRoleColor(user.role)}/30`}>
-              <div className={`w-3 h-3 ${getRoleColor(user.role)} rounded-full mr-2`}></div>
-              {user.role} Command
+            <Badge className={`px-3 py-1 ${getRoleColor(effectiveUser.role)}/20 text-${getRoleColor(effectiveUser.role)} border-${getRoleColor(effectiveUser.role)}/30`}>
+              <div className={`w-3 h-3 ${getRoleColor(effectiveUser.role)} rounded-full mr-2`}></div>
+              {effectiveUser.role} Command
             </Badge>
             <div className="text-right">
-              <div className="font-medium">{user.name}</div>
-              <div className="text-sm text-gray-600">{user.title}</div>
+              <div className="font-medium">{effectiveUser.name}</div>
+              <div className="text-sm text-gray-600">{effectiveUser.title}</div>
             </div>
             <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-medium">
-              {user.initials}
+              {effectiveUser.initials}
             </div>
           </div>
         </div>
@@ -89,10 +127,10 @@ export function Header({ user, project }: HeaderProps) {
         <div className="bg-primary/10 px-4 py-2 rounded-lg mb-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-medium text-hydro-dark">{project.name}</h2>
+              <h2 className="font-medium text-hydro-dark">{effectiveProject.name}</h2>
               <p className="text-sm text-gray-600">
-                Project No: <span className="font-medium">{project.number}</span> | 
-                Client: <span className="font-medium">{project.client}</span>
+                Project No: <span className="font-medium">{effectiveProject.number}</span> | 
+                Client: <span className="font-medium">{effectiveProject.client}</span>
               </p>
             </div>
             <div className="flex items-center space-x-2">
