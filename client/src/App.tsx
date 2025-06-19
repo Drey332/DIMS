@@ -9,6 +9,7 @@ import Incidents from "@/pages/incidents";
 import TeamManagement from "@/pages/team-management";
 import Reports from "@/pages/reports";
 import ProjectSetup from "@/pages/project-setup";
+import AssetVerification from "@/pages/asset-verification";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import NotFound from "@/pages/not-found";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/team" component={TeamManagement} />
       <Route path="/reports" component={Reports} />
       <Route path="/setup" component={ProjectSetup} />
+      <Route path="/assets" component={AssetVerification} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -4,7 +4,8 @@ import {
   AlertTriangle, 
   Users, 
   FileText, 
-  Settings 
+  Settings,
+  Package
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const navItems: NavItem[] = [
   { href: "/incidents", label: "Incidents", icon: AlertTriangle },
   { href: "/team", label: "Team Management", icon: Users },
   { href: "/reports", label: "Reports & Audit", icon: FileText },
+  { href: "/assets", label: "Asset Verification", icon: Package },
   { href: "/setup", label: "Project Setup", icon: Settings },
 ];
 

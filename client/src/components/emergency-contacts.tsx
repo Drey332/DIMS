@@ -225,7 +225,10 @@ export function EmergencyContacts() {
                 <Edit className="w-4 h-4 mr-2" />
                 Add/Update Contacts
               </Button>
-              <Button className="bg-green-600 text-white hover:bg-green-700 transition-colors">
+              <Button 
+                className="bg-green-600 text-white hover:bg-green-700 transition-colors"
+                onClick={() => window.location.href = '/assets'}
+              >
                 <CheckCircle className="w-4 h-4 mr-2" />
                 Verify All Assets
               </Button>
