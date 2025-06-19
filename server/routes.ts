@@ -8,6 +8,7 @@ import {
   analyzeDecisionContext,
   generateProactiveRecommendations 
 } from "./openai";
+import { AIAuditReferee } from "./ai-audit";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -431,6 +432,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating recommendations:", error);
       res.status(500).json({ message: "Failed to generate recommendations" });
+    }
+  });
+
+  // AI Audit Referee routes
+  app.post('/api/ai/audit-action', async (req: AuthenticatedRequest, res) => {
+    try {
+      const { actionDetails, projectId } = req.body;
+      
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const project = await storage.getProject(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+
+      const user = await storage.getUser(req.user.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const recentActions = await storage.getAuditLogs({ 
+        projectId, 
+        userId: req.user.id 
+      });
+
+      const auditContext = {
+        projectData: project,
+        user,
+        recentActions: recentActions.slice(0, 10), // Last 10 actions
+        protocolContext: actionDetails.type || 'GENERAL',
+        actionDetails: {
+          type: actionDetails.type,
+          description: actionDetails.description,
+          evidence: actionDetails.evidence || [],
+          timestamp: new Date(),
+          criticality: actionDetails.criticality || 'MEDIUM'
+        }
+      };
+
+      const auditResult = await AIAuditReferee.auditAction(auditContext);
+      res.json(auditResult);
+    } catch (error) {
+      console.error("Error during AI audit:", error);
+      res.status(500).json({ message: "Failed to perform AI audit" });
+    }
+  });
+
+  app.get('/api/ai/compliance-summary', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
+      
+      if (!projectId) {
+        return res.status(400).json({ message: "Project ID required" });
+      }
+
+      const summary = await AIAuditReferee.getComplianceSummary(projectId, req.user.id);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching compliance summary:", error);
+      res.status(500).json({ message: "Failed to fetch compliance summary" });
     }
   });
 

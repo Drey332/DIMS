@@ -1,0 +1,106 @@
+1. Core Structure for Audit & AI Referee
+A. Audit Trail / Action Logging
+Every time a user does something important (asset verification, incident update, checklist step, etc.), log:
+
+The action (type, details)
+
+The user, role, timestamp
+
+Project, asset, scenario context
+
+Any uploaded evidence (photos, files)
+
+Store these in a collection/table (auditLogs).
+
+B. Triggering AI Referee at Each Step
+After each major action, call your AI backend endpoint with:
+
+All relevant logs (last N actions, or the whole audit log for current project/incident)
+
+The scenario type, current project, checklist/protocol context
+
+2. Feeding All Info to the API
+Construct a “super-prompt” that gives the AI all needed info:
+
+Current Project Data (name, client, location, assigned roles)
+
+Active Protocols/Checklists (summarized, with key standards—IMCA, IOGP, HydroDive extracts)
+
+Audit Log / Recent Actions (steps, evidence, timestamps, user/role)
+
+Any flags/gaps/missing steps so far
+
+What you want from the AI (“Review the log so far. Flag gaps, compliance issues, suggest next steps, and require confirmation before proceeding if critical items are missing. Always cite the standard.”)
+
+3. Sample Backend Route (Node/Express) to Call OpenAI
+js
+Copier
+Modifier
+// server/routes/aiAudit.js
+const express = require('express');
+const router = express.Router();
+const { Configuration, OpenAIApi } = require('openai');
+const openai = new OpenAIApi(new Configuration({ apiKey: process.env.OPENAI_API_KEY }));
+
+router.post('/ai-audit', async (req, res) => {
+  const { projectData, protocolExcerpts, auditLog, actionDetails } = req.body;
+
+  const prompt = `
+You are an offshore safety AI referee for HydroSafe.
+Project: ${JSON.stringify(projectData)}
+Protocols/Standards: ${protocolExcerpts}
+Recent Audit Log: ${JSON.stringify(auditLog)}
+Latest Action: ${JSON.stringify(actionDetails)}
+
+Task: Review all steps so far. Flag any missing compliance, protocol violations, or skipped evidence. If anything is missing, block further action and instruct the user specifically what to fix. For every flag, cite the relevant protocol/standard section. Suggest the next correct step.
+`;
+
+  const response = await openai.createChatCompletion({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: "You are a strict, audit-focused safety AI for HydroSafe. Never let the user skip a required step without warning and instruction." },
+      { role: "user", content: prompt }
+    ],
+    max_tokens: 600,
+    temperature: 0.2
+  });
+
+  res.json({ aiFeedback: response.data.choices[0].message.content });
+});
+
+module.exports = router;
+4. Sample React Integration (After Each Step)
+jsx
+Copier
+Modifier
+// Call this after each important action/verification step
+async function auditStep(actionDetails) {
+  const projectData = ...;      // Current project info from state/store
+  const protocolExcerpts = ...; // Key rules/standards for this step/project
+  const auditLog = ...;         // Recent audit log/history for this project
+
+  const response = await fetch('/api/ai-audit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectData, protocolExcerpts, auditLog, actionDetails })
+  });
+  const { aiFeedback } = await response.json();
+  setAiFeedback(aiFeedback); // Show feedback to user in modal/banner/etc.
+}
+
+// Example usage:
+onAssetVerify={() => auditStep({ type: "AssetVerify", asset: "Fire Suppression", user: currentUser, ... })}
+5. How to Keep API “Aware” of Everything
+Always include current context:
+
+Project details
+
+All protocol excerpts relevant to this step (can fetch from your DB, or store as Markdown/JSON)
+
+All recent audit log actions (last N, or full current session)
+
+The latest user action, with evidence/file links
+
+Summarize where needed:
+
+If logs are huge, send a summary + only recent or flagged items to the API.

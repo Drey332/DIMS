@@ -129,6 +129,7 @@ Changelog:
 - June 19, 2025. Simplified navigation by implementing dropdown menus for Assets and Reports sections to reduce interface complexity and improve user experience
 - June 19, 2025. Implemented modern HydroSafe design system with role-based color coding (Gold: yellow, Silver: blue, Bronze: orange), status-aware card styling, and professional visual hierarchy for enhanced trust and usability
 - June 19, 2025. Implemented comprehensive project management system with role-based access control allowing Gold users to create/edit projects while Silver/Bronze users have view-only access to assigned projects with seamless project switching functionality
+- June 19, 2025. Created AI Audit Referee system with real-time compliance monitoring using OpenAI GPT-4o to review all actions against IMCA, IOGP, and HydroDive safety protocols with automatic violation detection and action blocking
 
 ## User Preferences
 

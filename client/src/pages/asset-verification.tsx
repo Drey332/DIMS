@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Header } from "@/components/header";
 import { Navigation } from "@/components/navigation";
+import { AIAuditReferee, type AuditResult } from "@/components/ai-audit-referee";
 import { cn } from "@/lib/utils";
 import { 
   Camera, 
