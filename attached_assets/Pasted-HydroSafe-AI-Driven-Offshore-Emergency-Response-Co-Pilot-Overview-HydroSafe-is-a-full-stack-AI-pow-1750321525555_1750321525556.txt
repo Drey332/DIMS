@@ -1,0 +1,117 @@
+HydroSafe: AI-Driven Offshore Emergency Response Co-Pilot
+Overview
+HydroSafe is a full-stack, AI-powered web application designed specifically for HydroDive and similar offshore operators. It acts as a digital safety “co-pilot” for Project Managers and command teams, ensuring that every emergency response is protocol-compliant, fully documented, and legally defensible—while actively adapting to the complexity of real-life offshore operations.
+
+Key Capabilities & Features
+1. Project-Specific Safety Data Management
+Dynamic Project Setup:
+Project Managers input critical project details: vessels/assets, hospital and ambulance contacts, routes, team roles, weather, inspection dates, unique risks, and notes.
+
+Photo/Document Upload:
+For each equipment or site inspection, users can upload timestamped photos as proof, supporting audit and regulatory compliance.
+
+2. Role-Based Command & Dashboards
+Role-Specific Interfaces:
+
+Bronze (On-Scene): See only relevant checklists, upload photos, and receive/take immediate actions.
+
+Silver (Tactical): Manage incident escalation, view all field actions, approve tactical decisions, review FMECA tables, and assign tasks.
+
+Gold (Strategic): Oversee all incidents, manage legal/PR/board reporting, approve resources, and sign off on post-incident reviews.
+
+Role-Adaptive Prompts:
+Prompts and AI advice are tailored to the user’s authority and required decisions.
+
+3. FMECA-Driven Dynamic Checklists & Prompts
+Automated, Context-Aware Checklists:
+Based on project input and scenario, HydroSafe generates a dynamic checklist, identifies single points of failure, suggests backups, and flags missing data or incomplete steps.
+
+Proactive “Have You Considered…” Prompts:
+No minor detail is overlooked—prompts cover everything from verifying hospital contracts and ambulance readiness, to checking road/weather changes and confirming backup evacuation plans.
+
+4. Medical Emergency Protocol Guidance
+Built-in Scenario Knowledge:
+For any medical or operational emergency (e.g., trauma, CASEVAC/MEDEVAC, psych incidents, multi-casualty, loss of comms, etc.), the app:
+
+Provides the exact company/industry protocol steps and time standards.
+
+Shows countdowns for urgent actions (e.g., 10-min heli response, 40-min psychiatric evacuation).
+
+Cites the ERP, IMCA, IOGP, or other standards with section numbers.
+
+“Gray-Area” Handling:
+If the scenario doesn’t fit a neat box (e.g., hybrid MEDEVAC/CASEVAC), the AI prompts for documentation, justification, and real-time escalation.
+
+5. Emergency Contact & Resource Management
+Automated Contact Suggestion:
+Based on scenario/location, the app suggests primary/backup hospitals, medevac numbers, helicopter providers, and more—editable by the user.
+
+Resource Status Logging:
+Tracks the state, readiness, and proof-of-inspection for every asset.
+
+6. Real-Time Communication & Tasking
+In-App Messaging:
+Enables secure, documented chat and file sharing between Bronze, Silver, and Gold controllers.
+
+Task Assignment/Updates:
+Silver and Gold can assign and track specific actions (e.g., “Bronze, upload casualty photos,” “Silver, escalate incident to Tier 3,” etc.).
+
+Live Incident Feed:
+Shows a timestamped log of all messages, decisions, photos, and status changes.
+
+7. Audit Trail & Legal Defense
+Immutable Audit Logs:
+Every action, input, message, file upload, and AI suggestion is time-stamped and archived, tied to the user’s role and ID.
+
+Exportable, Cited Reports:
+All data can be exported as a PDF or Word file, with references to specific protocols and standards for compliance, audit, or legal proceedings.
+
+Justification for Deviations:
+Any step skipped or protocol not followed requires a documented reason, logged for future review.
+
+8. Offline & Export Capability
+Downloadable Forms & Reports:
+Allows operations and checklists to be continued and exported even if offshore connectivity is lost.
+
+9. Continuous Improvement & Feedback Loop
+After-Action Reviews:
+The system prompts for “lessons learned” after every drill or real incident, and admins can update the protocol knowledge base as best practices evolve.
+
+User Feedback:
+Users can rate prompts, checklists, and system suggestions to continually enhance accuracy and usability.
+
+Technology Stack
+Frontend: React (for dynamic dashboards, forms, upload, timers, etc.)
+
+Backend: Python Flask or Node.js Express (handles OpenAI integration, file storage, audit logs)
+
+Database: Replit DB or SQLite (for persistent data and audit logs)
+
+AI Integration: OpenAI GPT-4o or Gemini (for dynamic checklists, gap analysis, prompts, and reporting)
+
+Real-Time Comms: Socket.io or Flask-SocketIO (for live chat and status updates)
+
+Export: jsPDF, html2pdf, or Python’s reportlab for generating PDF/Word reports
+
+File Upload: Built-in support for photo and document storage
+
+User Flow Example
+Bronze logs in: Completes equipment/asset checklists, uploads photos, and responds to AI-driven incident prompts.
+
+Silver reviews: Approves/rejects Bronze actions, escalates incidents, assigns tactical tasks, and reviews FMECA outputs.
+
+Gold oversees: Monitors high-level incident logs, approves crisis strategies, manages PR/legal communication, and signs off on incident close-out.
+
+All actions, communications, and files are time-stamped and exportable for compliance, investigation, or legal review.
+
+Unique Value
+Moves safety from “paper compliance” to provable, real-time, evidence-based action.
+
+Protects HydroDive by generating a sue-proof audit trail for every decision and deviation.
+
+Ensures every PM and controller is fully informed, protocol-compliant, and never alone in decision-making.
+
+Adapts to every offshore scenario, including new, hybrid, or unforeseen emergencies.
+
+HydroSafe transforms safety and incident management for offshore operations—combining AI intelligence, digital proof, and dynamic teamwork into a single, unified platform.
+
