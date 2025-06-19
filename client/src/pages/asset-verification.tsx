@@ -281,68 +281,69 @@ export default function AssetVerification() {
               </Card>
             </div>
 
-            {/* Assets List - Clean Layout */}
-            <div className="space-y-4">
-              {assets.map((asset) => (
-                <Card key={asset.id} className="border border-gray-200 hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      {/* Asset Info */}
-                      <div className="flex items-center space-x-4 flex-1">
-                        <div className="flex-shrink-0">
-                          {getStatusIcon(asset.status)}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                            {asset.name}
-                          </h3>
-                          
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                            <div className="flex items-center">
-                              <span className="font-medium mr-2">Category:</span>
-                              <Badge variant="outline" className="text-xs">
-                                {asset.category}
-                              </Badge>
+            {/* Assets List */}
+            <Card className="shadow-lg border border-gray-200">
+              <CardHeader className="bg-gradient-to-r from-hydro-dark to-blue-600 text-white">
+                <CardTitle className="flex items-center text-xl font-semibold">
+                  <Package className="w-6 h-6 mr-3" />
+                  Project Assets - Verification Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-gray-200">
+                  {assets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className={`p-6 border-l-4 ${getCategoryColor(asset.category)} bg-white hover:bg-gray-50 transition-colors duration-200`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4 flex-1">
+                          <div className="flex-shrink-0">
+                            {getStatusIcon(asset.status)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between mb-3">
+                              <h3 className="font-semibold text-hydro-dark text-lg">{asset.name}</h3>
+                              {getStatusBadge(asset.status)}
                             </div>
                             
-                            <div className="flex items-center">
-                              <MapPin className="w-4 h-4 mr-1" />
-                              <span>{asset.location}</span>
-                            </div>
-                            
-                            <div className="flex items-center">
-                              <Calendar className="w-4 h-4 mr-1" />
-                              <span>
-                                {asset.lastVerified 
-                                  ? `Verified ${new Date(asset.lastVerified).toLocaleDateString()}`
-                                  : 'Never verified'
-                                }
-                              </span>
+                            <div className="space-y-2 mb-4">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Badge variant="outline" className="mr-2 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  {asset.category}
+                                </Badge>
+                              </div>
+                              
+                              <div className="flex items-center text-sm text-gray-600">
+                                <MapPin className="w-4 h-4 mr-2 text-gray-400" />
+                                <span>{asset.location}</span>
+                              </div>
+                              
+                              {asset.lastVerified && (
+                                <div className="flex items-center text-sm text-gray-600">
+                                  <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                                  <span>Last verified: {new Date(asset.lastVerified).toLocaleDateString()}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      {/* Status and Action */}
-                      <div className="flex items-center space-x-4 flex-shrink-0">
-                        <div>
-                          {getStatusBadge(asset.status)}
+                        <div className="flex-shrink-0 ml-4">
+                          <Button
+                            size="sm"
+                            className="hydro-button-primary shadow-md hover:shadow-lg transition-shadow"
+                            onClick={() => handleVerifyAsset(asset)}
+                          >
+                            <Camera className="w-4 h-4 mr-2" />
+                            Verify
+                          </Button>
                         </div>
-                        
-                        <Button
-                          className="hydro-button-primary px-6"
-                          onClick={() => handleVerifyAsset(asset)}
-                        >
-                          <Camera className="w-4 h-4 mr-2" />
-                          Verify
-                        </Button>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Upload Modal */}
             {isUploadModalOpen && selectedAsset && (
