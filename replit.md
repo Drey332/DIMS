@@ -124,6 +124,7 @@ Changelog:
 - June 19, 2025. Completed comprehensive authentication system with email/password, Google, and Apple login options
 - June 19, 2025. Fixed emergency contact update functionality and changed button text to "Add/Update Contact" with proper form state management
 - June 19, 2025. Created comprehensive Asset Verification system with photo upload, timestamp tracking, and comment functionality for offshore asset management
+- June 19, 2025. Optimized Asset Verification page layout for better space utilization with left-aligned content and responsive grid layouts
 
 ## User Preferences
 

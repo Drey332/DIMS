@@ -222,17 +222,17 @@ export default function AssetVerification() {
       <Header user={user} project={projectData} />
       <div className="flex">
         <Navigation />
-        <div className="flex-1 p-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-hydro-dark mb-3">Asset Verification</h1>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        <div className="flex-1 p-6">
+          <div className="w-full">
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold text-hydro-dark mb-2">Asset Verification</h1>
+              <p className="text-gray-600">
                 Verify and document all project assets with photos and detailed comments to maintain compliance and safety standards
               </p>
             </div>
 
             {/* Asset Statistics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
               <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
                   <div className="text-center">
@@ -289,7 +289,7 @@ export default function AssetVerification() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {assets.map((asset) => (
                     <div
                       key={asset.id}
