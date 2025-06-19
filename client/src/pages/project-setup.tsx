@@ -261,28 +261,28 @@ export default function ProjectSetup() {
 
                 <div>
                   <Label htmlFor="projectName">Project Name</Label>
-                  <Input id="projectName" value={displayProject.name} />
+                  <Input id="projectName" defaultValue={displayProject.name} />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="client">Client</Label>
-                    <Input id="client" value={displayProject.client} />
+                    <Input id="client" defaultValue={displayProject.client} />
                   </div>
                   <div>
                     <Label htmlFor="contractor">Contractor</Label>
-                    <Input id="contractor" value={displayProject.contractor} />
+                    <Input id="contractor" defaultValue={displayProject.contractor} />
                   </div>
                 </div>
 
                 <div>
                   <Label htmlFor="location">Location</Label>
-                  <Input id="location" value={displayProject.location} />
+                  <Input id="location" defaultValue={displayProject.location} />
                 </div>
 
                 <div>
                   <Label htmlFor="description">Description</Label>
-                  <Textarea id="description" value={displayProject.description} rows={3} />
+                  <Textarea id="description" defaultValue={displayProject.description} rows={3} />
                 </div>
               </CardContent>
             </Card>
