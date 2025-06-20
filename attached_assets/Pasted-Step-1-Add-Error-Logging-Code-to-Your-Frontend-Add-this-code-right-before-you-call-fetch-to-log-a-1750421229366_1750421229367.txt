@@ -1,0 +1,128 @@
+Step 1: Add Error-Logging Code to Your Frontend
+Add this code right before you call fetch() to log and check all details:
+
+js
+Copier
+Modifier
+console.log("Submitting team member:", {
+  name: firstName + " " + lastName,
+  email,
+  number: phone,
+  rank: commandLevel, // gold, silver, bronze
+});
+
+console.log("Sending fetch to:", '/api/team');
+And wrap your fetch in a try/catch with error logging:
+
+js
+Copier
+Modifier
+try {
+  const resp = await fetch('/api/team', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token, // If using auth
+    },
+    body: JSON.stringify({
+      name: firstName + " " + lastName,
+      email,
+      number: phone,
+      rank: commandLevel, // 'gold', 'silver', or 'bronze'
+    }),
+  });
+  if (!resp.ok) {
+    const errorText = await resp.text();
+    console.error('API responded with error:', errorText);
+    throw new Error(errorText);
+  }
+  const result = await resp.json();
+  console.log('Team member added:', result);
+} catch (err) {
+  console.error('Fetch failed:', err);
+  alert('Error: ' + err.message);
+}
+Step 2: Check for Incorrect Endpoint or Method
+If you still see /api/team-members anywhere in your frontend, replace it with /api/team.
+Check all:
+
+fetch('/api/team-members', ... → change to fetch('/api/team', ...
+
+Any frontend config file or service.
+
+Step 3: Add Backend Logging (in /api/team route)
+Add this line at the very top of your /api/team POST route in routes/team.js:
+
+js
+Copier
+Modifier
+router.post('/', requireGold, async (req, res) => {
+  console.log('POST /api/team called:', req.body);
+  // ...rest of the code
+});
+Then, restart your backend and try again.
+If you do not see this log, your frontend is not calling the correct endpoint.
+
+Step 4: Debug the Network Tab
+Open Dev Tools (F12) > Network tab before clicking Add Member.
+
+Click Add Member.
+
+Look for the failed network request:
+
+What is the full Request URL?
+
+What is the Response/Status?
+
+Is the method POST or something else?
+
+Copy/paste the Request details here if you’re unsure.
+
+Step 5: Production-Grade API Utility for Team Add
+Here’s a reusable utility to ensure you are sending the correct request:
+
+js
+Copier
+Modifier
+async function addTeamMember({ firstName, lastName, email, number, rank, token }) {
+  const payload = {
+    name: `${firstName} ${lastName}`,
+    email,
+    number,
+    rank, // gold, silver, bronze
+  };
+
+  console.log('Payload:', payload);
+
+  try {
+    const resp = await fetch('/api/team', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': 'Bearer ' + token }),
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      throw new Error(errorText || 'Unknown server error');
+    }
+    return await resp.json();
+  } catch (err) {
+    console.error('Add team member error:', err);
+    throw err;
+  }
+}
+Summary of Troubleshooting Steps
+Check every fetch call: it must be /api/team, not /api/team-members.
+
+Log everything: what are you sending, what’s the endpoint, and what does the backend receive?
+
+Check browser DevTools Network tab: what’s the exact failing endpoint and method?
+
+Backend logging: make sure your POST /api/team route is logging incoming requests.
+
+Check for method errors: You must use POST, not GET, for adding.
+
+Restart everything after changes (frontend + backend).
+
