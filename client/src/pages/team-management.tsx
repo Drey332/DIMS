@@ -205,7 +205,7 @@ export default function TeamManagement() {
   // Add team member mutation
   const addMemberMutation = useMutation({
     mutationFn: (memberData: AddMemberForm) => 
-      apiRequest('/api/team-members', 'POST', memberData),
+      apiRequest('/api/team-members', 'POST', { ...memberData, goldCode: "000" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       setShowAddForm(false);
@@ -235,7 +235,16 @@ export default function TeamManagement() {
   // Remove team member mutation
   const removeMemberMutation = useMutation({
     mutationFn: (id: number) => 
-      apiRequest(`/api/team-members/${id}`, 'DELETE'),
+      fetch(`/api/team-members/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-gold-code': '000'
+        }
+      }).then(res => {
+        if (!res.ok) throw new Error('Failed to remove team member');
+        return res.json();
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
       toast({

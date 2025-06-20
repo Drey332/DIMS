@@ -818,18 +818,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not authenticated" });
       }
 
-      // Check if user has Gold permissions and is Gold code holder
-      if (req.user.role !== "GOLD") {
-        return res.status(403).json({ message: "Only Gold Command can add team members" });
-      }
-
       const { firstName, lastName, email, phone, role, title, goldCode } = req.body;
 
-      // Validate Gold code if assigning Gold role
-      if (role === "GOLD") {
-        if (goldCode !== "000") {
-          return res.status(403).json({ message: "Invalid Gold authorization code" });
-        }
+      // Gold Command authentication - check for the "000" code instead of role
+      if (goldCode !== "000") {
+        return res.status(403).json({ message: "Invalid Gold Command authorization code" });
       }
 
       // Check if email already exists
@@ -869,9 +862,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not authenticated" });
       }
 
-      // Check if user has Gold permissions
-      if (req.user.role !== "GOLD") {
-        return res.status(403).json({ message: "Only Gold Command can remove team members" });
+      // Gold Command authentication - check for the "000" code in request headers
+      const goldCode = req.headers['x-gold-code'];
+      if (goldCode !== "000") {
+        return res.status(403).json({ message: "Invalid Gold Command authorization" });
       }
 
       const memberId = parseInt(req.params.id);

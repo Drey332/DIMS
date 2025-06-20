@@ -1,0 +1,107 @@
+The error message:
+
+pgsql
+Copier
+Modifier
+Failed to execute 'fetch' on 'Window': '/api/team-members' is not a valid HTTP method.
+means one (or more) of the following:
+
+Your frontend is making a fetch call to /api/team-members, but your backend API is at /api/team (not /api/team-members).
+
+The HTTP method being used might not be supported (for example, maybe your form is using GET instead of POST).
+
+How to Fix (CEO/CTO Mindset):
+1. Correct the API Endpoint
+Change all your frontend fetch calls from /api/team-members to /api/team.
+
+POST /api/team → Add member
+
+GET /api/team → Get all members
+
+PUT /api/team/:id → Edit member
+
+DELETE /api/team/:id → Remove member
+
+Example:
+
+js
+Copier
+Modifier
+// WRONG (causing your error)
+fetch('/api/team-members', ...);
+
+// CORRECT
+fetch('/api/team', ...);
+2. Double-Check Your HTTP Method
+Make sure you are using POST to add members (not GET or something else):
+
+js
+Copier
+Modifier
+await fetch('/api/team', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + token, // only for Gold users
+  },
+  body: JSON.stringify({
+    name: firstName + " " + lastName,
+    email,
+    number: phone,
+    rank: commandLevel, // 'gold', 'silver', or 'bronze'
+  }),
+});
+3. Check Backend Route Matches
+Your backend should have (from above):
+
+js
+Copier
+Modifier
+router.post('/', requireGold, async (req, res) => {
+  // ...
+});
+This matches /api/team POST.
+
+4. Restart Backend After Changes
+If you modify backend code or endpoints, always restart your backend/server so changes take effect.
+
+Forward-thinking & Developer-CEO Tips:
+Always make your frontend API calls use the same routes as your backend. Consistency is key!
+
+If you rename routes, update both frontend and backend.
+
+Add a global error handler to your frontend so you see more details (helpful for debugging in the future).
+
+Add logging on the backend (console.log(req.body)) to see what’s coming in if you hit issues.
+
+How To Fix Right Now:
+In your frontend, change every /api/team-members to /api/team.
+
+Make sure you’re using POST when adding a member.
+
+Send all required fields: name, email, number, rank.
+
+Include the Gold token in the header if needed (Authorization: Bearer <token>).
+
+Bonus: Example Add Member Function
+js
+Copier
+Modifier
+async function addMember({ name, email, number, rank }, token) {
+  const resp = await fetch('/api/team', {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + token
+    },
+    body: JSON.stringify({ name, email, number, rank })
+  });
+  if (!resp.ok) throw new Error("Failed to add member");
+  return await resp.json();
+}
+Call like:
+
+js
+Copier
+Modifier
+await addMember({ name, email, number, rank }, userToken);
