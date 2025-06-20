@@ -1,0 +1,364 @@
+1. High-Level Architecture
+Frontend: React (functional, hooks, Tailwind for styling, shadcn/ui for components)
+
+Backend: Node.js/Express
+
+Database: MongoDB (using Mongoose)
+
+Auth: JWT (with Google/Apple OAuth and fallback to classic email/password)
+
+Role/Hierarchy: Gold/Silver/Bronze, editable only by users with the “Gold code” (000)
+
+Team management: CRUD (create, remove) of team members, real-time updates
+
+1. Database Schemas (Mongoose Models)
+/models/User.js
+
+js
+Copier
+Modifier
+const mongoose = require('mongoose');
+
+const userSchema = new mongoose.Schema({
+  email: { type: String, unique: true, required: true },
+  passwordHash: String, // hashed, not plain
+  firstName: String,
+  lastName: String,
+  role: { type: String, enum: ['gold', 'silver', 'bronze'], default: 'bronze' },
+  phone: String,
+  isGoldCodeHolder: { type: Boolean, default: false },
+  lastSeen: Date
+});
+
+module.exports = mongoose.model('User', userSchema);
+2. Backend API Routes (Express)
+/routes/auth.js
+
+js
+Copier
+Modifier
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+const router = express.Router();
+
+// Register or login with email/password
+router.post('/register', async (req, res) => {
+  const { email, password, firstName, lastName, role, phone, goldCode } = req.body;
+  const isGold = goldCode === '000';
+  const user = await User.findOne({ email });
+  if (user) return res.status(400).json({ message: 'Email already exists' });
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const newUser = new User({
+    email,
+    passwordHash,
+    firstName,
+    lastName,
+    role: isGold ? 'gold' : (role || 'bronze'),
+    phone,
+    isGoldCodeHolder: isGold,
+    lastSeen: new Date()
+  });
+  await newUser.save();
+
+  const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
+  res.json({ token, user: newUser });
+});
+
+// Login
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.status(400).json({ message: 'Invalid credentials' });
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) return res.status(400).json({ message: 'Invalid credentials' });
+
+  user.lastSeen = new Date();
+  await user.save();
+
+  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+  res.json({ token, user });
+});
+
+// Google/Apple OAuth would go here as well
+
+module.exports = router;
+/routes/team.js
+
+js
+Copier
+Modifier
+const express = require('express');
+const User = require('../models/User');
+const router = express.Router();
+
+// Middleware to check Gold
+const requireGold = async (req, res, next) => {
+  const user = await User.findById(req.userId);
+  if (!user || user.role !== 'gold' || !user.isGoldCodeHolder) {
+    return res.status(403).json({ message: 'Not authorized' });
+  }
+  next();
+};
+
+// Get team, sorted
+router.get('/', async (req, res) => {
+  const team = await User.find().sort([
+    ['role', 1], // gold first, then silver, then bronze
+    ['lastSeen', -1]
+  ]);
+  res.json(team);
+});
+
+// Add team member (Gold only)
+router.post('/', requireGold, async (req, res) => {
+  const { email, firstName, lastName, phone, role } = req.body;
+  const exists = await User.findOne({ email });
+  if (exists) return res.status(400).json({ message: 'Email already exists' });
+  const user = new User({ email, firstName, lastName, phone, role });
+  await user.save();
+  res.json(user);
+});
+
+// Remove team member (Gold only)
+router.delete('/:userId', requireGold, async (req, res) => {
+  await User.findByIdAndDelete(req.params.userId);
+  res.json({ success: true });
+});
+
+module.exports = router;
+3. React Frontend (with shadcn/ui + Tailwind)
+/src/App.jsx (core structure)
+
+jsx
+Copier
+Modifier
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import { AuthProvider } from './context/AuthContext';
+
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
+export default App;
+/src/pages/Login.jsx
+
+jsx
+Copier
+Modifier
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+export default function Login() {
+  const [isGold, setIsGold] = useState(null);
+  const [form, setForm] = useState({});
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
+  const handleChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+
+  const submitGold = async e => {
+    e.preventDefault();
+    // Here you can connect to /register or /login as gold
+    // If goldCode is correct, let user proceed to dashboard
+    const resp = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ ...form, goldCode: form.goldCode })
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      login(data.token, data.user);
+      navigate('/dashboard');
+    } else {
+      alert(data.message);
+    }
+  };
+
+  const submitRegular = async e => {
+    e.preventDefault();
+    const resp = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(form)
+    });
+    const data = await resp.json();
+    if (resp.ok) {
+      login(data.token, data.user);
+      navigate('/dashboard');
+    } else {
+      alert(data.message);
+    }
+  };
+
+  // UI
+  if (isGold === null) {
+    return (
+      <div className="w-full h-screen flex flex-col justify-center items-center">
+        <h1 className="text-2xl mb-4 font-bold">Are you Gold Command?</h1>
+        <button className="btn btn-yellow mb-2" onClick={() => setIsGold(true)}>Yes</button>
+        <button className="btn btn-gray" onClick={() => setIsGold(false)}>No</button>
+      </div>
+    );
+  }
+  if (isGold) {
+    return (
+      <form className="flex flex-col space-y-2" onSubmit={submitGold}>
+        <input name="goldCode" placeholder="Enter Gold Code" required onChange={handleChange} />
+        <input name="firstName" placeholder="First Name" required onChange={handleChange} />
+        <input name="lastName" placeholder="Last Name" required onChange={handleChange} />
+        <input name="email" placeholder="Email" required onChange={handleChange} />
+        <input name="password" type="password" placeholder="Password" required onChange={handleChange} />
+        <input name="phone" placeholder="Phone Number" required onChange={handleChange} />
+        <button className="btn btn-yellow" type="submit">Login as Gold</button>
+      </form>
+    );
+  }
+  return (
+    <form className="flex flex-col space-y-2" onSubmit={submitRegular}>
+      <input name="firstName" placeholder="First Name" required onChange={handleChange} />
+      <input name="lastName" placeholder="Last Name" required onChange={handleChange} />
+      <input name="email" placeholder="Email" required onChange={handleChange} />
+      <input name="password" type="password" placeholder="Password" required onChange={handleChange} />
+      <input name="phone" placeholder="Phone Number" onChange={handleChange} />
+      <button className="btn btn-blue" type="submit">Continue</button>
+    </form>
+  );
+}
+/src/pages/Dashboard.jsx
+
+jsx
+Copier
+Modifier
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+
+function CommandCard({ user, onDelete }) {
+  const roleColors = {
+    gold: 'bg-yellow-100 border-yellow-400',
+    silver: 'bg-gray-100 border-gray-400',
+    bronze: 'bg-orange-100 border-orange-400'
+  };
+  return (
+    <div className={`rounded-xl border-l-8 mb-3 p-4 shadow-md flex flex-col ${roleColors[user.role]}`}>
+      <div className="flex justify-between items-center">
+        <span className="font-semibold text-lg">{user.firstName} {user.lastName}</span>
+        <span className={`text-xs font-bold uppercase`}>{user.role} Command</span>
+      </div>
+      <div className="text-sm">{user.email} | {user.phone}</div>
+      <div className="text-xs text-gray-500">Last seen: {user.lastSeen && new Date(user.lastSeen).toLocaleTimeString()}</div>
+      {onDelete && <button className="btn btn-red mt-2" onClick={() => onDelete(user._id)}>Remove</button>}
+    </div>
+  );
+}
+
+export default function Dashboard() {
+  const { user, isGold } = useAuth();
+  const [team, setTeam] = useState([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({});
+
+  useEffect(() => {
+    fetch('/api/team')
+      .then(res => res.json())
+      .then(setTeam);
+  }, []);
+
+  const handleDelete = async (userId) => {
+    await fetch(`/api/team/${userId}`, { method: 'DELETE' });
+    setTeam(team.filter(u => u._id !== userId));
+  };
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    const resp = await fetch('/api/team', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form)
+    });
+    const newUser = await resp.json();
+    setTeam([...team, newUser]);
+    setShowAdd(false);
+  };
+
+  // Sort: Gold > Silver > Bronze
+  const sorted = team.slice().sort((a, b) => {
+    const order = { gold: 0, silver: 1, bronze: 2 };
+    return order[a.role] - order[b.role];
+  });
+
+  return (
+    <div className="max-w-2xl mx-auto py-6">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Command Team Members</h2>
+        {isGold && (
+          <>
+            <button className="btn btn-blue" onClick={() => setShowAdd(true)}>Add Team Member</button>
+            <button className="btn btn-red ml-2" onClick={() => setShowAdd(false)}>Remove</button>
+          </>
+        )}
+      </div>
+      {sorted.map(u => (
+        <CommandCard key={u._id} user={u} onDelete={isGold ? handleDelete : null} />
+      ))}
+
+      {/* Add Modal */}
+      {showAdd && isGold && (
+        <form onSubmit={handleAdd} className="fixed z-10 bg-white p-4 shadow-2xl rounded-xl top-10 left-1/2 -translate-x-1/2 w-96">
+          <input name="firstName" placeholder="First Name" required onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
+          <input name="lastName" placeholder="Last Name" required onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
+          <input name="email" placeholder="Email" required onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+          <input name="phone" placeholder="Phone" onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+          <select name="role" required onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+            <option value="">Select Command</option>
+            <option value="gold">Gold</option>
+            <option value="silver">Silver</option>
+            <option value="bronze">Bronze</option>
+          </select>
+          <button className="btn btn-green mt-2" type="submit">Add</button>
+        </form>
+      )}
+    </div>
+  );
+}
+4. User Experience Details
+Gold code is never shown in UI—must be distributed securely.
+
+Whoever logs in with code becomes Gold (and can remove/add anyone, including other Golds).
+
+List is always Gold first, then Silver, then Bronze.
+
+Color-coded panels (Gold = yellow, Silver = gray, Bronze = orange).
+
+Only Gold sees the add/remove buttons.
+
+Any changes (add/remove) instantly update for all users (socket.io can be added for real-time sync).
+
+"Active", "On Duty", "Field Operations", etc. are easily updated as part of the user profile.
+
+Each role can have status indicator, last seen, etc., updated live.
+
+5. Styling Snippet (Tailwind/shadcn/ui)
+css
+Copier
+Modifier
+.btn { @apply rounded-lg px-4 py-2 shadow font-bold; }
+.btn-yellow { @apply bg-yellow-400 hover:bg-yellow-500 text-black; }
+.btn-blue { @apply bg-blue-500 hover:bg-blue-600 text-white; }
+.btn-red { @apply bg-red-500 hover:bg-red-600 text-white; }
+.btn-green { @apply bg-green-500 hover:bg-green-600 text-white; }
+.btn-gray { @apply bg-gray-300 hover:bg-gray-400 text-black; }

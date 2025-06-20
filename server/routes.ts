@@ -799,6 +799,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team hierarchy management routes
+  app.get('/api/team-members', async (req: AuthenticatedRequest, res) => {
+    try {
+      const teamMembers = await storage.getTeamMembers();
+      res.json(teamMembers);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
+  });
+
+  app.post('/api/team-members', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Check if user has Gold permissions and is Gold code holder
+      if (req.user.role !== "GOLD") {
+        return res.status(403).json({ message: "Only Gold Command can add team members" });
+      }
+
+      const { firstName, lastName, email, phone, role, title, goldCode } = req.body;
+
+      // Validate Gold code if assigning Gold role
+      if (role === "GOLD") {
+        if (goldCode !== "000") {
+          return res.status(403).json({ message: "Invalid Gold authorization code" });
+        }
+      }
+
+      // Check if email already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      const newMember = await storage.createTeamMember({
+        firstName,
+        lastName,
+        email,
+        phone,
+        role,
+        title,
+        isGoldCodeHolder: role === "GOLD" && goldCode === "000"
+      });
+
+      // Create audit log
+      await storage.createAuditLog({
+        userId: req.user.id,
+        actionType: 'TEAM_MEMBER_ADDED',
+        description: `Team member added: ${firstName} ${lastName} (${role})`,
+        newData: newMember,
+      });
+
+      res.status(201).json(newMember);
+    } catch (error) {
+      console.error("Error creating team member:", error);
+      res.status(500).json({ message: "Failed to create team member" });
+    }
+  });
+
+  app.delete('/api/team-members/:id', async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      // Check if user has Gold permissions
+      if (req.user.role !== "GOLD") {
+        return res.status(403).json({ message: "Only Gold Command can remove team members" });
+      }
+
+      const memberId = parseInt(req.params.id);
+      
+      // Prevent removing self
+      if (memberId === req.user.id) {
+        return res.status(400).json({ message: "Cannot remove yourself" });
+      }
+
+      const member = await storage.getTeamMember(memberId);
+      if (!member) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      await storage.deleteTeamMember(memberId);
+
+      // Create audit log
+      await storage.createAuditLog({
+        userId: req.user.id,
+        actionType: 'TEAM_MEMBER_REMOVED',
+        description: `Team member removed: ${member.firstName} ${member.lastName}`,
+        oldData: member,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting team member:", error);
+      res.status(500).json({ message: "Failed to delete team member" });
+    }
+  });
+
   // Audit logs
   app.get('/api/audit-logs', async (req, res) => {
     try {

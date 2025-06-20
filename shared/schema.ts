@@ -11,9 +11,11 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  role: text("role").notNull(), // 'BRONZE', 'SILVER', 'GOLD'
-  title: text("title").notNull(),
+  role: text("role").notNull().default("BRONZE"), // 'BRONZE', 'SILVER', 'GOLD'
+  phone: text("phone"),
+  title: text("title"),
   isActive: boolean("is_active").default(true),
+  isGoldCodeHolder: boolean("is_gold_code_holder").default(false),
   lastSeen: timestamp("last_seen").defaultNow(),
   lastActivity: timestamp("last_activity").defaultNow(),
   isOnline: boolean("is_online").default(false),

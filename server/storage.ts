@@ -44,6 +44,12 @@ export interface IStorage {
   updateUserActivity(id: number, activity: { lastActivity: Date; isOnline: boolean; activityStatus: string; sessionId?: string | null }): Promise<User>;
   getActiveUsers(): Promise<User[]>;
   
+  // Team hierarchy operations
+  getTeamMembers(): Promise<User[]>;
+  getTeamMember(id: number): Promise<User | undefined>;
+  createTeamMember(member: { firstName: string; lastName: string; email: string; phone?: string; role: string; title?: string; isGoldCodeHolder?: boolean }): Promise<User>;
+  deleteTeamMember(id: number): Promise<void>;
+  
   // Project operations
   getProject(id: number): Promise<Project | undefined>;
   getProjectByNumber(number: string): Promise<Project | undefined>;
@@ -519,6 +525,68 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(clients)
       .where(eq(clients.id, id));
+  }
+
+  // Team hierarchy management operations
+  async getTeamMembers(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .orderBy(
+        sql`CASE role 
+          WHEN 'GOLD' THEN 1 
+          WHEN 'SILVER' THEN 2 
+          WHEN 'BRONZE' THEN 3 
+          ELSE 4 END`,
+        desc(users.lastSeen)
+      );
+  }
+
+  async getTeamMember(id: number): Promise<User | undefined> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id));
+    return user;
+  }
+
+  async createTeamMember(member: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    role: string;
+    title?: string;
+    isGoldCodeHolder?: boolean;
+  }): Promise<User> {
+    // Generate a temporary username and password for the new team member
+    const username = member.email.split('@')[0] + '_' + Date.now();
+    const tempPassword = 'TempPass123!'; // In production, this should be securely generated
+
+    const [user] = await db
+      .insert(users)
+      .values({
+        username,
+        password: tempPassword, // In production, this should be hashed
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+        phone: member.phone,
+        role: member.role,
+        title: member.title,
+        isGoldCodeHolder: member.isGoldCodeHolder || false,
+        isActive: true,
+        lastSeen: new Date(),
+        activityStatus: 'OFFLINE',
+      })
+      .returning();
+    return user;
+  }
+
+  async deleteTeamMember(id: number): Promise<void> {
+    await db
+      .delete(users)
+      .where(eq(users.id, id));
   }
 }
 
