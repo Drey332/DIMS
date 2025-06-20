@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { User, Plus, Trash2, Shield, Clock, Phone, Mail } from "lucide-react";
+import { User, Plus, Trash2, Shield, Clock, Phone, Mail, Lock, Unlock, Crown, Star, Award } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { socket } from '../socket.js';
 
 interface TeamMember {
   id: number;
@@ -47,10 +49,10 @@ const statusColors = {
   OFFLINE: "bg-gray-400"
 };
 
-function TeamMemberCard({ member, onRemove, canManage }: { 
+function TeamMemberCard({ member, onRemove, goldUnlocked }: { 
   member: TeamMember; 
   onRemove?: (id: number) => void;
-  canManage: boolean;
+  goldUnlocked: boolean;
 }) {
   return (
     <Card className={`border-l-8 mb-3 ${roleColors[member.role]}`}>
@@ -75,7 +77,7 @@ function TeamMemberCard({ member, onRemove, canManage }: {
               className={`w-3 h-3 rounded-full ${statusColors[member.activityStatus]}`}
               title={member.activityStatus}
             />
-            {canManage && onRemove && (
+            {goldUnlocked && onRemove && (
               <Button
                 variant="destructive"
                 size="sm"
@@ -112,9 +114,13 @@ function TeamMemberCard({ member, onRemove, canManage }: {
   );
 }
 
+const GOLD_CODE = "000";
+
 export default function TeamManagement() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [currentUser, setCurrentUser] = useState<TeamMember | null>(null);
+  const [goldUnlocked, setGoldUnlocked] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -140,14 +146,61 @@ export default function TeamManagement() {
     queryFn: () => fetch('/api/team-members').then(res => res.json()),
   });
 
+  // Check for persistent Gold unlock state
+  useEffect(() => {
+    const goldUnlockedState = localStorage.getItem("goldUnlocked");
+    if (goldUnlockedState === "true") {
+      setGoldUnlocked(true);
+    }
+  }, []);
+
+  // Real-time team member updates via Socket.IO
+  useEffect(() => {
+    socket.connect();
+    
+    const handleTeamUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-members'] });
+    };
+
+    socket.on('team-member-added', handleTeamUpdate);
+    socket.on('team-member-updated', handleTeamUpdate);
+    socket.on('team-member-removed', handleTeamUpdate);
+
+    return () => {
+      socket.off('team-member-added', handleTeamUpdate);
+      socket.off('team-member-updated', handleTeamUpdate);
+      socket.off('team-member-removed', handleTeamUpdate);
+    };
+  }, [queryClient]);
+
   React.useEffect(() => {
     if (userProfile) {
       setCurrentUser(userProfile);
     }
   }, [userProfile]);
 
-  // Check if current user can manage team (Gold code holder)
-  const canManageTeam = currentUser?.role === "GOLD" && currentUser?.isGoldCodeHolder;
+  // Gold Command code verification
+  const handleCodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (codeInput.trim() === GOLD_CODE) {
+      setGoldUnlocked(true);
+      localStorage.setItem("goldUnlocked", "true");
+      toast({
+        title: "Gold Command Unlocked",
+        description: "You now have full team management permissions",
+      });
+      setCodeInput("");
+    } else {
+      toast({
+        title: "Incorrect Code",
+        description: "Please enter the correct Gold Command code",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Gold Command permissions based on code unlock
+  const canManageTeam = goldUnlocked;
 
   // Add team member mutation
   const addMemberMutation = useMutation({
@@ -248,10 +301,10 @@ export default function TeamManagement() {
         <div className="flex-1">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Command Team Members</h2>
-            {canManageTeam && (
+            {goldUnlocked && (
               <Button 
                 onClick={() => setShowAddForm(true)}
-                className="hydro-button-gold"
+                className="bg-yellow-600 hover:bg-yellow-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Team Member
@@ -259,7 +312,61 @@ export default function TeamManagement() {
             )}
           </div>
 
-          {!canManageTeam && (
+          {/* Gold Command Authentication */}
+          {!goldUnlocked && (
+            <Card className="mb-6 border-yellow-200 bg-yellow-50">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-yellow-800">
+                  <Lock className="h-5 w-5" />
+                  Gold Command Authentication Required
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Alert className="mb-4">
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription>
+                    To add, edit, or remove team members, enter the Gold Command code below.
+                  </AlertDescription>
+                </Alert>
+                <form onSubmit={handleCodeSubmit} className="flex items-center gap-3">
+                  <div className="flex-1 max-w-xs">
+                    <Input
+                      type="password"
+                      placeholder="Enter Gold Command Code"
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value)}
+                      className="border-yellow-300 focus:border-yellow-500"
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                    disabled={!codeInput.trim()}
+                  >
+                    <Unlock className="h-4 w-4 mr-2" />
+                    Unlock Gold Command
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Gold Command Active Status */}
+          {goldUnlocked && (
+            <Card className="mb-6 border-green-200 bg-green-50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 text-green-800">
+                  <Crown className="h-5 w-5" />
+                  <span className="font-semibold">Gold Command Active</span>
+                  <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300">
+                    Full Permissions
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!goldUnlocked && (
             <Card className="mb-6 border-amber-200 bg-amber-50">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -285,8 +392,8 @@ export default function TeamManagement() {
                 <TeamMemberCard
                   key={member.id}
                   member={member}
-                  onRemove={canManageTeam ? handleRemoveMember : undefined}
-                  canManage={canManageTeam}
+                  onRemove={goldUnlocked ? handleRemoveMember : undefined}
+                  goldUnlocked={goldUnlocked}
                 />
               ))
             )}

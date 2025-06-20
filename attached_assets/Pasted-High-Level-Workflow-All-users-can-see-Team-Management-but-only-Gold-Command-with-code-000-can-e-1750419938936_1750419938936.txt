@@ -1,0 +1,243 @@
+High-Level Workflow
+All users can see Team Management, but only Gold Command (with code “000”) can edit/delete/add members.
+
+In Team Management, there’s an input to “Enter Gold Command Code.”
+
+If correct, the page unlocks edit/delete/add features, otherwise it stays read-only.
+
+When adding/removing/updating members, the UI updates for everyone in real time (via Socket.io, Firebase RTDB, or Firestore onSnapshot).
+
+Each team member card is styled by their rank: Gold (gold bg), Silver (silver bg), Bronze (bronze bg).
+
+Golds always show at the top, then Silver, then Bronze.
+
+🟨 1. Team Management UI & Gold Command Unlock
+pages/TeamManagement.jsx (React + Firebase Firestore, but easy to adapt)
+
+jsx
+Copier
+Modifier
+import { useState, useEffect } from "react";
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth } from "../firebase";
+
+// Config
+const GOLD_CODE = "000";
+const db = getFirestore();
+
+const rankColors = {
+  gold: "bg-yellow-100 border-yellow-400",
+  silver: "bg-gray-100 border-gray-400",
+  bronze: "bg-orange-100 border-orange-400",
+};
+
+export default function TeamManagement() {
+  const [user] = useAuthState(auth);
+  const [team, setTeam] = useState([]);
+  const [goldUnlocked, setGoldUnlocked] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
+  const [modal, setModal] = useState(null); // {mode: 'add'|'edit'|'delete', member}
+  const [form, setForm] = useState({ name: "", email: "", number: "", rank: "bronze" });
+
+  // Real-time team updates
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "team"), (snap) => {
+      const members = [];
+      snap.forEach(doc => members.push({ ...doc.data(), id: doc.id }));
+      // Sort: gold > silver > bronze
+      members.sort((a, b) => {
+        const rankOrder = { gold: 0, silver: 1, bronze: 2 };
+        return rankOrder[a.rank] - rankOrder[b.rank];
+      });
+      setTeam(members);
+    });
+    return unsub;
+  }, []);
+
+  // Gold code unlock
+  const handleCodeSubmit = (e) => {
+    e.preventDefault();
+    if (codeInput.trim() === GOLD_CODE) setGoldUnlocked(true);
+    else alert("Incorrect code");
+  };
+
+  // Add/Edit member handlers
+  const handleFormChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const openAddModal = () => { setForm({ name: "", email: "", number: "", rank: "bronze" }); setModal({ mode: "add" }); };
+  const openEditModal = (member) => { setForm(member); setModal({ mode: "edit", member }); };
+  const openDeleteModal = (member) => setModal({ mode: "delete", member });
+
+  const closeModal = () => setModal(null);
+
+  const handleAddEdit = async (e) => {
+    e.preventDefault();
+    if (modal.mode === "add") {
+      await addDoc(collection(db, "team"), { ...form });
+    } else {
+      await updateDoc(doc(db, "team", modal.member.id), form);
+    }
+    closeModal();
+  };
+
+  const handleDelete = async () => {
+    await deleteDoc(doc(db, "team", modal.member.id));
+    closeModal();
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <h2 className="text-2xl font-bold mb-4">Team Management</h2>
+      {!goldUnlocked && (
+        <form onSubmit={handleCodeSubmit} className="mb-6 flex items-center gap-2">
+          <input
+            className="border p-2 rounded"
+            type="password"
+            value={codeInput}
+            onChange={e => setCodeInput(e.target.value)}
+            placeholder="Enter Gold Command Code"
+            style={{ minWidth: 180 }}
+          />
+          <button className="bg-yellow-500 text-white px-4 py-2 rounded" type="submit">Unlock Gold Command</button>
+        </form>
+      )}
+
+      {/* Add button (Gold only) */}
+      {goldUnlocked && (
+        <button onClick={openAddModal} className="bg-blue-600 text-white px-5 py-2 rounded mb-4">
+          Add Team Member
+        </button>
+      )}
+
+      <div className="grid gap-4 mt-2">
+        {team.map(member => (
+          <div
+            key={member.id}
+            className={`p-4 rounded-lg border-2 flex items-center justify-between ${rankColors[member.rank]}`}
+          >
+            <div>
+              <div className="text-lg font-semibold">{member.name}</div>
+              <div className="text-gray-700">{member.email} | {member.number}</div>
+              <span className={`font-bold capitalize mr-2 ${member.rank === "gold" ? "text-yellow-700" : member.rank === "silver" ? "text-gray-700" : "text-orange-700"}`}>
+                {member.rank} Command
+              </span>
+            </div>
+            {goldUnlocked && (
+              <div className="flex gap-2">
+                <button onClick={() => openEditModal(member)} className="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded">Edit</button>
+                <button onClick={() => openDeleteModal(member)} className="bg-red-400 hover:bg-red-500 px-3 py-1 text-white rounded">Remove</button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Modal for add/edit */}
+      {modal && (modal.mode === "add" || modal.mode === "edit") && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <form
+            className="bg-white rounded-lg p-8 shadow-xl w-[360px]"
+            onSubmit={handleAddEdit}
+          >
+            <h3 className="font-bold text-lg mb-4">{modal.mode === "add" ? "Add" : "Edit"} Team Member</h3>
+            <input
+              required
+              className="border w-full p-2 mb-2 rounded"
+              name="name"
+              placeholder="Name"
+              value={form.name}
+              onChange={handleFormChange}
+            />
+            <input
+              required
+              className="border w-full p-2 mb-2 rounded"
+              name="email"
+              placeholder="Email"
+              value={form.email}
+              onChange={handleFormChange}
+            />
+            <input
+              required
+              className="border w-full p-2 mb-2 rounded"
+              name="number"
+              placeholder="Number"
+              value={form.number}
+              onChange={handleFormChange}
+            />
+            <select
+              required
+              className="border w-full p-2 mb-4 rounded"
+              name="rank"
+              value={form.rank}
+              onChange={handleFormChange}
+            >
+              <option value="gold">Gold Command</option>
+              <option value="silver">Silver Command</option>
+              <option value="bronze">Bronze Command</option>
+            </select>
+            <div className="flex gap-2">
+              <button className="bg-blue-600 text-white px-4 py-2 rounded" type="submit">Save</button>
+              <button className="bg-gray-300 px-4 py-2 rounded" type="button" onClick={closeModal}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Modal for delete */}
+      {modal && modal.mode === "delete" && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 shadow-xl w-[350px]">
+            <h3 className="font-bold text-lg mb-3">Remove Team Member</h3>
+            <p>Are you sure you want to remove <b>{modal.member.name}</b>?</p>
+            <div className="flex gap-2 mt-4">
+              <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={handleDelete}>Remove</button>
+              <button className="bg-gray-300 px-4 py-2 rounded" onClick={closeModal}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+🟨 2. How it Works (UX/Logic):
+All users see Team Management (cannot edit).
+
+To edit/add/delete, you must “unlock” Gold Command by entering the code (“000”).
+
+If the code is valid, edit/delete/add UI is unlocked instantly for that session.
+
+Add Team Member shows a modal form for name, email, number, rank (gold/silver/bronze).
+
+Remove pops a modal to confirm.
+
+Cards auto-color and sort by rank (gold > silver > bronze).
+
+All changes are real-time—all users see updates instantly (if you use Firestore or RTDB).
+
+🟨 3. Implementation/Stack Notes
+This uses Firebase Firestore for simplicity. If you want Socket.io or another backend, logic is similar.
+
+Security: For real-world, also add Firestore security rules to protect from non-gold writes.
+
+The code input is local (doesn’t persist across sessions)—for persistent Gold login, store a token in context or local storage.
+
+🟨 4. To Integrate
+Place this in your /pages/TeamManagement.jsx.
+
+Ensure you have a Firestore collection called "team".
+
+Style as needed (the above uses Tailwind for fast prototyping, but classes can be swapped out for your own CSS/UI system).
+
+🟨 5. Bonus (Persistent Gold Unlock across pages):
+If you want the “Gold Command unlocked” state to persist across page reloads, store it in localStorage and check it on mount:
+
+js
+Copier
+Modifier
+// When unlock succeeds:
+localStorage.setItem("goldUnlocked", "true");
+setGoldUnlocked(true);
+// On mount:
+useEffect(() => {
+  if (localStorage.getItem("goldUnlocked") === "true") setGoldUnlocked(true);
+}, []);
