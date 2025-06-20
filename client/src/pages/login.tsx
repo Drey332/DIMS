@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,16 +6,23 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, googleProvider, appleProvider } from '../firebase.js';
-import { useMutation } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
-import { Shield, Anchor, Chrome, Apple, Mail, Lock, User, UserPlus } from 'lucide-react';
+import { 
+  signInWithPopup, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut,
+  type User
+} from 'firebase/auth';
+import { auth, googleProvider } from '../firebase.js';
+import { Shield, Anchor, Chrome, Mail, Lock, User as UserIcon, UserPlus, LogOut } from 'lucide-react';
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [firebaseUser, setFirebaseUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Form states
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -27,101 +34,64 @@ export default function LoginPage() {
     username: ''
   });
 
-  // Firebase OAuth mutation
-  const firebaseOAuthMutation = useMutation({
-    mutationFn: async (oauthData: any) => {
-      return apiRequest('/api/auth/firebase-oauth', {
-        method: 'POST',
-        body: JSON.stringify(oauthData)
-      });
-    },
-    onSuccess: (data) => {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      toast({
-        title: 'Success',
-        description: 'Successfully logged in with OAuth'
-      });
-      setLocation('/dashboard');
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Authentication Error',
-        description: error.message || 'OAuth authentication failed',
-        variant: 'destructive'
-      });
-    }
-  });
+  // Listen for Firebase auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        // User is signed in, sync with backend
+        syncWithBackend(user);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
-  // Email/Password login mutation
-  const loginMutation = useMutation({
-    mutationFn: async (credentials: { email: string; password: string }) => {
-      return apiRequest('/api/auth/login', {
+  // Sync Firebase user with backend
+  const syncWithBackend = async (user: any) => {
+    try {
+      const response = await fetch('/api/auth/firebase-oauth', {
         method: 'POST',
-        body: JSON.stringify(credentials)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          displayName: user.displayName,
+          provider: 'google',
+          uid: user.uid
+        })
       });
-    },
-    onSuccess: (data) => {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      toast({
-        title: 'Success',
-        description: 'Successfully logged in'
-      });
-      setLocation('/dashboard');
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Login Error',
-        description: error.message || 'Login failed',
-        variant: 'destructive'
-      });
-    }
-  });
 
-  // Registration mutation
-  const registerMutation = useMutation({
-    mutationFn: async (userData: any) => {
-      return apiRequest('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(userData)
-      });
-    },
-    onSuccess: (data) => {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        toast({
+          title: 'Success',
+          description: 'Successfully authenticated'
+        });
+        setLocation('/dashboard');
+      }
+    } catch (error: any) {
+      console.error('Backend sync error:', error);
       toast({
-        title: 'Success',
-        description: 'Account created successfully'
-      });
-      setLocation('/dashboard');
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Registration Error',
-        description: error.message || 'Registration failed',
+        title: 'Sync Error',
+        description: 'Authentication succeeded but sync failed',
         variant: 'destructive'
       });
     }
-  });
+  };
 
   // Google OAuth handler
   const handleGoogleLogin = async () => {
+    setError('');
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      await firebaseOAuthMutation.mutateAsync({
-        email: user.email,
-        displayName: user.displayName,
-        provider: 'google',
-        uid: user.uid
-      });
+      await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged will handle the rest
     } catch (error: any) {
+      setError(error.message);
       toast({
         title: 'Google Login Error',
-        description: error.message || 'Google authentication failed',
+        description: error.message,
         variant: 'destructive'
       });
     } finally {
@@ -129,59 +99,126 @@ export default function LoginPage() {
     }
   };
 
-  // Apple OAuth handler
-  const handleAppleLogin = async () => {
-    try {
-      setIsLoading(true);
-      const result = await signInWithPopup(auth, appleProvider);
-      const user = result.user;
-
-      await firebaseOAuthMutation.mutateAsync({
-        email: user.email,
-        displayName: user.displayName,
-        provider: 'apple',
-        uid: user.uid
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Apple Login Error',
-        description: error.message || 'Apple authentication failed',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Email/Password login handler
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  // Email/Password login
+  const handleEmailLogin = async (e: any) => {
     e.preventDefault();
+    setError('');
     if (!loginForm.email || !loginForm.password) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all fields',
-        variant: 'destructive'
-      });
+      setError('Please fill in all fields');
       return;
     }
-    await loginMutation.mutateAsync(loginForm);
+    
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, loginForm.email, loginForm.password);
+      // onAuthStateChanged will handle the rest
+    } catch (error: any) {
+      setError(error.message);
+      toast({
+        title: 'Login Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Registration handler
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: any) => {
     e.preventDefault();
+    setError('');
     if (!registerForm.email || !registerForm.password || !registerForm.firstName || !registerForm.lastName || !registerForm.username) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please fill in all fields',
-        variant: 'destructive'
-      });
+      setError('Please fill in all fields');
       return;
     }
-    await registerMutation.mutateAsync(registerForm);
+    
+    setIsLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, registerForm.email, registerForm.password);
+      // onAuthStateChanged will handle the rest
+    } catch (error: any) {
+      setError(error.message);
+      toast({
+        title: 'Registration Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const isAnyLoading = isLoading || firebaseOAuthMutation.isPending || loginMutation.isPending || registerMutation.isPending;
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setFirebaseUser(null);
+      toast({
+        title: 'Success',
+        description: 'Successfully logged out'
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Logout Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // If user is logged in, show user info
+  if (firebaseUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-lg border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+          <CardHeader className="text-center">
+            <div className="flex items-center justify-center space-x-2 mb-4">
+              <div className="p-2 bg-blue-600 rounded-lg">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <div className="p-2 bg-orange-500 rounded-lg">
+                <Anchor className="h-6 w-6 text-white" />
+              </div>
+            </div>
+            <CardTitle>Welcome to HydroSafe</CardTitle>
+            <CardDescription>AI Emergency Response Co-Pilot</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="text-center space-y-2">
+              {firebaseUser.photoURL && (
+                <img 
+                  src={firebaseUser.photoURL} 
+                  alt="Profile" 
+                  className="w-16 h-16 rounded-full mx-auto border-2 border-blue-200"
+                />
+              )}
+              <h3 className="text-lg font-semibold">{firebaseUser.displayName || firebaseUser.email}</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{firebaseUser.email}</p>
+            </div>
+            <div className="space-y-2">
+              <Button 
+                onClick={() => setLocation('/dashboard')}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                Go to Dashboard
+              </Button>
+              <Button 
+                onClick={handleLogout}
+                variant="outline"
+                className="w-full"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 flex items-center justify-center p-4">
@@ -210,10 +247,16 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <div className="mb-4 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400 rounded-md">
+                {error}
+              </div>
+            )}
+
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login" className="flex items-center space-x-2">
-                  <User className="h-4 w-4" />
+                  <UserIcon className="h-4 w-4" />
                   <span>Login</span>
                 </TabsTrigger>
                 <TabsTrigger value="register" className="flex items-center space-x-2">
@@ -235,7 +278,7 @@ export default function LoginPage() {
                         value={loginForm.email}
                         onChange={(e) => setLoginForm(prev => ({ ...prev, email: e.target.value }))}
                         className="pl-10"
-                        disabled={isAnyLoading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -250,16 +293,16 @@ export default function LoginPage() {
                         value={loginForm.password}
                         onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
                         className="pl-10"
-                        disabled={isAnyLoading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full bg-blue-600 hover:bg-blue-700"
-                    disabled={isAnyLoading}
+                    disabled={isLoading}
                   >
-                    {loginMutation.isPending ? 'Signing In...' : 'Sign In'}
+                    {isLoading ? 'Signing In...' : 'Sign In'}
                   </Button>
                 </form>
               </TabsContent>
@@ -274,7 +317,7 @@ export default function LoginPage() {
                         placeholder="John"
                         value={registerForm.firstName}
                         onChange={(e) => setRegisterForm(prev => ({ ...prev, firstName: e.target.value }))}
-                        disabled={isAnyLoading}
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="space-y-2">
@@ -284,7 +327,7 @@ export default function LoginPage() {
                         placeholder="Doe"
                         value={registerForm.lastName}
                         onChange={(e) => setRegisterForm(prev => ({ ...prev, lastName: e.target.value }))}
-                        disabled={isAnyLoading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -295,7 +338,7 @@ export default function LoginPage() {
                       placeholder="johndoe"
                       value={registerForm.username}
                       onChange={(e) => setRegisterForm(prev => ({ ...prev, username: e.target.value }))}
-                      disabled={isAnyLoading}
+                      disabled={isLoading}
                     />
                   </div>
                   <div className="space-y-2">
@@ -309,7 +352,7 @@ export default function LoginPage() {
                         value={registerForm.email}
                         onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
                         className="pl-10"
-                        disabled={isAnyLoading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -324,16 +367,16 @@ export default function LoginPage() {
                         value={registerForm.password}
                         onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
                         className="pl-10"
-                        disabled={isAnyLoading}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
                   <Button 
                     type="submit" 
                     className="w-full bg-orange-600 hover:bg-orange-700"
-                    disabled={isAnyLoading}
+                    disabled={isLoading}
                   >
-                    {registerMutation.isPending ? 'Creating Account...' : 'Create Account'}
+                    {isLoading ? 'Creating Account...' : 'Create Account'}
                   </Button>
                 </form>
               </TabsContent>
@@ -349,27 +392,16 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* OAuth Buttons */}
-            <div className="space-y-3">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleGoogleLogin}
-                disabled={isAnyLoading}
-              >
-                <Chrome className="mr-2 h-4 w-4" />
-                {isLoading && firebaseOAuthMutation.isPending ? 'Connecting...' : 'Continue with Google'}
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={handleAppleLogin}
-                disabled={isAnyLoading}
-              >
-                <Apple className="mr-2 h-4 w-4" />
-                {isLoading && firebaseOAuthMutation.isPending ? 'Connecting...' : 'Continue with Apple'}
-              </Button>
-            </div>
+            {/* Google OAuth Button */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+            >
+              <Chrome className="mr-2 h-4 w-4" />
+              {isLoading ? 'Connecting...' : 'Continue with Google'}
+            </Button>
           </CardContent>
         </Card>
 

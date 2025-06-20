@@ -2,12 +2,13 @@
 import { io } from "socket.io-client";
 
 // Create socket connection to the server
-export const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
-  autoConnect: true,
+export const socket = io(import.meta.env.VITE_SOCKET_URL || window.location.origin, {
+  autoConnect: false,
   reconnection: true,
   reconnectionDelay: 1000,
   reconnectionAttempts: 5,
   timeout: 20000,
+  transports: ['websocket', 'polling']
 });
 
 // Socket event listeners for debugging
