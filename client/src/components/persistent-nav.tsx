@@ -12,6 +12,7 @@ import {
   LogOut,
   ShieldCheck
 } from "lucide-react";
+import ProfileMenu from './profile-menu';
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -92,24 +93,7 @@ export function PersistentNav() {
 
             {/* User Menu */}
             <div className="hidden md:block">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <UserCircle className="h-6 w-6" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuItem>
-                    <UserCircle className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ProfileMenu />
             </div>
 
             {/* Mobile menu button */}
@@ -158,13 +142,17 @@ export function PersistentNav() {
               
               {/* Mobile User Menu */}
               <div className="border-t border-gray-200 pt-3 mt-3">
-                <div className="flex items-center space-x-3 px-3 py-2 text-gray-700">
-                  <UserCircle className="h-5 w-5" />
-                  <span className="text-base font-medium">Profile</span>
-                </div>
-                <div className="flex items-center space-x-3 px-3 py-2 text-gray-700">
-                  <LogOut className="h-5 w-5" />
-                  <span className="text-base font-medium">Log out</span>
+                <Link href="/profile">
+                  <div 
+                    className="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <UserCircle className="h-5 w-5" />
+                    <span className="text-base font-medium">Profile</span>
+                  </div>
+                </Link>
+                <div className="md:hidden mt-2 px-3">
+                  <ProfileMenu />
                 </div>
               </div>
             </div>

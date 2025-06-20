@@ -1,0 +1,140 @@
+1. TopBar Profile Dropdown (Avatar + Menu)
+components/ProfileMenu.jsx:
+
+jsx
+Copier
+Modifier
+import { useState, useRef, useEffect } from "react";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { useNavigate } from "react-router-dom";
+import { auth } from "../firebase";
+
+export default function ProfileMenu() {
+  const [user] = useAuthState(auth);
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const menuRef = useRef(null);
+
+  // Close menu if clicked outside
+  useEffect(() => {
+    function handleClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false);
+    }
+    if (open) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  if (!user) return null;
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-center w-10 h-10 rounded-full border bg-white hover:bg-blue-50"
+        title="Profile menu"
+      >
+        {user.photoURL
+          ? <img src={user.photoURL} alt="avatar" className="w-8 h-8 rounded-full" />
+          : <span className="font-bold text-lg text-blue-800">{user.email?.[0]?.toUpperCase() ?? "U"}</span>
+        }
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 bg-white border rounded-lg shadow-lg min-w-[150px] z-20">
+          <button
+            className="w-full text-left px-4 py-2 hover:bg-blue-50 flex items-center gap-2"
+            onClick={() => {
+              setOpen(false);
+              navigate("/profile");
+            }}>
+            <span className="material-symbols-outlined">person</span> Profile
+          </button>
+          <button
+            className="w-full text-left px-4 py-2 hover:bg-blue-50 flex items-center gap-2"
+            onClick={() => {
+              setOpen(false);
+              auth.signOut();
+            }}>
+            <span className="material-symbols-outlined">logout</span> Log out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+Usage:
+Put <ProfileMenu /> on the right of your top navigation bar.
+
+2. The Profile Page (/profile)
+pages/Profile.jsx:
+
+jsx
+Copier
+Modifier
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { auth } from '../firebase';
+
+export default function Profile() {
+  const [user] = useAuthState(auth);
+
+  if (!user) return <div className="p-8">Not logged in</div>;
+
+  return (
+    <div className="max-w-lg mx-auto bg-white p-8 shadow-xl rounded-xl mt-10">
+      <h2 className="text-2xl font-bold mb-4">My Profile</h2>
+      <div className="flex items-center gap-4 mb-6">
+        {user.photoURL ? (
+          <img src={user.photoURL} alt="avatar" className="w-20 h-20 rounded-full border" />
+        ) : (
+          <span className="w-20 h-20 rounded-full bg-blue-200 flex items-center justify-center text-3xl font-bold text-blue-700">
+            {user.email?.[0]?.toUpperCase() ?? "U"}
+          </span>
+        )}
+        <div>
+          <div className="font-bold text-lg">{user.displayName ?? "No Name"}</div>
+          <div className="text-gray-600">{user.email}</div>
+        </div>
+      </div>
+      <div className="mb-2">
+        <span className="font-semibold">UID:</span> <span className="text-gray-700">{user.uid}</span>
+      </div>
+      <div className="mb-6">
+        <span className="font-semibold">Email verified:</span> {user.emailVerified ? "Yes" : "No"}
+      </div>
+      <button
+        onClick={() => auth.signOut()}
+        className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-700"
+      >
+        Sign Out
+      </button>
+    </div>
+  );
+}
+3. Main Layout Integration
+In your top bar layout:
+
+jsx
+Copier
+Modifier
+import ProfileMenu from './components/ProfileMenu';
+// ...in your nav bar JSX:
+<div className="flex items-center gap-2">
+  {/* ...other nav elements... */}
+  <ProfileMenu />
+</div>
+4. Gold User Modal
+If you want the "Gold Command?" modal to show up after sign-in, just add <GoldRolePrompt /> to your main app layout/component, as described in the earlier message.
+Here’s a recap:
+
+Place <GoldRolePrompt /> in your main app or at the top of the dashboard page.
+
+It will check Firestore for the user’s role, and if not set, show the modal.
+
+Result:
+Clicking your profile icon always opens the dropdown.
+
+You get Profile and Log Out.
+
+Profile goes to a clean page with all user info.
+
+“Gold Command” modal works after login.
+
