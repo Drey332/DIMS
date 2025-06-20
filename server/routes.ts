@@ -24,6 +24,7 @@ import {
   initiateAppleAuth,
   handleGoogleCallback,
   handleAppleCallback,
+  handleFirebaseOAuth,
   type AuthRequest
 } from "./auth";
 
@@ -75,6 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/auth/apple', initiateAppleAuth);
   app.get('/auth/google/callback', handleGoogleCallback);
   app.post('/auth/apple/callback', handleAppleCallback);
+  app.post('/api/auth/firebase-oauth', handleFirebaseOAuth);
 
   // Apply authentication middleware to protected API routes
   app.use('/api', authenticateUser);

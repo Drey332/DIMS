@@ -217,3 +217,72 @@ export const handleAppleCallback = async (req: Request, res: Response) => {
     res.redirect('/login?error=auth_failed');
   }
 };
+
+// Firebase OAuth endpoint for Google/Apple authentication
+export const handleFirebaseOAuth = async (req: Request, res: Response) => {
+  try {
+    const { email, displayName, provider, uid } = req.body;
+
+    if (!email || !provider) {
+      return res.status(400).json({ error: 'Email and provider are required' });
+    }
+
+    // Check if user exists
+    const existingUser = await storage.getUserByEmail(email);
+
+    let user;
+    if (!existingUser) {
+      // Create new user from OAuth data
+      const [firstName, ...lastNameParts] = (displayName || '').split(' ');
+      const lastName = lastNameParts.join(' ') || '';
+
+      user = await storage.createUser({
+        email,
+        username: email.split('@')[0],
+        firstName: firstName || '',
+        lastName: lastName || '',
+        role: 'BRONZE', // Default role for OAuth users
+        password: 'oauth_user', // OAuth users don't need passwords
+        isActive: true
+      });
+
+      // Log user registration
+      await storage.createAuditLog({
+        userId: user.id,
+        actionType: 'USER_REGISTRATION',
+        description: `New user registered via ${provider} OAuth`,
+        newData: { email, provider }
+      });
+    } else {
+      user = existingUser;
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user.id, 
+        email: user.email, 
+        role: user.role 
+      },
+      process.env.JWT_SECRET || 'hydrosafe_secret',
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        authProvider: provider
+      }
+    });
+
+  } catch (error) {
+    console.error('Firebase OAuth error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+};

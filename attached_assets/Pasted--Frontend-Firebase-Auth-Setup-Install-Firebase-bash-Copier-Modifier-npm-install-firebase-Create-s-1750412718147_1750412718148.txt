@@ -1,0 +1,212 @@
+. Frontend: Firebase Auth Setup
+Install Firebase
+
+bash
+Copier
+Modifier
+npm install firebase
+Create src/firebase.js:
+
+js
+Copier
+Modifier
+// src/firebase.js
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: "...", // your Firebase API key
+  authDomain: "...",
+  projectId: "...",
+  appId: "...",
+};
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+export const appleProvider = new OAuthProvider('apple.com');
+Update src/pages/Login.jsx:
+
+jsx
+Copier
+Modifier
+import { auth, googleProvider, appleProvider } from '../firebase';
+import { signInWithPopup } from "firebase/auth";
+import { useAuth } from '../context/AuthContext'; // Your context
+import { useNavigate } from 'react-router-dom';
+
+export default function Login() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  // Google OAuth
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const resp = await fetch('/api/auth/oauth', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: result.user.email,
+          displayName: result.user.displayName,
+          provider: 'google'
+        })
+      });
+      const data = await resp.json();
+      login(data.token, data.user);
+      navigate('/dashboard');
+    } catch (err) {
+      alert('Google Auth failed');
+    }
+  };
+
+  // Apple OAuth
+  const handleAppleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, appleProvider);
+      const resp = await fetch('/api/auth/oauth', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: result.user.email,
+          displayName: result.user.displayName,
+          provider: 'apple'
+        })
+      });
+      const data = await resp.json();
+      login(data.token, data.user);
+      navigate('/dashboard');
+    } catch (err) {
+      alert('Apple Auth failed');
+    }
+  };
+
+  return (
+    <div>
+      {/* Your existing login UI */}
+      <button onClick={handleGoogleLogin} className="btn btn-blue">Sign in with Google</button>
+      <button onClick={handleAppleLogin} className="btn btn-gray">Sign in with Apple</button>
+    </div>
+  );
+}
+2. Backend: OAuth Endpoint (Express)
+In /routes/auth.js:
+
+js
+Copier
+Modifier
+router.post('/oauth', async (req, res) => {
+  const { email, displayName, provider } = req.body;
+  let user = await User.findOne({ email });
+  if (!user) {
+    user = new User({
+      email,
+      firstName: displayName.split(' ')[0],
+      lastName: displayName.split(' ')[1] || '',
+      role: 'bronze' // Default to bronze unless you have a gold-code flow
+    });
+    await user.save();
+  }
+  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+  res.json({ token, user });
+});
+Tip: Add logic to prompt for Gold code later if they want to be Gold.
+
+3. Backend: Real-Time Updates with Socket.IO
+Install Socket.IO
+
+bash
+Copier
+Modifier
+npm install socket.io
+server.js
+
+js
+Copier
+Modifier
+const http = require('http');
+const app = require('./app'); // your express app
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, { cors: { origin: "*" } });
+
+// Attach io to app for access in routes
+app.set('io', io);
+
+io.on('connection', (socket) => {
+  console.log("User connected:", socket.id);
+  socket.on('disconnect', () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+// Helper function
+const broadcastTeamUpdate = async () => {
+  const team = await User.find();
+  io.emit('teamUpdate', team);
+};
+
+module.exports = { server, broadcastTeamUpdate };
+Example Usage in /routes/team.js:
+
+js
+Copier
+Modifier
+const { broadcastTeamUpdate } = require('../server');
+
+router.post('/', requireGold, async (req, res) => {
+  // ...add logic...
+  await broadcastTeamUpdate();
+  res.json(user);
+});
+
+router.delete('/:userId', requireGold, async (req, res) => {
+  // ...remove logic...
+  await broadcastTeamUpdate();
+  res.json({ success: true });
+});
+4. Frontend: Socket.IO Client
+Install:
+
+bash
+Copier
+Modifier
+npm install socket.io-client
+src/socket.js
+
+js
+Copier
+Modifier
+import { io } from "socket.io-client";
+export const socket = io('http://localhost:5000'); // Or your deployed server
+Example in Dashboard/Team Management:
+
+jsx
+Copier
+Modifier
+import { useEffect, useState } from 'react';
+import { socket } from '../socket';
+
+export default function TeamManagement() {
+  const [team, setTeam] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/team').then(res => res.json()).then(setTeam);
+
+    socket.on('teamUpdate', (newTeam) => {
+      setTeam(newTeam);
+    });
+    return () => {
+      socket.off('teamUpdate');
+    };
+  }, []);
+
+  // ...render team UI...
+}
+That’s it!
+One-click Google/Apple login
+
+Real-time team sync across all browsers/users
+
+Works perfectly with your command hierarchy logic and clean navigation
+

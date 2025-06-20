@@ -1,8 +1,24 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 const app = express();
+const server = createServer(app);
+
+// Initialize Socket.IO with CORS support
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
+// Attach io to app for access in routes
+app.set('io', io);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -36,8 +52,44 @@ app.use((req, res, next) => {
   next();
 });
 
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log('Client connected:', socket.id);
+
+  // Handle project room joining
+  socket.on('join-project', (projectId) => {
+    socket.join(`project-${projectId}`);
+    console.log(`Socket ${socket.id} joined project ${projectId}`);
+  });
+
+  // Handle project room leaving
+  socket.on('leave-project', (projectId) => {
+    socket.leave(`project-${projectId}`);
+    console.log(`Socket ${socket.id} left project ${projectId}`);
+  });
+
+  // Handle team updates
+  socket.on('team-update', (data) => {
+    socket.to(`project-${data.projectId}`).emit('team-update', data);
+  });
+
+  // Handle incident updates
+  socket.on('incident-update', (data) => {
+    socket.to(`project-${data.projectId}`).emit('incident-update', data);
+  });
+
+  // Handle asset verification updates
+  socket.on('asset-update', (data) => {
+    socket.to(`project-${data.projectId}`).emit('asset-update', data);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+  });
+});
+
 (async () => {
-  const server = await registerRoutes(app);
+  const httpServer = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
