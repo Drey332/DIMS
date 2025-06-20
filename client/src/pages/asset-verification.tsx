@@ -8,8 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Header } from "@/components/header";
-import { Navigation } from "@/components/navigation";
 import { AIAuditReferee, type AuditResult } from "@/components/ai-audit-referee";
 import { cn } from "@/lib/utils";
 import { 
@@ -216,39 +214,32 @@ export default function AssetVerification() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <Navigation />
+      <main>
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <RefreshCw className="h-8 w-8 animate-spin" />
             <span className="ml-2">Loading assets...</span>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Header />
-        <Navigation />
+      <main>
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64 text-red-600">
             <AlertTriangle className="h-8 w-8 mr-2" />
             <span>Asset Error: {error.message || "Unknown error loading assets"}</span>
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <Navigation />
-      
+    <main>
       <div className="container mx-auto px-4 py-8">
         {/* Project Selection */}
         {projects && projects.length > 1 && (
@@ -494,7 +485,7 @@ export default function AssetVerification() {
             </Card>
           </div>
         )}
-      </div>
-    </div>
+        </div>
+    </main>
   );
 }
