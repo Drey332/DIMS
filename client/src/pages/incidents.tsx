@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Header } from "@/components/header";
-import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -130,11 +128,8 @@ export default function Incidents() {
   };
 
   return (
-    <div className="min-h-screen bg-hydro-light">
-      <Header user={user} project={project} />
-      <Navigation />
-      
-      <main className="container mx-auto px-4 py-6">
+    <div>
+      <main>
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-hydro-dark">Incident Management</h1>
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>

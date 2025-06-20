@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Header } from "@/components/header";
 import ClientCard from "@/components/ClientCard";
 import ClientForm from "@/components/ClientForm";
 import { Button } from "@/components/ui/button";
@@ -121,13 +120,10 @@ export default function ClientsPage() {
 
   if (isLoading) {
     return (
-      <div className="hydro-container">
-        <Header />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading clients...</p>
-          </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading clients...</p>
         </div>
       </div>
     );
@@ -135,33 +131,27 @@ export default function ClientsPage() {
 
   if (error) {
     return (
-      <div className="hydro-container">
-        <Header />
-        <Alert variant="destructive" className="m-6">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Failed to load clients. Please try again later.
-          </AlertDescription>
-        </Alert>
-      </div>
+      <Alert variant="destructive" className="m-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>
+          Failed to load clients. Please try again later.
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
-    <div className="hydro-container">
-      <Header />
-      
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
+    <main>
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
             <Users className="h-8 w-8 text-primary" />
             <div>
               <h1 className="text-3xl font-bold text-hydro-dark">Client Management</h1>
               <p className="text-gray-600">Manage your client organizations and contacts</p>
             </div>
-          </div>
-          
-          {canCreateClients && (
+        </div>
+        
+        {canCreateClients && (
             <Button
               onClick={() => setShowForm(true)}
               className="gap-2"
@@ -170,8 +160,8 @@ export default function ClientsPage() {
               <Plus className="h-4 w-4" />
               Add New Client
             </Button>
-          )}
-        </div>
+        )}
+      </div>
 
         {showForm && (
           <ClientForm
@@ -212,7 +202,6 @@ export default function ClientsPage() {
             ))}
           </div>
         )}
-      </div>
-    </div>
+    </main>
   );
 }

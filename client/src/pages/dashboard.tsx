@@ -1,6 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Header } from "@/components/header";
-import { Navigation } from "@/components/navigation";
 import { CommandDashboard } from "@/components/command-dashboard";
 import { DecisionMakingModel } from "@/components/decision-making-model";
 import { EmergencyContacts } from "@/components/emergency-contacts";
@@ -27,11 +25,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-hydro-light">
-      <Header user={user} project={project} />
-      <Navigation />
-      
-      <main className="container mx-auto px-4 py-6">
+    <div>
+      <main>
         <CommandDashboard />
         <DecisionMakingModel />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
