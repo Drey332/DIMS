@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
+import { ProjectHeader } from "@/components/project-header";
 
 import Dashboard from "@/pages/dashboard";
 import Incidents from "@/pages/incidents";
@@ -23,24 +24,27 @@ function Router() {
   return (
     <>
       <PersistentNav />
+      <ProjectHeader />
       <div className="min-h-screen bg-gray-50">
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/login" component={Login} />
-          <Route path="/register" component={Register} />
-          <Route path="/incidents" component={Incidents} />
-          <Route path="/team" component={TeamManagement} />
-          <Route path="/reports" component={Reports} />
-          <Route path="/reports/generate" component={Reports} />
-          <Route path="/reports/history" component={Reports} />
-          <Route path="/setup" component={ProjectSetup} />
-          <Route path="/asset-verification" component={AssetVerification} />
-          <Route path="/assets" component={AssetVerification} />
-          <Route path="/assets/upload" component={AssetUpload} />
-          <Route path="/assets/manage" component={AssetManage} />
-          <Route path="/clients" component={Clients} />
-          <Route component={NotFound} />
-        </Switch>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/login" component={Login} />
+            <Route path="/register" component={Register} />
+            <Route path="/incidents" component={Incidents} />
+            <Route path="/team" component={TeamManagement} />
+            <Route path="/reports" component={Reports} />
+            <Route path="/reports/generate" component={Reports} />
+            <Route path="/reports/history" component={Reports} />
+            <Route path="/setup" component={ProjectSetup} />
+            <Route path="/asset-verification" component={AssetVerification} />
+            <Route path="/assets" component={AssetVerification} />
+            <Route path="/assets/upload" component={AssetUpload} />
+            <Route path="/assets/manage" component={AssetManage} />
+            <Route path="/clients" component={Clients} />
+            <Route component={NotFound} />
+          </Switch>
+        </main>
       </div>
     </>
   );
