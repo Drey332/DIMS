@@ -1,0 +1,219 @@
+. Google/Apple OAuth with Firebase Auth
+Frontend: React with Firebase
+Install Firebase
+
+bash
+Copier
+Modifier
+npm install firebase
+firebase.js (init your Firebase app)
+
+js
+Copier
+Modifier
+// src/firebase.js
+import { initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  appId: "...",
+};
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const googleProvider = new GoogleAuthProvider();
+export const appleProvider = new OAuthProvider('apple.com');
+Login Component (OAuth Buttons)
+
+jsx
+Copier
+Modifier
+// src/pages/Login.jsx
+import { auth, googleProvider, appleProvider } from '../firebase';
+import { signInWithPopup } from "firebase/auth";
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
+export default function Login() {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  // ...existing login logic...
+
+  // Google OAuth
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      // You should now send result.user info (email, displayName) to your backend to check/create a user and get a JWT/token
+      const resp = await fetch('/api/auth/oauth', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: result.user.email,
+          displayName: result.user.displayName,
+          provider: 'google'
+        })
+      });
+      const data = await resp.json();
+      login(data.token, data.user);
+      navigate('/dashboard');
+    } catch (err) {
+      alert('Google Auth failed');
+    }
+  };
+
+  // Apple OAuth
+  const handleAppleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, appleProvider);
+      // Same backend logic
+      const resp = await fetch('/api/auth/oauth', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          email: result.user.email,
+          displayName: result.user.displayName,
+          provider: 'apple'
+        })
+      });
+      const data = await resp.json();
+      login(data.token, data.user);
+      navigate('/dashboard');
+    } catch (err) {
+      alert('Apple Auth failed');
+    }
+  };
+
+  return (
+    <div>
+      {/* ...your custom login forms/buttons... */}
+      <button onClick={handleGoogleLogin} className="btn btn-blue">Sign in with Google</button>
+      <button onClick={handleAppleLogin} className="btn btn-gray">Sign in with Apple</button>
+    </div>
+  );
+}
+Backend OAuth Endpoint (Express)
+
+js
+Copier
+Modifier
+// /routes/auth.js
+router.post('/oauth', async (req, res) => {
+  // Called from frontend after OAuth
+  const { email, displayName, provider } = req.body;
+  let user = await User.findOne({ email });
+  if (!user) {
+    user = new User({
+      email,
+      firstName: displayName.split(' ')[0],
+      lastName: displayName.split(' ')[1] || '',
+      // Assign bronze or prompt for Gold code later if needed
+      role: 'bronze'
+    });
+    await user.save();
+  }
+  const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+  res.json({ token, user });
+});
+You can add logic to ask for Gold code if the user claims to be Gold after OAuth.
+
+2. Real-Time Updates with Socket.IO
+Backend Setup (Express + Socket.io)
+js
+Copier
+Modifier
+// server.js
+const http = require('http');
+const app = require('./app'); // your express app
+const server = http.createServer(app);
+const { Server } = require("socket.io");
+const io = new Server(server, { cors: { origin: "*" } });
+
+io.on('connection', (socket) => {
+  console.log("User connected:", socket.id);
+  // Optional: Store which user is connected
+  socket.on('disconnect', () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+// Broadcast team update after changes
+const broadcastTeamUpdate = async () => {
+  const team = await User.find();
+  io.emit('teamUpdate', team);
+};
+
+// Use broadcastTeamUpdate() in your /routes/team.js after add/remove
+Example in /routes/team.js
+js
+Copier
+Modifier
+router.post('/', requireGold, async (req, res) => {
+  // ...add logic...
+  await broadcastTeamUpdate();
+  res.json(user);
+});
+
+router.delete('/:userId', requireGold, async (req, res) => {
+  // ...remove logic...
+  await broadcastTeamUpdate();
+  res.json({ success: true });
+});
+Frontend: React with Socket.IO Client
+bash
+Copier
+Modifier
+npm install socket.io-client
+/src/socket.js
+
+js
+Copier
+Modifier
+import { io } from "socket.io-client";
+export const socket = io('http://localhost:5000'); // adjust port if needed
+Use in Dashboard
+
+jsx
+Copier
+Modifier
+import { useEffect } from 'react';
+import { socket } from '../socket';
+
+export default function Dashboard() {
+  const [team, setTeam] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/team').then(res => res.json()).then(setTeam);
+
+    socket.on('teamUpdate', (newTeam) => {
+      setTeam(newTeam);
+    });
+    return () => {
+      socket.off('teamUpdate');
+    };
+  }, []);
+
+  // ...render as before...
+}
+Summary Checklist
+Google/Apple OAuth:
+
+User can log in with Google/Apple.
+
+If new, create their user in the DB, else log them in.
+
+Optionally, if user claims “Gold,” still prompt for the code (can add a modal for this).
+
+Real-Time Team Updates:
+
+When any Gold edits the team, all dashboards update instantly (socket.io).
+
+Works for add/remove and status changes.
+
+UX:
+
+Feels instant, field-ready, no refresh required.
+
