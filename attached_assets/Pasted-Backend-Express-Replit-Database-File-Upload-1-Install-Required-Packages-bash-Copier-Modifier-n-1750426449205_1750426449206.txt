@@ -1,0 +1,130 @@
+Backend: Express + Replit Database + File Upload
+1. Install Required Packages
+bash
+Copier
+Modifier
+npm install express multer replitdb
+2. Backend: server.js
+js
+Copier
+Modifier
+const express = require('express');
+const multer = require('multer');
+const { Database } = require("replitdb");
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use('/uploads', express.static('uploads')); // Serve photos
+
+const db = new Database();
+
+// Multer for local file uploads (to /uploads)
+const upload = multer({ dest: './uploads/' });
+
+// List all assets
+app.get('/api/assets', async (req, res) => {
+  const assets = (await db.get("assets")) || [];
+  res.json(assets);
+});
+
+// Add new asset
+app.post('/api/assets', async (req, res) => {
+  const { name, location } = req.body;
+  if (!name || !location) return res.status(400).json({ error: "Missing fields" });
+  const assets = (await db.get("assets")) || [];
+  const asset = {
+    id: Date.now().toString(),
+    name,
+    location,
+    createdAt: Date.now(),
+    verifications: [],
+  };
+  assets.push(asset);
+  await db.set("assets", assets);
+  res.json(asset);
+});
+
+// Verify asset (with photo, location, comment, etc.)
+app.post('/api/assets/:id/verify', upload.single('photo'), async (req, res) => {
+  const { id } = req.params;
+  const { comment, lat, lng, verifiedBy } = req.body;
+  const photoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+  let assets = (await db.get("assets")) || [];
+  const idx = assets.findIndex(a => a.id === id);
+  if (idx === -1) return res.status(404).json({ error: "Asset not found" });
+  const verification = {
+    photoUrl,
+    timestamp: Date.now(),
+    location: { lat, lng },
+    comment,
+    verifiedBy,
+  };
+  assets[idx].verifications = assets[idx].verifications || [];
+  assets[idx].verifications.push(verification);
+  await db.set("assets", assets);
+  res.json(assets[idx]);
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log('HydroSafe Asset Backend (Replit DB) running on', PORT));
+🟨 Frontend: React Asset Verification (No changes needed)
+You can use the previous React code!
+Just make sure your API endpoints are pointed to /api/assets and /api/assets/:id/verify.
+
+Assets are stored as a list at key "assets" in Replit DB.
+
+Each asset has an array of verifications, each with photoUrl, timestamp, comment, location, and verifiedBy.
+
+Photos are stored in /uploads folder in your Replit workspace.
+
+🟩 How to Access/Query Data
+All assets:
+GET /api/assets
+Returns an array:
+
+js
+Copier
+Modifier
+[
+  {
+    id: "1687288383",
+    name: "Compressor 1",
+    location: "FPSO Aft Deck",
+    createdAt: 1687288383000,
+    verifications: [
+      {
+        photoUrl: "/uploads/2e95ac7f2b9d4c8f8b3e5f.jpg",
+        timestamp: 1687288400000,
+        location: { lat: "6.45", lng: "3.39" },
+        comment: "No leaks, all clear.",
+        verifiedBy: "Sarah"
+      }
+    ]
+  }
+]
+Add/verify just as in the previous frontend.
+
+🟦 Advanced CTO Tips
+To limit DB size, periodically prune old assets or photos from /uploads.
+
+Back up your asset data by exporting the "assets" key:
+
+js
+Copier
+Modifier
+const allAssets = await db.get("assets");
+// Save this to a file for backup
+If you want to store photos as base64 in the DB (not recommended, but possible for tiny images):
+Replace the multer/photo upload code with reading the file and saving its contents to the DB (let me know if you want this method).
+
+Summary
+Everything stored in Replit DB and local /uploads for images.
+
+No external services required.
+
+All logic is fast and simple.
+
