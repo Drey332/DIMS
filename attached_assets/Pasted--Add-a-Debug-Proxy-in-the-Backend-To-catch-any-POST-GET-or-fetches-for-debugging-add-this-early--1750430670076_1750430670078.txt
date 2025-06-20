@@ -1,0 +1,86 @@
+. Add a Debug Proxy in the Backend
+To catch any POST, GET, or fetches for debugging, add this early in your backend (for testing only):
+
+js
+Copier
+Modifier
+app.all('/api/*', (req, res, next) => {
+  console.log('[DEBUG] Incoming:', req.method, req.originalUrl);
+  next();
+});
+Now any fetch from your frontend will be logged.
+
+2. Fix Your Frontend Endpoint
+Step-by-step CTO Debugging Process
+A. Open your frontend code and search for:
+asset-verifications
+or
+/api/asset-verifications
+
+B. Change all references of /api/asset-verifications to the correct endpoint:
+
+To add a new asset:
+POST /api/assets
+
+To verify an asset:
+POST /api/assets/:id/verify
+
+Example for verification:
+
+js
+Copier
+Modifier
+// WRONG (causing error)
+fetch('/api/asset-verifications', {...})
+
+// CORRECT (for verifying an asset)
+fetch(`/api/assets/${assetId}/verify`, {...})
+3. Log and Show Errors in the Frontend
+Add this before every fetch:
+
+js
+Copier
+Modifier
+console.log('About to fetch', endpoint, options);
+try {
+  const resp = await fetch(endpoint, options);
+  if (!resp.ok) {
+    const text = await resp.text();
+    console.error('Fetch error:', text);
+    alert('Error: ' + text);
+  }
+} catch (err) {
+  console.error('Network error:', err);
+}
+4. Confirm with Dev Tools
+Go to your browser Dev Tools > Network tab.
+
+Try to add/verify an asset.
+
+Look for the Request URL.
+
+If it's /api/asset-verifications → This is wrong. Fix it!
+
+If it's /api/assets or /api/assets/:id/verify → Correct!
+
+5. Final Debug Route (to see what comes in):
+Add this to your backend to print all post body data (temporarily):
+
+js
+Copier
+Modifier
+app.post('*', express.json(), (req, res, next) => {
+  console.log('[DEBUG POST] URL:', req.originalUrl, 'Body:', req.body);
+  next();
+});
+This way you see exactly what the frontend is sending, at every endpoint.
+
+TL;DR (Action List)
+Fix all frontend fetch URLs:
+
+Replace /api/asset-verifications with /api/assets (add asset) or /api/assets/:id/verify (verify asset).
+
+Add backend logging (see above) to catch all unexpected requests.
+
+Watch logs as you interact—they’ll tell you if your frontend is calling the right API.
+

@@ -141,21 +141,22 @@ export default function AssetVerification() {
   });
 
   const handleCreateAsset = () => {
-    if (!activeProjectId || !currentUser) return;
+    if (!activeProjectId || !currentUser) {
+      console.log("Cannot create asset - missing data:", { activeProjectId, currentUser: !!currentUser });
+      return;
+    }
     
     const newAsset = {
       projectId: activeProjectId,
       assetName: "New Asset " + Date.now(),
       assetType: "EQUIPMENT",
-      location: "Offshore Platform",
-      description: "New asset verification entry",
       status: "PENDING",
-      verifiedBy: currentUser.id,
       nextCheckDue: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       protocolReference: "IOGP Report 456 - KPI Framework",
       comments: "Asset created for verification"
     };
     
+    console.log("Creating asset with data:", newAsset);
     createAssetMutation.mutate(newAsset);
   };
 
