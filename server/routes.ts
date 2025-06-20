@@ -596,10 +596,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const assetData = req.body;
-      const asset = await storage.createAssetVerification({
-        ...assetData,
+      
+      // Convert date strings to Date objects and filter out undefined values
+      const processedData: any = {
+        projectId: assetData.projectId,
+        assetName: assetData.assetName,
+        assetType: assetData.assetType,
+        status: assetData.status || 'PENDING',
         verifiedBy: req.user.id,
-      });
+        comments: assetData.comments,
+        complianceNotes: assetData.complianceNotes,
+        protocolReference: assetData.protocolReference,
+        checklistData: assetData.checklistData,
+      };
+      
+      // Only add date fields if they exist and are valid
+      if (assetData.lastChecked) {
+        processedData.lastChecked = new Date(assetData.lastChecked);
+      }
+      if (assetData.nextCheckDue) {
+        processedData.nextCheckDue = new Date(assetData.nextCheckDue);
+      }
+      if (assetData.photoId) {
+        processedData.photoId = assetData.photoId;
+      }
+      
+      const asset = await storage.createAssetVerification(processedData);
 
       // Log the asset verification action
       await storage.createAuditLog({

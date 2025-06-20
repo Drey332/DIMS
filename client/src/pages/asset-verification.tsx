@@ -99,10 +99,11 @@ export default function AssetVerification() {
         description: "New asset verification entry created successfully",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Asset creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create asset verification",
+        description: error.message || "Failed to create asset verification",
         variant: "destructive",
       });
     }
@@ -140,15 +141,19 @@ export default function AssetVerification() {
   });
 
   const handleCreateAsset = () => {
-    if (!activeProjectId) return;
+    if (!activeProjectId || !currentUser) return;
     
     const newAsset = {
       projectId: activeProjectId,
-      assetName: "New Asset",
+      assetName: "New Asset " + Date.now(),
       assetType: "EQUIPMENT",
+      location: "Offshore Platform",
+      description: "New asset verification entry",
       status: "PENDING",
+      verifiedBy: currentUser.id,
       nextCheckDue: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      protocolReference: "IOGP Report 456 - KPI Framework"
+      protocolReference: "IOGP Report 456 - KPI Framework",
+      comments: "Asset created for verification"
     };
     
     createAssetMutation.mutate(newAsset);
