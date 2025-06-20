@@ -1,0 +1,168 @@
+Best Practice: "Command Hierarchy" inside Team Management
+Key Points:
+
+“Command Hierarchy” = visual, not a separate tab/route.
+
+All hierarchy is reflected in Team Management—just one place to view, add, or remove people.
+
+Only Gold Command (with the right code) sees the add/remove controls.
+
+How the Next.js UI Should Work
+/team-management is the only route.
+
+The page lists team members, automatically sorted by hierarchy (Gold → Silver → Bronze).
+
+Each role is color-coded and visually grouped—Gold always on top, then Silver, then Bronze.
+
+Golds can add or remove team members via modals/forms.
+
+The “Command Structure” card (right-side) just summarizes the current counts and hierarchy—not clickable.
+
+No separate “Command Hierarchy” menu item or tab anywhere.
+
+Sample Next.js + Tailwind UI Code
+Here’s a React component structure for your Team Management page:
+
+jsx
+Copier
+Modifier
+// pages/team-management.jsx
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { socket } from '../socket';
+
+function TeamMemberCard({ user, onRemove }) {
+  const roleColors = {
+    gold: 'bg-yellow-50 border-yellow-400',
+    silver: 'bg-gray-100 border-gray-400',
+    bronze: 'bg-orange-50 border-orange-400'
+  };
+  const dotColor = user.status === 'Active' ? 'bg-green-500' : user.status === 'Away' ? 'bg-orange-500' : 'bg-gray-400';
+  return (
+    <div className={`rounded-xl border-l-8 mb-3 p-4 shadow flex flex-col ${roleColors[user.role]}`}>
+      <div className="flex justify-between items-center">
+        <span className="font-bold text-lg">{user.firstName} {user.lastName}</span>
+        <span className={`text-xs font-bold uppercase`}>{user.role} Command</span>
+      </div>
+      <div className="text-sm">{user.title} | {user.email} | {user.phone}</div>
+      <div className="text-xs text-gray-500 flex items-center gap-2">
+        <span className={`w-2 h-2 rounded-full ${dotColor}`}></span>
+        {user.status}
+        &middot; Last seen: {user.lastSeen && new Date(user.lastSeen).toLocaleTimeString()}
+      </div>
+      {onRemove && <button className="btn btn-red mt-2" onClick={() => onRemove(user._id)}>Remove</button>}
+    </div>
+  );
+}
+
+export default function TeamManagement() {
+  const { user, isGold } = useAuth();
+  const [team, setTeam] = useState([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({});
+
+  useEffect(() => {
+    fetch('/api/team').then(res => res.json()).then(setTeam);
+    socket.on('teamUpdate', setTeam);
+    return () => socket.off('teamUpdate');
+  }, []);
+
+  const handleRemove = async (id) => {
+    await fetch(`/api/team/${id}`, { method: 'DELETE' });
+    // socket will update everyone
+  };
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    await fetch('/api/team', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(form)
+    });
+    setShowAdd(false);
+    // socket will update everyone
+  };
+
+  // Sorted: Gold > Silver > Bronze
+  const sorted = team.slice().sort((a, b) => {
+    const order = { gold: 0, silver: 1, bronze: 2 };
+    return order[a.role] - order[b.role];
+  });
+
+  return (
+    <div className="max-w-4xl mx-auto py-8">
+      <h1 className="text-2xl font-bold mb-6">Team Management</h1>
+      <div className="flex gap-8">
+        {/* Left: Team List */}
+        <div className="flex-1">
+          <div className="flex justify-between mb-4">
+            <span className="font-bold text-lg">Command Team Members</span>
+            {isGold && <button className="btn btn-blue" onClick={() => setShowAdd(true)}>Add Team Member</button>}
+          </div>
+          {sorted.map(u =>
+            <TeamMemberCard key={u._id} user={u} onRemove={isGold ? handleRemove : undefined} />
+          )}
+        </div>
+        {/* Right: Hierarchy summary */}
+        <div className="w-72 flex flex-col gap-6">
+          <div className="rounded-xl p-4 shadow bg-white">
+            <h2 className="font-bold text-lg mb-2">Command Structure</h2>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center font-bold">G</span>
+                <span className="font-bold">GOLD</span> <span className="text-xs ml-1 text-gray-500">({team.filter(u=>u.role==='gold').length} Active)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-gray-400 flex items-center justify-center font-bold text-white">S</span>
+                <span className="font-bold">SILVER</span> <span className="text-xs ml-1 text-gray-500">({team.filter(u=>u.role==='silver').length} Active)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-orange-400 flex items-center justify-center font-bold">B</span>
+                <span className="font-bold">BRONZE</span> <span className="text-xs ml-1 text-gray-500">({team.filter(u=>u.role==='bronze').length} Active)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Add Modal */}
+      {showAdd && isGold && (
+        <form onSubmit={handleAdd} className="fixed z-10 bg-white p-8 shadow-2xl rounded-xl top-1/3 left-1/2 -translate-x-1/2 w-96">
+          <input className="input mb-2" name="firstName" placeholder="First Name" required onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
+          <input className="input mb-2" name="lastName" placeholder="Last Name" required onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
+          <input className="input mb-2" name="email" placeholder="Email" required onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+          <input className="input mb-2" name="title" placeholder="Role/Title (ex. MD/CEO, Marine Director)" onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
+          <input className="input mb-2" name="phone" placeholder="Phone" onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+          <select className="input mb-4" name="role" required onChange={e => setForm(f => ({ ...f, role: e.target.value }))}>
+            <option value="">Select Command</option>
+            <option value="gold">Gold</option>
+            <option value="silver">Silver</option>
+            <option value="bronze">Bronze</option>
+          </select>
+          <button className="btn btn-green" type="submit">Add</button>
+          <button className="btn btn-gray ml-2" onClick={() => setShowAdd(false)}>Cancel</button>
+        </form>
+      )}
+    </div>
+  );
+}
+Design Notes
+Hierarchy = Sorting, not a Tab: Gold, Silver, Bronze grouped visually in one list.
+
+“Command Structure” on the right is a summary of current status, never a navigation.
+
+All changes are real-time via socket.io.
+
+Only Golds see Add/Remove.
+
+Backend: Sorting
+When you return the team list from your backend, either:
+
+Return it sorted (Gold > Silver > Bronze), OR
+
+Let the frontend sort, as above (with const order = { gold: 0, silver: 1, bronze: 2 }).
+
+No “Command Hierarchy” Tab!
+You only have Dashboard, Tools, Incidents, Team Management, Client Management, Project Setup
+Team Management = where command hierarchy happens.
+

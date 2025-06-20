@@ -35,7 +35,6 @@ const navItems: NavItem[] = [
   },
   { href: "/incidents", label: "Incidents", icon: AlertTriangle },
   { href: "/team", label: "Team Management", icon: Users },
-  { href: "/team-hierarchy", label: "Command Hierarchy", icon: Users },
   { href: "/clients", label: "Client Management", icon: Users },
   { href: "/setup", label: "Project Setup", icon: Settings },
 ];

@@ -8,7 +8,6 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import Dashboard from "@/pages/dashboard";
 import Incidents from "@/pages/incidents";
 import TeamManagement from "@/pages/team-management";
-import TeamHierarchy from "@/pages/team-hierarchy";
 import Reports from "@/pages/reports";
 import ProjectSetup from "@/pages/project-setup";
 import AssetVerification from "@/pages/asset-verification";
@@ -27,7 +26,6 @@ function Router() {
       <Route path="/register" component={Register} />
       <Route path="/incidents" component={Incidents} />
       <Route path="/team" component={TeamManagement} />
-      <Route path="/team-hierarchy" component={TeamHierarchy} />
       <Route path="/reports" component={Reports} />
       <Route path="/reports/generate" component={Reports} />
       <Route path="/reports/history" component={Reports} />
