@@ -6,10 +6,22 @@ import {
   FileText, 
   Settings,
   Package,
-  ChevronDown
+  ChevronDown,
+  Menu,
+  X,
+  UserCircle,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuSeparator, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 
 interface NavItem {
   href: string;
@@ -42,6 +54,7 @@ const navItems: NavItem[] = [
 export function Navigation() {
   const [location] = useLocation();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const renderNavItem = (item: NavItem) => {
     const Icon = item.icon;

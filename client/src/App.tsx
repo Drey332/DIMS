@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { PersistentNav } from "@/components/persistent-nav";
 
 import Dashboard from "@/pages/dashboard";
 import Incidents from "@/pages/incidents";
@@ -20,23 +21,28 @@ import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/login" component={Login} />
-      <Route path="/register" component={Register} />
-      <Route path="/incidents" component={Incidents} />
-      <Route path="/team" component={TeamManagement} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/reports/generate" component={Reports} />
-      <Route path="/reports/history" component={Reports} />
-      <Route path="/setup" component={ProjectSetup} />
-      <Route path="/asset-verification" component={AssetVerification} />
-      <Route path="/assets" component={AssetVerification} />
-      <Route path="/assets/upload" component={AssetUpload} />
-      <Route path="/assets/manage" component={AssetManage} />
-      <Route path="/clients" component={Clients} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <PersistentNav />
+      <div className="min-h-screen bg-gray-50">
+        <Switch>
+          <Route path="/" component={Dashboard} />
+          <Route path="/login" component={Login} />
+          <Route path="/register" component={Register} />
+          <Route path="/incidents" component={Incidents} />
+          <Route path="/team" component={TeamManagement} />
+          <Route path="/reports" component={Reports} />
+          <Route path="/reports/generate" component={Reports} />
+          <Route path="/reports/history" component={Reports} />
+          <Route path="/setup" component={ProjectSetup} />
+          <Route path="/asset-verification" component={AssetVerification} />
+          <Route path="/assets" component={AssetVerification} />
+          <Route path="/assets/upload" component={AssetUpload} />
+          <Route path="/assets/manage" component={AssetManage} />
+          <Route path="/clients" component={Clients} />
+          <Route component={NotFound} />
+        </Switch>
+      </div>
+    </>
   );
 }
 

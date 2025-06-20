@@ -1,0 +1,81 @@
+How To Fix It: Persistent Navigation Bar
+Here’s how to make sure the top menu (Dashboard, Tools, Incidents, Team Management, etc.) always stays visible as you move between pages—including Team Management.
+
+1. Use a Layout Component in Next.js
+With Next.js (especially the App Router: /app), you set up a layout so your navigation bar is always rendered, and your pages load inside the layout.
+
+app/layout.jsx (or src/layouts/MainLayout.jsx if using pages/ folder)
+
+jsx
+Copier
+Modifier
+// For Next.js 13+ App Router style
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <NavBar />
+        <main className="pt-16 bg-gray-50 min-h-screen">{children}</main>
+      </body>
+    </html>
+  );
+}
+If using classic /pages, use _app.js for the same effect.
+
+2. Example Navigation Bar (Responsive, Modern)
+jsx
+Copier
+Modifier
+// components/NavBar.jsx
+
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+
+const links = [
+  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/tools', label: 'Tools' },
+  { href: '/incidents', label: 'Incidents' },
+  { href: '/team-management', label: 'Team Management' },
+  { href: '/client-management', label: 'Client Management' },
+  { href: '/project-setup', label: 'Project Setup' },
+];
+
+export default function NavBar() {
+  const { pathname } = useRouter();
+  return (
+    <nav className="fixed top-0 left-0 w-full bg-white shadow z-20">
+      <div className="max-w-7xl mx-auto flex items-center px-4 h-16">
+        <span className="font-bold text-xl text-blue-700 mr-10">HydroSafe</span>
+        <div className="flex gap-5">
+          {links.map(link => (
+            <Link key={link.href} href={link.href}>
+              <span className={`font-semibold hover:text-blue-500 px-3 py-2 rounded transition
+                ${pathname === link.href ? 'bg-blue-100 text-blue-700' : 'text-gray-700'}
+              `}>
+                {link.label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
+}
+3. Example Layout Usage
+If you’re in /app directory (Next.js 13+):
+
+Place <NavBar /> in your app/layout.jsx
+
+All pages will have the menu
+
+If you’re in /pages (Next.js 12 or below):
+
+Place <NavBar /> in pages/_app.js so every page renders it
+
+Result
+Menu is always visible at the top, regardless of page
+
+Can navigate easily between Dashboard, Team Management, etc.
+
+No more getting “stuck” in a section!
+
