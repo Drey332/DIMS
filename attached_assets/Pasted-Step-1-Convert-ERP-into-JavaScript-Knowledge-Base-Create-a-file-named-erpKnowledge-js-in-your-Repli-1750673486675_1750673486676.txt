@@ -1,0 +1,105 @@
+Step 1: Convert ERP into JavaScript Knowledge Base
+Create a file named erpKnowledge.js in your Replit project.
+
+js
+Copier
+Modifier
+// erpKnowledge.js
+module.exports = [
+  {
+    id: "objective",
+    title: "Objective",
+    content: `HydroDive's Emergency Response Plan ensures strict, logical procedures are followed in emergencies to prevent further harm, save lives, and limit damage to property/environment. Emergencies require additional resources—this plan covers all activities to be performed 24/7 in case of emergency.`
+  },
+  {
+    id: "project-overview",
+    title: "Project Overview",
+    content: `Decommissioning of Forcados ACOE Temporary Export System (SPDC/CPTL/HydroDive). Subsea diving support for the removal of temporary export system, performed from Dive Support Vessels in compliance with HydroDive and IMCA guidelines.`
+  },
+  {
+    id: "emergency-policy",
+    title: "HydroDive Emergency Response Policy",
+    content: `All personnel must be fully conversant with emergency actions. Simulated emergency drills (following HDG-HSE-FRM-022) are mandatory at project start and at least every 30 days.`
+  },
+  {
+    id: "scope",
+    title: "Scope",
+    content: `This document covers emergency response on the HD Contender vessel. It provides emergency contacts, scenario response plans, and is a reference for all personnel. All emergency flow charts must be posted in project/dive control offices.`
+  },
+  {
+    id: "decision-making",
+    title: "Decision Making Models",
+    content: `In emergencies, use Recognition-Primed Decision Making and follow established flowcharts. The Bronze-Silver-Gold command hierarchy is used for clarity and interoperability.`
+  },
+  {
+    id: "responsibilities",
+    title: "Responsibilities",
+    content: `- OSC Bronze (Offshore Manager): First responder, coordinates with EC Silver and COSC.
+- EC Silver (Project Mgr/Marine Mgr): Coordinates overall response, decides on level, manages team, writes after-action report.
+- GM Gold (Strategic Lead): Sets overall strategy, appoints Silver, handles media/major decisions.
+- ECM/ECT/HSE/Medical/Legal: Full supporting roles. See document for full role descriptions.`
+  },
+  {
+    id: "emergency-comm",
+    title: "Emergency Organization & Communication",
+    content: `Follow precise communication protocols. Accident reporting must include: Time, Date, Place, Type, Names, Actions Taken, Best Communication Means. Use SPDC and HydroDive's reporting structures for investigation, medical arrangements, and close out.`
+  },
+  {
+    id: "medevac-casevac",
+    title: "MEDEVAC & CASEVAC",
+    content: `MEDEVAC: Move injured/ill to shore hospital. Most likely: stabilize on vessel, transfer via helicopter or fast boat. CASEVAC: Immediate action, highest urgency (used for mass casualties or overwhelming emergencies). Always have helicopter and boat ready; activate secondary means if helicopter is delayed/unavailable.`
+  },
+  {
+    id: "drill-plan",
+    title: "Emergency Drill Plan",
+    content: `Required drills include: Abandon Ship, Fire/Evacuation, MEDEVAC, Unconscious Diver Recovery, Muster, Lock-Down, Stretcher/Helideck transfer. Most are monthly, or at project start.`
+  },
+  {
+    id: "scenarios",
+    title: "Emergency Scenarios",
+    content: `Plan covers: Medical (illness, injury, fatality), Fire onboard, Collision, Grounding, Oil Spill, Man Overboard, Security (Crime, Piracy, Kidnap), Missing Personnel, High Winds/Swell, Diving Incidents, Food Poisoning. See Section 14 for detailed protocols.`
+  },
+  {
+    id: "diving-emergencies",
+    title: "Diving Emergency Events and Mitigations",
+    content: `Comprehensive procedures for: Fire in Dive Control/Chamber, Loss of Comms, Loss of Air Supply, Contaminated Gas, Unconscious/Injured Diver Recovery (single/two divers), Fouled/Trapped Diver, Severed Umbilical, DP Degraded/Loss of Position, LARS Failure, Evacuation of Divers Under Decompression, Diver Adrift, and Reporting.`
+  },
+  {
+    id: "contacts",
+    title: "Primary Emergency Contacts",
+    content: `Includes all key phone/email contacts for Offshore Manager, HSE, Medical, ECs, and critical onshore/offshore parties. (See Appendix 1 of the document for details—these can be built as a separate contacts.js or loaded here.)`
+  },
+  // ...you can continue to break out more sections as needed
+];
+Step 2: How to Use This In Your App
+Import where needed:
+
+js
+Copier
+Modifier
+const erpKnowledge = require('./erpKnowledge');
+Find the right section:
+
+js
+Copier
+Modifier
+function findERPSection(query) {
+  // Simple search; for production, use fuzzy search or vector search for better results
+  return erpKnowledge.find(
+    s => s.title.toLowerCase().includes(query.toLowerCase())
+      || s.content.toLowerCase().includes(query.toLowerCase())
+  );
+}
+Feed to OpenAI API as context (see previous responses for full prompt code):
+
+js
+Copier
+Modifier
+const section = findERPSection("Fire onboard");
+// Use section.content in your GPT API prompt
+Step 3: (Optional) Make it Editable or DB-Driven
+If you want to let Gold Command update these sections live in your app, switch to storing/retrieving these sections in the Replit Database, with .set('erp', array) and .get('erp').
+
+Step 4: (Optional) Contacts As Data
+You can make a contacts.js file with the contact details array for live search or display.
+

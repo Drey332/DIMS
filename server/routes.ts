@@ -1181,6 +1181,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ERP Knowledge Base API endpoints
+  app.get('/api/erp/search', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { query, limit } = req.query;
+      const { ERPKnowledgeService } = await import('./erpKnowledge');
+      const sections = ERPKnowledgeService.findRelevantSections(
+        query as string, 
+        parseInt(limit as string) || 5
+      );
+      res.json(sections);
+    } catch (error) {
+      console.error("Error searching ERP knowledge:", error);
+      res.status(500).json({ message: "Failed to search ERP knowledge base" });
+    }
+  });
+
+  app.get('/api/erp/critical', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { ERPKnowledgeService } = await import('./erpKnowledge');
+      const criticalSections = ERPKnowledgeService.getCriticalSections();
+      res.json(criticalSections);
+    } catch (error) {
+      console.error("Error fetching critical ERP sections:", error);
+      res.status(500).json({ message: "Failed to fetch critical sections" });
+    }
+  });
+
+  app.get('/api/erp/category/:category', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { category } = req.params;
+      const { ERPKnowledgeService } = await import('./erpKnowledge');
+      const sections = ERPKnowledgeService.getSectionsByCategory(
+        category as any
+      );
+      res.json(sections);
+    } catch (error) {
+      console.error("Error fetching ERP category:", error);
+      res.status(500).json({ message: "Failed to fetch category sections" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // WebSocket setup for real-time communication

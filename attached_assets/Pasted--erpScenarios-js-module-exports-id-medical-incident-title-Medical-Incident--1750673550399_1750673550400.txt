@@ -1,0 +1,131 @@
+// erpScenarios.js
+
+module.exports = [
+  {
+    id: "medical-incident",
+    title: "Medical Incident (Illness/Injury/Fatality)",
+    content: `
+- Assess the situation: Ensure your own safety first.
+- Call for immediate medical assistance (Offshore Medic, HSE, Supervisor).
+- Apply first aid per training and ERP protocol.
+- Notify Gold/Silver Command immediately.
+- Record: Nature of incident, personnel involved, time, and actions taken.
+- Prepare for possible MEDEVAC; gather casualty’s details and medical history.
+- Log the incident fully and ensure after-action review.`
+  },
+  {
+    id: "fire-onboard",
+    title: "Fire Onboard",
+    content: `
+- Raise the alarm and alert all crew.
+- Evacuate personnel from affected area to muster point.
+- Shut down affected systems (fuel/electrical/isolation as needed).
+- Only trained personnel attempt firefighting using correct extinguishers.
+- Notify Gold/Silver Command immediately.
+- Conduct headcount; prepare for possible Abandon Ship.
+- Ensure all firefighting and life-saving appliances are deployed per ERP.
+- Follow up with full investigation and log the event.`
+  },
+  {
+    id: "collision",
+    title: "Collision",
+    content: `
+- Sound collision alarm.
+- Immediately stop all vessel movement if possible.
+- Assess for injuries, fire, flooding, or pollution risk.
+- Notify Gold/Silver Command and all relevant authorities (NPA, Coast Guard).
+- Muster crew and perform headcount.
+- Prepare for evacuation if needed.
+- Secure the vessel and investigate the cause.
+- Report fully and conduct after-action review.`
+  },
+  {
+    id: "grounding",
+    title: "Grounding",
+    content: `
+- Raise the alarm; stop all engines.
+- Sound tank spaces for flooding/damage.
+- Muster crew and prepare for possible evacuation.
+- Notify Gold/Silver Command, Marine Department, and authorities.
+- Assess for oil spills or environmental impact.
+- Prepare for refloating or lightering operations as directed.
+- Full documentation and follow-up investigation.`
+  },
+  {
+    id: "oil-spill",
+    title: "Oil Spill",
+    content: `
+- Raise the alarm and contain spill source immediately if safe.
+- Deploy spill response materials (booms, absorbents).
+- Notify Gold/Silver Command, Environmental Authority, and NPA.
+- Record: location, volume, time, source, weather, personnel involved.
+- Begin recovery/clean-up per spill response plan.
+- Document all actions and outcomes for reporting.`
+  },
+  {
+    id: "man-overboard",
+    title: "Man Overboard",
+    content: `
+- Raise “Man Overboard” alarm.
+- Throw lifebuoy/marker at person’s location.
+- Appoint spotter; maintain constant visual contact.
+- Stop engines and maneuver vessel for recovery.
+- Lower rescue boat if safe, or use recovery equipment.
+- Notify Gold/Silver Command and Medical Officer.
+- Log event, personnel involved, time, and recovery actions.`
+  },
+  {
+    id: "security-crime",
+    title: "Security Threat/Crime/Piracy/Kidnap",
+    content: `
+- Raise the alarm; secure all access points.
+- Notify Gold/Silver Command and authorities immediately.
+- Muster crew in safe zones or citadel if required.
+- Document description of threat/incident and personnel involved.
+- Follow Gold Command instructions for escalation/negotiation.
+- Record all communications for investigation.`
+  },
+  {
+    id: "missing-personnel",
+    title: "Missing Personnel",
+    content: `
+- Conduct immediate roll call and search muster stations.
+- Interview witnesses; check last known location and CCTV if available.
+- Notify Gold/Silver Command and authorities.
+- Organize search party with safety gear and full communication.
+- Log event, personnel involved, search actions, and outcome.
+- Prepare for media/HR communication as needed.`
+  },
+  {
+    id: "bad-weather",
+    title: "High Winds/Heavy Swell",
+    content: `
+- Secure all deck equipment and loose objects.
+- Halt operations in unsafe conditions.
+- Notify all crew of weather updates and muster location.
+- Monitor weather forecasts and vessel stability.
+- Stand down or resume work as directed by Silver/Gold Command.`
+  },
+  {
+    id: "diving-incident",
+    title: "Diving Incident",
+    content: `
+- Immediate call to Dive Supervisor and Medic.
+- Abort dive and bring diver(s) to surface or bell.
+- Administer first aid and start surface decompression if needed.
+- Notify Gold/Silver Command and record all times/events.
+- Prepare for evacuation to medical facility if severe.
+- Log all details for investigation.`
+  },
+  {
+    id: "food-poisoning",
+    title: "Food Poisoning/Contaminated Water",
+    content: `
+- Notify Medical Officer and isolate affected personnel.
+- Identify and secure contaminated food/water source.
+- Inform Gold/Silver Command and document all cases.
+- Arrange medical treatment and sample collection for testing.
+- Record batch numbers, suppliers, and staff on duty.
+- Submit full incident report and review food safety protocols.`
+  }
+];

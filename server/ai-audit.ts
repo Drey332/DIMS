@@ -1,6 +1,7 @@
 import { OpenAI } from 'openai';
 import { storage } from './storage';
 import { AuditLog, Project, User } from '../shared/schema';
+import { ERPKnowledgeService } from './erpKnowledge';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -32,8 +33,14 @@ interface AuditResponse {
 
 export class AIAuditReferee {
   private static getProtocolExcerpts(actionType: string, projectType: string): string {
+    // Get relevant ERP sections based on action type
+    const erpContext = ERPKnowledgeService.getContextForAI(actionType);
+    
     const protocols = {
       ASSET_VERIFICATION: `
+        HydroDive ERP Guidance:
+        ${erpContext}
+        
         IMCA D 014 - Dynamic Positioning Vessel Design Philosophy Guidelines:
         - All critical safety systems must be verified before operations
         - Photo evidence required for all asset inspections
@@ -45,6 +52,9 @@ export class AIAuditReferee {
         - All verification activities require timestamp and GPS coordinates
       `,
       INCIDENT_REPORTING: `
+        HydroDive ERP Emergency Response:
+        ${ERPKnowledgeService.getContextForAI('emergency communication')}
+        
         IMCA M 140 - Guidance on Incident Investigation:
         - Incident must be reported within 2 hours of occurrence
         - Initial assessment required within 30 minutes
@@ -55,15 +65,46 @@ export class AIAuditReferee {
         - All stakeholders must be notified according to escalation matrix
       `,
       EMERGENCY_RESPONSE: `
+        HydroDive ERP Command Structure:
+        ${ERPKnowledgeService.getContextForAI('decision making responsibilities')}
+        
+        Emergency Communication Requirements:
+        ${ERPKnowledgeService.getEmergencyContactsGuidance()}
+        
         IMCA R 004 - Code of Practice for the Safe Use of Electricity Underwater:
         - Emergency procedures must follow Bronze-Silver-Gold command structure
         - All emergency actions require dual authorization for CRITICAL level
         - Communication protocols must be maintained at all times
+      `,
+      DIVING_EMERGENCY: `
+        HydroDive ERP Diving Procedures:
+        ${ERPKnowledgeService.getContextForAI('diving emergency')}
+        
+        Critical Response Requirements:
+        - Immediate action within 2 minutes of incident detection
+        - Surface support team activation mandatory
+        - Emergency gas supply verification required
+      `,
+      TEAM_MANAGEMENT: `
+        HydroDive ERP Command Hierarchy:
+        ${ERPKnowledgeService.getContextForAI('responsibilities')}
+        
+        Gold Command Authorization Protocol:
+        - Strategic decisions require Gold Command approval
+        - Team structure changes must be documented
+        - Emergency contact verification mandatory
       `
     };
     
-    return protocols[actionType as keyof typeof protocols] || 
-           "Standard offshore safety protocols apply. Refer to IMCA and IOGP guidelines.";
+    const selectedProtocol = protocols[actionType as keyof typeof protocols];
+    
+    if (selectedProtocol) {
+      return selectedProtocol;
+    }
+    
+    // Fallback to ERP knowledge search
+    const fallbackContext = ERPKnowledgeService.getContextForAI(actionType);
+    return fallbackContext || "Standard offshore safety protocols apply. Refer to IMCA, IOGP, and HydroDive ERP guidelines.";
   }
 
   static async auditAction(context: AuditContext): Promise<AuditResponse> {
