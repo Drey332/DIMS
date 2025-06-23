@@ -1222,6 +1222,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ERP Scenarios API endpoints for live search
+  app.get('/api/erp/scenarios', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { q, category, severity } = req.query;
+      const { ERPScenariosService } = await import('./erpScenarios');
+      
+      let scenarios = ERPScenariosService.searchScenarios(q as string || '');
+      
+      if (category) {
+        scenarios = scenarios.filter(s => s.category === category);
+      }
+      
+      if (severity) {
+        scenarios = scenarios.filter(s => s.severity === severity);
+      }
+      
+      res.json(scenarios);
+    } catch (error) {
+      console.error("Error searching ERP scenarios:", error);
+      res.status(500).json({ message: "Failed to search ERP scenarios" });
+    }
+  });
+
+  app.get('/api/erp/scenarios/:id', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { ERPScenariosService } = await import('./erpScenarios');
+      const scenario = ERPScenariosService.getScenarioById(id);
+      
+      if (!scenario) {
+        return res.status(404).json({ message: "Scenario not found" });
+      }
+      
+      res.json(scenario);
+    } catch (error) {
+      console.error("Error fetching ERP scenario:", error);
+      res.status(500).json({ message: "Failed to fetch ERP scenario" });
+    }
+  });
+
+  app.get('/api/erp/scenarios/category/:category', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { category } = req.params;
+      const { ERPScenariosService } = await import('./erpScenarios');
+      const scenarios = ERPScenariosService.getScenariosByCategory(category as any);
+      res.json(scenarios);
+    } catch (error) {
+      console.error("Error fetching scenarios by category:", error);
+      res.status(500).json({ message: "Failed to fetch scenarios by category" });
+    }
+  });
+
+  app.get('/api/erp/scenarios/critical', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { ERPScenariosService } = await import('./erpScenarios');
+      const criticalScenarios = ERPScenariosService.getCriticalScenarios();
+      res.json(criticalScenarios);
+    } catch (error) {
+      console.error("Error fetching critical scenarios:", error);
+      res.status(500).json({ message: "Failed to fetch critical scenarios" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // WebSocket setup for real-time communication

@@ -19,6 +19,7 @@ import AssetUpload from "@/pages/asset-upload";
 import AssetManage from "@/pages/asset-manage";
 import Clients from "@/pages/clients";
 import Profile from "@/pages/profile";
+import EmergencyProtocols from "@/pages/emergency-protocols";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import NotFound from "@/pages/not-found";
@@ -96,6 +97,7 @@ function Router() {
                 <Route path="/assets/upload" component={AssetUpload} />
                 <Route path="/assets/manage" component={AssetManage} />
                 <Route path="/clients" component={Clients} />
+                <Route path="/emergency-protocols" component={EmergencyProtocols} />
                 <Route path="/profile" component={Profile} />
               </>
             )}

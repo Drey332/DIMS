@@ -2,6 +2,7 @@ import { OpenAI } from 'openai';
 import { storage } from './storage';
 import { AuditLog, Project, User } from '../shared/schema';
 import { ERPKnowledgeService } from './erpKnowledge';
+import { ERPScenariosService } from './erpScenarios';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

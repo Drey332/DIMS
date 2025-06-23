@@ -1,0 +1,146 @@
+Here’s how a top CTO would integrate live search for ERP scenarios into both your Node/Express API and your React UI, so you can instantly search, display, and feed ERP scenarios to your AI or team.
+
+1. Node/Express API Endpoint for Live Search
+a) Place your scenarios in erpScenarios.js
+(as in previous answer)
+
+b) Add a live search endpoint to your API
+routes/erp.js:
+
+js
+Copier
+Modifier
+const express = require('express');
+const router = express.Router();
+const scenarios = require('../erpScenarios');
+
+router.get('/scenarios', (req, res) => {
+  // ?q=term will search titles/content (case-insensitive)
+  const q = (req.query.q || '').trim().toLowerCase();
+  if (!q) return res.json(scenarios);
+
+  const matches = scenarios.filter(
+    s =>
+      s.title.toLowerCase().includes(q) ||
+      s.content.toLowerCase().includes(q)
+  );
+  res.json(matches);
+});
+
+router.get('/scenarios/:id', (req, res) => {
+  const scenario = scenarios.find(s => s.id === req.params.id);
+  if (!scenario) return res.status(404).json({ error: "Not found" });
+  res.json(scenario);
+});
+
+module.exports = router;
+In your server.js:
+
+js
+Copier
+Modifier
+app.use('/api/erp', require('./routes/erp'));
+2. React UI for Live Search and Scenario Display
+components/ScenarioSearch.jsx:
+
+jsx
+Copier
+Modifier
+import { useState } from "react";
+
+export default function ScenarioSearch({ onSelect }) {
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  async function searchScenarios(term) {
+    setLoading(true);
+    const resp = await fetch(`/api/erp/scenarios?q=${encodeURIComponent(term)}`);
+    const arr = await resp.json();
+    setResults(arr);
+    setLoading(false);
+  }
+
+  return (
+    <div className="max-w-xl mx-auto p-6">
+      <h2 className="text-xl font-bold mb-2">Search ERP Scenarios</h2>
+      <input
+        className="border p-2 w-full rounded mb-3"
+        placeholder="Search by keyword, e.g. 'fire', 'diving', 'evacuation'"
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') searchScenarios(q); }}
+      />
+      <button
+        className="bg-blue-600 text-white px-4 py-1 rounded mb-4"
+        onClick={() => searchScenarios(q)}
+        disabled={loading}
+      >Search</button>
+      {loading && <div>Loading...</div>}
+      <ul className="divide-y">
+        {results.map(s => (
+          <li
+            key={s.id}
+            className="py-2 cursor-pointer hover:bg-blue-50 px-2 rounded"
+            onClick={() => onSelect(s)}
+          >
+            <span className="font-bold">{s.title}</span>
+            <div className="text-gray-500 text-sm line-clamp-2">{s.content.slice(0, 120)}...</div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+pages/ScenarioViewer.jsx:
+
+jsx
+Copier
+Modifier
+import { useState } from "react";
+import ScenarioSearch from "../components/ScenarioSearch";
+
+export default function ScenarioViewer() {
+  const [selected, setSelected] = useState(null);
+
+  return (
+    <div>
+      {!selected ? (
+        <ScenarioSearch onSelect={setSelected} />
+      ) : (
+        <div className="max-w-xl mx-auto p-6">
+          <button
+            className="text-blue-700 mb-3 underline"
+            onClick={() => setSelected(null)}
+          >← Back to Search</button>
+          <h2 className="text-2xl font-bold mb-3">{selected.title}</h2>
+          <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded">{selected.content}</pre>
+        </div>
+      )}
+    </div>
+  );
+}
+3. Feed the Selected Scenario to Your AI API
+Example usage after a scenario is selected:
+
+js
+Copier
+Modifier
+// After selecting, send selected.content to your AI API:
+const aiResponse = await fetch('/api/ask-erp', {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    userQuestion: "What are the steps for this scenario?",
+    relevantSection: selected.title // or selected.id, as your API expects
+  })
+});
+const data = await aiResponse.json();
+console.log("AI says:", data.answer);
+How it Works (Industry Standard):
+Live Search: Type and instantly find ERP scenarios by keyword/incident.
+
+Click any result to view full protocol/details.
+
+Feed that scenario’s content directly to the AI API to get answers, compliance checks, or automated instructions.
+
