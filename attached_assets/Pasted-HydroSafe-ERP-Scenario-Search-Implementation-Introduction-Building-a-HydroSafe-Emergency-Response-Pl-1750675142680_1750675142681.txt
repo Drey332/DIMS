@@ -1,0 +1,276 @@
+HydroSafe ERP Scenario Search Implementation
+Introduction
+Building a HydroSafe Emergency Response Plan (ERP) scenario search involves two main components: a web-based search UI and a backend API. The ERP documents provided (HydroSafe Emergency Response Plan) contain multiple emergency scenarios (with titles, IDs, and procedures) which we will extract and make queryable. This solution uses a lightweight stack (e.g. Python with FastAPI or Node.js with Express) for ease of deployment. FastAPI is an excellent choice for a quick, high-performance API in Python
+fastapi.tiangolo.com
+ (Express is an equally lightweight alternative for Node.js
+expressjs.com
+). We will outline how to extract scenario data, design the API endpoints, implement search functionality with logging, and create a clear, responsive UI. An optional “Ask AI” feature for follow-up questions will also be discussed. All responses are structured in clean JSON and the provided code is deployment-ready.
+Extracting Emergency Scenarios from ERP Documents
+The provided ERP documents detail various emergency scenarios and their response procedures. Section 14 of the ERP, for example, lists several scenarios
+file-kpzyxshakbx8fodmnjaere
+, including:
+Serious Illness, Injury or Fatality – e.g. medical emergencies on site
+file-kpzyxshakbx8fodmnjaere
+.
+Fire Onboard (Vessel) – shipboard fire emergency
+file-kpzyxshakbx8fodmnjaere
+.
+Collision with Other Vessel or Structure – collision at sea
+file-kpzyxshakbx8fodmnjaere
+.
+Grounding – vessel running aground (stranding)
+file-kpzyxshakbx8fodmnjaere
+.
+Oil Spill – hydrocarbon spill incident
+file-kpzyxshakbx8fodmnjaere
+.
+Man Overboard – personnel falling overboard
+file-kpzyxshakbx8fodmnjaere
+.
+Security Incident (Crime/Piracy) – e.g. militancy, kidnapping
+file-kpzyxshakbx8fodmnjaere
+.
+Missing Personnel – unaccounted person on site
+file-kpzyxshakbx8fodmnjaere
+.
+Severe Weather (High Wind/Swell) – weather exceeding safe limits
+file-kpzyxshakbx8fodmnjaere
+.
+Diving Incidents – dive-related emergencies (e.g. DCS, lost diver)
+file-kpzyxshakbx8fodmnjaere
+.
+Food Poisoning (Medical Emergency) – mass illness requiring medical response
+file-kpzyxshakbx8fodmnjaere
+.
+Each scenario is accompanied by procedure details in the ERP. For example, the Man Overboard procedure emphasizes immediate retrieval and rescue actions
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+, while the Fire Onboard Vessel procedure describes activating alarms, assembling firefighting teams, and potential abandon-ship steps
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. We extract these scenarios and procedures from the documents and structure them as data for our application (for demo purposes, we can store them in memory as a list of dictionaries, or in a JSON/CSV file, with fields like id, title, and content). This data preparation can be done manually or via a script to parse the PDF/docx content.
+Backend API Design
+We design a RESTful API with clear endpoints to serve the scenario data. The backend will be responsible for returning all scenarios, filtering scenarios by keyword, and returning a specific scenario by ID. We will also implement basic logging for search queries (e.g., log each query string and timestamp for auditing). Below are the endpoints and their behavior:
+GET /scenarios – Returns all emergency scenarios as a JSON array.
+GET /scenarios?q=<keyword> – Returns filtered scenarios whose title or content matches the given keyword (case-insensitive substring match).
+GET /scenarios/<id> – Returns the single scenario with the given ID (e.g. scenario ID “3” for Collision).
+Each scenario object includes at least an id, title, and procedure (content). For consistency, we use a numeric or short string ID for each scenario. For example, a response from /scenarios might look like:
+json
+Copier
+Modifier
+[
+  {
+    "id": 1,
+    "title": "Serious Illness, Injury or Fatality",
+    "procedure": "In the event an injured person is to be recovered ... the approved stretcher (Stokes Stretcher) will be utilized ...:contentReference[oaicite:18]{index=18}"
+  },
+  {
+    "id": 2,
+    "title": "Fire Onboard Vessel",
+    "procedure": "Fire onboard a vessel is one of the most life threatening scenarios. The only way to deal with this is prompt action from a trained fire-fighting team...:contentReference[oaicite:19]{index=19}"
+  },
+  ...
+]
+And an example /scenarios/2 (Fire Onboard) would return the JSON object for that scenario alone. The content is drawn from the ERP procedures, truncated or formatted as needed. We ensure the JSON is well-structured with keys and values that make it easy for front-end usage (no HTML in the API, just plain text).
+Implementation with FastAPI (Python)
+Using FastAPI, we define a simple data model and three routes. FastAPI automatically parses query parameters. We use an optional query parameter q for filtering
+fastapi.tiangolo.com
+fastapi.tiangolo.com
+. Logging can be done with Python’s logging module. Below is an outline of the code (which can be placed in a file like main.py):
+python
+Copier
+Modifier
+from fastapi import FastAPI, HTTPException
+import logging
+
+# Initialize app and logger
+app = FastAPI()
+logging.basicConfig(filename="queries.log", level=logging.INFO, format="%(asctime)s - %(message)s")
+
+# In-memory scenario data (id, title, procedure)
+scenarios = [
+    {"id": 1, "title": "Serious Illness, Injury or Fatality", 
+     "procedure": "If an injured person must be recovered on deck, use the approved stretcher (Stokes Stretcher)...:contentReference[oaicite:22]{index=22}"},
+    {"id": 2, "title": "Fire Onboard Vessel", 
+     "procedure": "Fire onboard a vessel is one of the most life-threatening emergencies. Immediately sound the alarm, assemble fire-fighting teams...:contentReference[oaicite:23]{index=23}"},
+    {"id": 3, "title": "Collision with Vessel/Structure", 
+     "procedure": "In a collision incident, assess damage and take on water status. Muster all crew and prepare to send distress call..."},
+    # ... (other scenarios extracted from ERP documents)
+]
+
+@app.get("/scenarios")
+def get_scenarios(q: str = None):
+    """Return all scenarios, or filter by keyword if q is provided."""
+    # Log the query for auditing
+    query_str = q or "ALL"
+    logging.info(f"Search query: {query_str}")
+    if not q:
+        return scenarios  # return all scenarios
+    # Filter scenarios by keyword in title or procedure (case-insensitive)
+    keyword = q.lower()
+    results = [s for s in scenarios if keyword in s["title"].lower() or keyword in s["procedure"].lower()]
+    return results
+
+@app.get("/scenarios/{scenario_id}")
+def get_scenario_by_id(scenario_id: int):
+    """Return a single scenario by ID."""
+    for s in scenarios:
+        if s["id"] == scenario_id:
+            return s
+    # If not found, raise 404
+    raise HTTPException(status_code=404, detail="Scenario not found")
+This FastAPI code defines the required endpoints. The search filtering simply checks if the keyword appears in the title or procedure text. For example, a request to /scenarios?q=fire will return the Fire Onboard scenario (and any others mentioning “fire”). The query parameter q is optional; if omitted, all scenarios are returned
+fastapi.tiangolo.com
+. FastAPI automatically serializes Python lists/dicts to JSON, so returning scenarios yields a JSON array of scenario objects. We’ve also included basic file logging: each search query (including “ALL” for full lists) is recorded with a timestamp in queries.log for audit purposes. Note: If using Express/Node.js, the implementation is similar: define routes for /scenarios and /scenarios/:id, use req.query.q for the keyword, and filter an array of scenario objects. For example, using Express you might do:
+js
+Copier
+Modifier
+app.get('/scenarios', (req, res) => {
+  const q = req.query.q;
+  // Log query
+  console.log(`Query: ${q || "ALL"}`);
+  let results = scenarioData;
+  if (q) {
+    const keyword = q.toLowerCase();
+    results = scenarioData.filter(s => 
+        s.title.toLowerCase().includes(keyword) || 
+        s.procedure.toLowerCase().includes(keyword));
+  }
+  res.json(results);
+});
+app.get('/scenarios/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const scenario = scenarioData.find(s => s.id === id);
+  if (!scenario) return res.status(404).send({ error: "Not found" });
+  res.json(scenario);
+});
+This yields the same functionality in a Node/Express style – Express being a “fast, unopinionated, minimalist web framework for Node.js”
+expressjs.com
+ well-suited for such simple APIs.
+JSON Response Structure
+All API responses are clean JSON. The GET /scenarios returns an array of scenario objects. GET /scenarios?q=keyword returns an array (possibly empty if no match). GET /scenarios/<id> returns a single object (or a 404 error JSON if not found). We avoid nested or verbose structures for simplicity. For instance, searching “medical” might return:
+json
+Copier
+Modifier
+[
+  {
+    "id": 1,
+    "title": "Serious Illness, Injury or Fatality",
+    "procedure": "If the IP is unresponsive, contact the Emergency Coordinator and continue resuscitation until the doctor takes charge...:contentReference[oaicite:26]{index=26}"
+  },
+  {
+    "id": 11,
+    "title": "Food Poisoning (Medical Emergency)",
+    "procedure": "Multiple crew with food poisoning symptoms should be treated as a medical emergency, follow medical evacuation procedures..."
+  }
+]
+In this example, scenario 1 and 11 contained the keyword "medical". Note that we preserved citations from source documents in procedure text (for authenticity), but in a real app you might remove those references or replace with plain text.
+Frontend Search UI Implementation
+The search UI will be a simple web interface allowing users to input keywords and view matching scenarios. The design should be clear, intuitive, and responsive, appropriate for offshore safety personnel (meaning it should be easy to read on various devices and in potentially high-stress situations). Key elements of the UI:
+Search Bar: an input field where users enter keywords (e.g., “fire”, “medical”, “diver”).
+Results List: a section that displays each matching scenario’s title and brief content snippet or full procedure. Each result should be clearly separated and labeled with its scenario ID and title, followed by the procedure details. If many scenarios are returned, they could be collapsible or truncated for easier browsing.
+No Results Indicator: if no scenario matches the query, the UI should clearly say “No matching scenarios found.”
+Ask AI Button (Optional): An optional feature could be an “💡 Ask AI” button or section. If integrated with an AI service (like OpenAI’s API), users could select a scenario or enter a follow-up question (e.g., “What should I do first if there’s a fire?”), and the system would use the scenario content plus the question to get an AI-generated answer. This is an enhancement for interactive guidance, but the core system should function without it if not configured.
+To implement the UI, we can use HTML5, CSS (or a framework like Bootstrap), and JavaScript. The UI does not need a heavy framework; a simple static page that calls the API is sufficient. We ensure it is mobile-responsive (using either CSS flexbox/grid or Bootstrap classes) and has a clean look (e.g., large legible text, clear headings for each scenario). Example HTML Structure:
+html
+Copier
+Modifier
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HydroSafe ERP Search</title>
+  <!-- Optionally include Bootstrap CSS for easy styling -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css" />
+  <style>
+    body { padding: 1em; }
+    .scenario { margin-bottom: 1.5em; padding: 1em; border: 1px solid #ccc; border-radius: 5px; }
+    .scenario h3 { font-size: 1.2em; }
+    .scenario p { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>HydroSafe ERP Emergency Scenarios</h1>
+  <input type="text" id="searchBox" placeholder="Enter keyword..." class="form-control" />
+  <button id="searchBtn" class="btn btn-primary mt-2">Search Scenarios</button>
+  <div id="results" class="mt-4"></div>
+
+  <!-- Optional Ask AI section -->
+  <div id="aiSection" class="mt-5">
+    <h4>Ask AI about a scenario</h4>
+    <textarea id="aiQuestion" rows="2" class="form-control" placeholder="E.g., What are the first steps for a fire?"></textarea>
+    <button id="askBtn" class="btn btn-secondary mt-2">Ask AI</button>
+    <div id="aiAnswer" class="mt-3"></div>
+  </div>
+
+  <script>
+    const apiBase = "http://<your-server-host>/";  // base URL for the API
+    document.getElementById('searchBtn').onclick = function() {
+      let query = document.getElementById('searchBox').value.trim();
+      let url = query ? `${apiBase}scenarios?q=${encodeURIComponent(query)}` : `${apiBase}scenarios`;
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          const resultsDiv = document.getElementById('results');
+          resultsDiv.innerHTML = "";  // clear old results
+          if (data.length === 0) {
+            resultsDiv.innerHTML = "<p><em>No matching scenarios found.</em></p>";
+            return;
+          }
+          data.forEach(scenario => {
+            const scenarioEl = document.createElement('div');
+            scenarioEl.className = "scenario";
+            scenarioEl.innerHTML = `<h3>${scenario.id}. ${scenario.title}</h3>
+                                     <p>${scenario.procedure}</p>`;
+            resultsDiv.appendChild(scenarioEl);
+          });
+        });
+    };
+
+    // Optional: AI ask integration (assuming an endpoint or function to handle it)
+    document.getElementById('askBtn').onclick = function() {
+      const question = document.getElementById('aiQuestion').value.trim();
+      if (!question) return;
+      // For demo, we could integrate with OpenAI API via backend proxy (not implemented here)
+      fetch(`${apiBase}ask_ai`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: question }) 
+      })
+      .then(res => res.json())
+      .then(answer => {
+        document.getElementById('aiAnswer').innerText = answer.response || "(No answer)";
+      });
+    };
+  </script>
+</body>
+</html>
+In this snippet, the search functionality uses the Fetch API to call our backend. When the user clicks "Search", it sends a GET request to /scenarios with the query if provided. The Fetch API is promise-based and allows us to easily get the JSON response in JavaScript
+developer.mozilla.org
+. We then dynamically create result elements: each scenario is shown in a <div class="scenario"> with a heading for title and a paragraph for the procedure. We included some basic styling (and optionally Bootstrap) to ensure spacing and readability. The UI is simple but effective: input + button on top, results below. The Ask AI section (optional) is shown as an example; it would require a corresponding POST /ask_ai endpoint that sends the question (and possibly relevant scenario context) to an AI service. If not using, this section can be omitted. Responsive Design: By using a fluid container (the default <body> with padding) and Bootstrap’s grid if needed, the UI will adjust to different screen sizes. The input and buttons use Bootstrap classes to be mobile-friendly (100% width inputs on small screens, etc.). Headings and paragraph text are left plain or lightly styled for clarity (important info like scenario title is bold as a heading). This keeps the interface focused on content, which is critical in emergency response scenarios.
+Logging and Auditing
+On the backend, every search query is logged for auditing purposes. In our FastAPI example, we configured the logging module to append to queries.log and used logging.info() inside the /scenarios endpoint
+fastapi.tiangolo.com
+fastapi.tiangolo.com
+. Each log entry might look like:
+yaml
+Copier
+Modifier
+2025-06-23 11:27:45,123 - Search query: fire  
+indicating a user searched for “fire” at that time. This basic logging can be extended to include user info or IP address if needed (e.g., via middleware capturing request.client.host). Audit logs help track what scenarios are being accessed and can inform training or updates to the ERP.
+Deployment Considerations
+Both the backend and frontend are lightweight and easy to deploy. For FastAPI, we can run with Uvicorn (ASGI server) for production: e.g. uvicorn main:app --host 0.0.0.0 --port 80. The code is self-contained (no external DB required in demo mode), and can be containerized with a simple Dockerfile if needed. Similarly, an Express app can be run with Node and easily containerized. Static files (the HTML/JS for the UI) can be served by the same backend (using FastAPI’s StaticFiles or Express’ static middleware), or by any web server. The solution’s design emphasizes clarity and speed. By using FastAPI, we leverage automatic documentation (OpenAPI docs at /docs) and high performance for concurrent requests
+fastapi.tiangolo.com
+. By keeping data in memory (or using a simple JSON store), the search is extremely fast given the limited number of scenarios. This is easily extensible to a database like MongoDB or PostgreSQL if needed: the API could query the DB instead of a list, but the external interface remains the same. The UI being static means it can even be served from a file system or CDN, querying the API via AJAX. Finally, the Ask AI integration can be implemented by adding an endpoint that uses an OpenAI SDK to send the user’s question and the relevant scenario text to a model (like GPT-4) and returns the answer. This requires API keys and careful prompt design (possibly out of scope for now), so we’ve kept it optional. The button is there to illustrate how it could be hooked up.
+Conclusion
+We have built a comprehensive HydroSafe ERP scenario search tool comprising a backend API and a front-end UI. Users can quickly search emergency scenarios (like fire, man overboard, medical emergencies) and see the official procedure from the ERP on how to respond. The API endpoints (/scenarios, /scenarios?q=, /scenarios/<id>) provide structured data for all scenarios, search results, or specific scenarios, respectively. The web UI provides a user-friendly portal to query this information on any device, with clear presentation of titles, IDs, and procedures. Optional AI-powered Q&A can further enhance the tool by allowing natural language questions. This solution is built on lightweight, deployable technology, ensuring it can be readily adopted on offshore sites for improving safety responses. By combining the authoritative ERP document content with modern search functionality, HydroSafe personnel can access critical emergency guidance in seconds, which is invaluable in time-sensitive situations. Sources:
+HydroDive “Site Emergency Response Plan” – scenario list and procedures
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+FastAPI Documentation – Query parameter usage and defaults
+fastapi.tiangolo.com
+fastapi.tiangolo.com
+MDN Web Docs – Using Fetch API for HTTP requests in JavaScript
+developer.mozilla.org
+Official FastAPI and Express descriptions – lightweight high-performance web frameworks

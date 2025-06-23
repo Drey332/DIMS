@@ -1,5 +1,7 @@
 import OpenAI from "openai";
 import { ERPKnowledgeService } from './erpKnowledge';
+import { ERPScenariosService } from './erpScenarios';
+import { ERPQnAService } from './erpQnA';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -159,22 +161,38 @@ export async function generateDynamicChecklist(
   userRole: 'BRONZE' | 'SILVER' | 'GOLD'
 ): Promise<ChecklistItem[]> {
   try {
+    // Get comprehensive context from all knowledge sources
+    const scenarioContext = ERPScenariosService.getScenarioContextForAI(scenarioType);
+    const qnaContext = ERPQnAService.getQnAContextForAI(scenarioType);
+    const knowledgeContext = ERPKnowledgeService.getContextForAI(scenarioType);
+    
     // First try OpenAI if available
     if (process.env.OPENAI_API_KEY) {
-      const prompt = `Generate emergency response checklist for HydroDive offshore operations.
+      const prompt = `Generate emergency response checklist for HydroDive offshore operations using comprehensive ERP knowledge.
 
-Context: ${scenarioType} - Role: ${userRole} - Project: ${JSON.stringify(projectDetails)}
+SCENARIO CONTEXT: ${scenarioType}
+USER ROLE: ${userRole} (Bronze=Operational, Silver=Tactical, Gold=Strategic)
+PROJECT: ${JSON.stringify(projectDetails)}
 
-Following IMCA D 014, IOGP 390, and HydroDive procedures, provide role-specific actions with priorities, time estimates, and protocol references.
+RELEVANT ERP SCENARIOS:
+${scenarioContext}
 
-Return JSON: {"items": [{"id": "string", "description": "string", "priority": "CRITICAL|HIGH|MEDIUM|LOW", "estimatedTime": "string", "protocolReference": "string", "riskMitigation": "string"}]}`;
+EMERGENCY RESPONSE Q&A GUIDANCE:
+${qnaContext}
+
+ADDITIONAL PROTOCOL CONTEXT:
+${knowledgeContext}
+
+Generate role-specific checklist following Bronze-Silver-Gold command hierarchy and HydroDive ERP procedures. Focus on actions appropriate for the user's command level with proper escalation protocols.
+
+Return JSON: {"items": [{"id": "string", "description": "string", "priority": "CRITICAL|HIGH|MEDIUM|LOW", "estimatedTime": "string", "protocolReference": "string", "riskMitigation": "string", "dependencies": ["string"], "commandLevel": "BRONZE|SILVER|GOLD"}]}`;
 
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
             role: "system", 
-            content: "Expert in offshore emergency response protocols, IMCA guidelines, IOGP standards, and HydroDive procedures."
+            content: "Expert in HydroDive emergency response protocols with comprehensive knowledge of offshore safety procedures, Bronze-Silver-Gold command structure, IMCA guidelines, IOGP standards, and detailed emergency scenarios."
           },
           { role: "user", content: prompt }
         ],
@@ -189,7 +207,7 @@ Return JSON: {"items": [{"id": "string", "description": "string", "priority": "C
     console.log("OpenAI unavailable, using internal protocols:", String(error));
   }
 
-  // Fallback to internal protocol database
+  // Fallback to internal protocol database with enhanced context
   const baseActions = ROLE_BASED_CHECKLISTS[userRole] || [];
   const scenarioActions = scenarioType === "EMERGENCY_RESPONSE" ? 
     EMERGENCY_PROTOCOLS.MEDICAL_EMERGENCY.requiredActions.slice(0, 3) : [];

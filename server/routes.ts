@@ -8,6 +8,8 @@ import {
   analyzeDecisionContext,
   generateProactiveRecommendations 
 } from "./openai";
+import { ERPQnAService } from "./erpQnA";
+import { ERPScenariosService } from "./erpScenarios";
 import { AIAuditReferee } from "./ai-audit";
 import { ComplianceGenerator } from "./compliance-generator";
 import multer from "multer";
@@ -1194,6 +1196,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error searching ERP knowledge:", error);
       res.status(500).json({ message: "Failed to search ERP knowledge base" });
+    }
+  });
+
+  // ERP Scenarios API endpoints
+  app.get('/api/erp/scenarios', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { query, category, severity } = req.query;
+      
+      let scenarios;
+      if (query) {
+        scenarios = ERPScenariosService.searchScenarios(query as string);
+      } else if (category) {
+        scenarios = ERPScenariosService.getScenariosByCategory(category as any);
+      } else if (severity) {
+        scenarios = ERPScenariosService.getScenariosBySeverity(severity as any);
+      } else {
+        scenarios = ERPScenariosService.getCriticalScenarios();
+      }
+      
+      res.json(scenarios);
+    } catch (error) {
+      console.error("Error fetching ERP scenarios:", error);
+      res.status(500).json({ message: "Failed to fetch ERP scenarios" });
+    }
+  });
+
+  // AI Q&A API endpoint for emergency response questions
+  app.post('/api/erp/ask-ai', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { question, context } = req.body;
+      
+      if (!question || typeof question !== 'string') {
+        return res.status(400).json({ message: "Question is required" });
+      }
+
+      // Get comprehensive context from all knowledge sources
+      const qnaResults = ERPQnAService.searchQuestions(question, 3);
+      const scenarioResults = ERPScenariosService.searchScenarios(question).slice(0, 2);
+      const { ERPKnowledgeService } = await import('./erpKnowledge');
+      const knowledgeContext = ERPKnowledgeService.getContextForAI(question);
+
+      // Use OpenAI to provide intelligent response
+      if (process.env.OPENAI_API_KEY) {
+        const { OpenAI } = await import('openai');
+        const openai = new OpenAI({ 
+          apiKey: process.env.OPENAI_API_KEY 
+        });
+
+        const prompt = `You are HydroSafe's AI Emergency Response Assistant with comprehensive knowledge of offshore safety protocols.
+
+USER QUESTION: ${question}
+${context ? `ADDITIONAL CONTEXT: ${context}` : ''}
+
+RELEVANT Q&A FROM ERP DATABASE:
+${qnaResults.map(qa => `Q: ${qa.question}\nA: ${qa.answer}\n[Urgency: ${qa.urgency}, Command Level: ${qa.commandLevel}]`).join('\n\n')}
+
+RELEVANT EMERGENCY SCENARIOS:
+${scenarioResults.map(scenario => `Scenario: ${scenario.title}\nCategory: ${scenario.category}, Severity: ${scenario.severity}\nResponse Time: ${scenario.timeToRespond}\nRequired Personnel: ${scenario.requiredPersonnel.join(', ')}\nProcedure: ${scenario.content.substring(0, 300)}...`).join('\n\n')}
+
+ADDITIONAL PROTOCOL CONTEXT:
+${knowledgeContext}
+
+Provide a comprehensive, actionable answer following HydroDive's Bronze-Silver-Gold command structure. Include:
+1. Immediate actions required
+2. Appropriate command level for response
+3. Time-critical steps and deadlines
+4. Required personnel and resources
+5. Protocol references
+6. Escalation criteria if applicable
+
+Be specific, practical, and safety-focused in your response.`;
+
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert in HydroDive emergency response protocols, IMCA guidelines, IOGP standards, and offshore safety procedures. Provide clear, actionable guidance following Bronze-Silver-Gold command hierarchy."
+            },
+            { role: "user", content: prompt }
+          ],
+          temperature: 0.3,
+          max_tokens: 800,
+        });
+
+        const aiAnswer = response.choices[0]?.message?.content || "Unable to generate response";
+
+        // Log the question for audit purposes
+        await storage.createAuditLog({
+          userId: req.user!.id,
+          actionType: 'AI_QUESTION_ASKED',
+          description: `AI emergency response question: ${question.substring(0, 100)}...`,
+          newData: { question, aiAnswer: aiAnswer.substring(0, 200) + "..." },
+        });
+
+        res.json({
+          answer: aiAnswer,
+          relatedQuestions: qnaResults.map(qa => qa.question),
+          relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
+          confidence: "high"
+        });
+      } else {
+        // Fallback to knowledge base search results
+        const bestMatch = qnaResults[0];
+        if (bestMatch) {
+          res.json({
+            answer: bestMatch.answer,
+            relatedQuestions: qnaResults.slice(1).map(qa => qa.question),
+            relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
+            confidence: "medium",
+            source: "Knowledge Base"
+          });
+        } else {
+          res.json({
+            answer: "I don't have specific information about that question. Please refer to your Emergency Response Plan or contact your Emergency Coordinator for guidance.",
+            relatedQuestions: [],
+            relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
+            confidence: "low"
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error processing AI question:", error);
+      res.status(500).json({ message: "Failed to process AI question" });
     }
   });
 

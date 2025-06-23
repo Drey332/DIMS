@@ -1,0 +1,1436 @@
+Offshore Emergency Response Scenarios Dataset & Structure
+Overview: The following is a comprehensive list of offshore emergency response scenarios, with step-by-step procedures and clearly defined Gold–Silver–Bronze command roles. It integrates scenarios from HydroDive’s ERP framework and aligns with IMCA D014/D022 and IOGP 411/478 guidelines
+file-kpzyxshakbx8fodmnjaere
+law.resource.org
+. The data is structured for easy integration (e.g. as JSON) into CLI or Streamlit applications, supporting search and AI Q&A functionalities.
+Gold–Silver–Bronze Command Roles
+Gold (Strategic Command): Senior management (e.g. General Manager) assuming overall command, setting strategy and liaising with external authorities
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Gold focuses on high-level decisions (media handling, stakeholder updates, resource allocation) and must not get bogged in tactical details
+file-kpzyxshakbx8fodmnjaere
+.
+Silver (Tactical Command): Incident Coordinator (often an onshore Project Manager or HSE Manager) who manages the overall response and coordination
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Silver maintains communication with the site and client, determines the level of response, and mobilizes resources. Silver works closely with Gold for strategic guidance and with Bronze for on-site information
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Operational Command): On-Scene Commander at the incident location (e.g. Vessel Master, Offshore Construction Manager, or Dive Supervisor) responsible for immediate actions
+file-kpzyxshakbx8fodmnjaere
+. Bronze handles hands-on response, initial containment, and ensures crew safety. Bronze alerts Silver at the earliest opportunity once initial control actions are underway
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+.
+Each scenario below outlines the procedures in a stepwise format, with roles (Bronze, Silver, Gold) identified for each action. These scenarios cover all reasonably foreseeable offshore emergencies as recommended by IMCA and IOGP guidelines
+law.resource.org
+scribd.com
+.
+List of Emergency Response Scenarios
+Medical Emergencies: Serious illness, injury or fatality on site (including food poisoning cases requiring evacuation).
+Fire Onboard: Fire or explosion on a vessel or offshore installation.
+Collision: Vessel collision with another vessel or with an oilfield structure.
+Grounding: Vessel grounding (running aground on seabed).
+Oil Spill: Accidental release of fuel or oil to the sea.
+Man Overboard (MOB): Person falling into the sea.
+Missing Personnel: Unaccounted person on site (potentially overboard if not found).
+Severe Weather: High winds, heavy seas or storm conditions endangering operations.
+Helicopter Ditching: Crash or emergency landing of a helicopter offshore.
+Security Threat: Piracy, armed attack, or other security incident (militancy, kidnapping) offshore.
+Diving Emergencies:
+Diver Injury/Unconscious: Injured or unresponsive diver underwater.
+Decompression Illness (DCI): Diver suffering the bends or other barotrauma.
+Diver Trapped/Entangled: Diver stuck on an object or inside a structure.
+Umbilical Failure (Lost Diver): Loss of diver’s umbilical or communications (diver adrift on emergency gas).
+Chamber Emergency: Fire or rapid depressurization in a deck decompression chamber or diving bell.
+Lost Bell: A closed diving bell unintentionally detached/lost at sea
+law.resource.org
+.
+Hyperbaric Evacuation: Saturation divers needing evacuation under pressure (SPHL lifeboat deployment)
+law.resource.org
+.
+Contaminated Dive: Diver exposure to toxic substances (e.g. H₂S, chemicals) underwater.
+Critical Equipment Failure: Major failure like dynamic positioning (DP) loss or power blackout during diving operations.
+Each scenario is detailed below with step-by-step response procedures and role assignments:
+Medical Emergency (Serious Illness/Injury or Fatality)
+Bronze (On-Scene – Supervisor or Medic): Ensure safety and first aid. Upon discovering a seriously ill or injured person, raise the alarm and attend to the casualty. Do not move the person unless necessary to remove them from immediate danger
+file-kpzyxshakbx8fodmnjaere
+. Begin first aid or CPR if trained, and have the vessel’s Medic or designated first aider take over treatment as soon as possible. If multiple casualties, call for additional first aid help and prepare the vessel’s hospital/clinic for triage
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (On-Scene): Notify and gather information. Inform the On-Scene Coordinator (OSC – e.g. OCM or Master) about the situation. The OSC should secure the incident area (if applicable) so it remains undisturbed for investigation
+file-kpzyxshakbx8fodmnjaere
+. Collect key details (injured person’s identity, injuries sustained, vital signs, circumstances of the incident) for relay to Silver
+file-kpzyxshakbx8fodmnjaere
+. If the injury is dive-related (e.g. barotrauma), consider recompression therapy – have the Dive Medical Technician (DMT) and chamber on standby
+file-kpzyxshakbx8fodmnjaere
+.
+Silver (Emergency Coordinator): Coordinate medevac and external support. Upon notification, the Silver EC arranges for medical evacuation if needed. Consult with the company’s diving medical doctor or Hyperbaric Medical Adviser for treatment guidance
+mds.uy
+. Activate the MEDEVAC protocol per the ERP: contact the client’s medical support and available transport (helicopter or boat)
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Ensure receiving onshore medical facilities are alerted and ready
+file-kpzyxshakbx8fodmnjaere
+. Silver keeps in constant communication with Bronze, updating on medevac ETA and any changes
+file-kpzyxshakbx8fodmnjaere
+.
+Silver (Emergency Coordinator): Escalate to Gold if required. If the situation is critical (e.g. fatality or multiple serious injuries), Silver notifies the Gold strategic team and possibly the client’s Emergency Control Center
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Silver and the client’s on-scene rep (COSC) decide if a full emergency response team activation is needed.
+Gold (Strategic Management): Strategic oversight and notifications. Gold convenes the onshore Emergency Management Team for a major medical incident
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. They approve major decisions (e.g. moving the injured to international facilities, press releases) and handle external communications. In case of a fatality, Gold ensures next-of-kin notification procedures are followed only after identity is confirmed and in coordination with authorities
+file-kpzyxshakbx8fodmnjaere
+. Gold may involve HR for family liaison and ensure investigative and legal requirements are initiated once the emergency phase is over.
+Bronze/Silver: Follow-up and documentation. Bronze completes accident report forms with all details of the incident and injured person, and submits to Silver and HSE management
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Silver ensures all reporting obligations are met (to regulators, client, company HSE) and that an incident investigation is initiated. Gold later reviews the incident report for lessons learned and closure.
+(Roles: On vessel, the On-Scene/Bronze is typically the Offshore Manager or Captain along with the Medic/DMT; Silver is the onshore Project or HSE Manager coordinating medevac; Gold is top management overseeing strategic decisions.)*
+Fire Onboard (Vessel or Installation)
+Bronze (On-Scene – Vessel Master/OIM): Raise alarm and initiate firefighting. At first sign of fire (sight or smell of smoke), immediately sound the general alarm
+file-kpzyxshakbx8fodmnjaere
+. Break the fire alarm glass and activate the alarm system, then announce the location of the fire over the PA if possible
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. The Master (acting as OSC) takes charge: muster the trained fire-fighting team and backup team per the vessel’s Muster List
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Ensure all firefighters don proper PPE and breathing apparatus. Attack the fire with appropriate extinguishers or fixed suppression systems (CO₂, foam, water) depending on the source (fuel, electrical, etc.), without delay – quick response is critical to prevent the fire from becoming uncontrollable
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Master/OSC): Alert nearby vessels and crew. If other vessels or facilities are nearby, sound the ship’s whistle (one long blast repeated) to signal distress and attract assistance
+file-kpzyxshakbx8fodmnjaere
+. Over the radio, issue a “PAN-PAN” or “MAYDAY” call (depending on severity) to inform all stations of a fire emergency on board, giving your vessel name, position, and nature of emergency. In port, also notify the local fire department immediately
+file-kpzyxshakbx8fodmnjaere
+. Meanwhile, ensure all crew not fighting the fire muster at their emergency stations and are accounted for. Check muster list – if anyone is missing, assign a search team (with SCBA gear) to last known locations, only if it does not put others in undue danger
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Master/OSC): Contain and decide on abandon ship. Close fire dampers, fuel valves, and power to affected areas to starve the fire (remove one element of the “fire triangle”)
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. If flames threaten vital areas (engine room, fuel tanks) or fire cannot be controlled with on-board resources, prepare for the worst. Engage emergency shutdowns and begin preparations to abandon ship if necessary
+file-kpzyxshakbx8fodmnjaere
+. Monitor the effectiveness of firefighting; if smothering systems (e.g. CO₂ in engine room) and fire teams cannot contain the blaze without risking lives, the Master must not hesitate to give the order to abandon
+file-kpzyxshakbx8fodmnjaere
+.
+Silver (Emergency Coordinator): Support and external notification. Upon being alerted by the Master (usually via the ship’s agent or direct call), the Silver EC notifies emergency services and rescue coordination centers on behalf of the vessel (if not already done). Silver ensures distress signals have been sent and coordinates additional support: e.g. requests nearby offshore support vessels to assist with firefighting or rescue
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Silver also alerts the company’s onshore Emergency Team (Gold) that a fire emergency is in progress, providing situation updates (extent of fire, injuries, assistance needed). If the vessel is in a field, inform the Field/Marine Controller to suspend other operations and mobilize field fire-fighting resources.
+Bronze (Master): Abandon ship (if ordered). If abandonment is necessary, sound the evacuation signal (seven short blasts + one long blast on ship’s whistle) and make a final PA announcement to abandon ship
+file-kpzyxshakbx8fodmnjaere
+. Ensure Mayday was transmitted with position before leaving (if not, deploy EPIRB). Crew should deploy liferafts and board in an orderly manner with essential survival gear (first aid kit, handheld radio, EPIRB, flares)
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Once in rafts, instruct everyone to cut loose and float clear of the vessel, then tie rafts together and await rescue
+file-kpzyxshakbx8fodmnjaere
+. Maintain headcount of personnel in the water.
+Bronze (Dive Supervisor): Special actions for divers: If diving operations were underway, immediately halt all dives. If a diver is in the water, recover the diver asap (if necessary, leave tools behind). If a diver is in the deck chamber (DDC) or bell, and the vessel is in imminent danger (fire out of control or sinking), initiate emergency procedures. For surface decompression: perform an emergency surfacing – bring the diver directly to surface pressure (omit normal decompression) and put them on oxygen as a first aid measure
+file-kpzyxshakbx8fodmnjaere
+. For saturation diving: if time permits, secure the chamber and prepare to launch the Self-Propelled Hyperbaric Lifeboat (SPHL) or portable chamber for evacuation (see Hyperbaric Evacuation scenario). If no SPHL and abandon ship is immediate, saturate divers will have to remain sealed in the chamber – ensure the chamber is sealed, life-support on autonomous mode, and hope for external rescue.
+Gold (Strategic): Coordinate rescue and resources. The Gold team, once activated, interfaces with national authorities (Coast Guard/Navy, Search and Rescue (SAR) teams) to coordinate rescue of the crew. Gold will manage high-level decisions: e.g. if a chartered rescue vessel or helicopter is needed, or if international help is requested. They also handle corporate communications – informing other company assets to assist and preparing media statements as needed. Gold ensures the client and regulatory bodies are notified promptly (a fire at sea is often reportable). If personnel are injured or missing, Gold oversees the next-of-kin notification process in alignment with company policy and authorities’ guidance
+file-kpzyxshakbx8fodmnjaere
+.
+Silver (EC) & Bronze: Aftermath and stand-down. Once the fire is extinguished or the crew rescued, Silver, in consultation with the Master/COSC, will formally stand down the emergency. Account for all personnel and treat any injuries. Preserve evidence for investigation if possible (the area of fire origin, if accessible, should be left undisturbed)
+file-kpzyxshakbx8fodmnjaere
+. Silver ensures an investigation team is formed. Gold will later review the incident response and ensure lessons learned are captured.
+(Roles: Bronze is the Vessel Master or OIM leading onboard firefighting; Silver is the onshore coordinator facilitating external help; Gold directs company-level support and liaisons with SAR authorities and client.)*
+Collision (Vessel Collision with Ship or Structure)
+Bronze (Master/OSC): Initial collision response. Upon collision with another vessel or an offshore installation, the Master/OIM as OSC must immediately assess the situation. Sound the general alarm to muster crew and dispatch damage control parties. Determine if there are any injuries onboard – if so, treat as per medical emergency steps
+file-kpzyxshakbx8fodmnjaere
+. Next, evaluate the vessel’s integrity: Is the hull breached or taking on water? Check all compartments, void spaces, and tanks for flooding (sound the tanks)
+file-kpzyxshakbx8fodmnjaere
+. Activate bilge and ballast pumps to control any flooding. Is there a fire? Collisions can ignite fires (from fuel or cargo); if so, also respond per the fire procedure
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Is the vessel stable? If stability is in jeopardy (listing or in danger of sinking), start preparing for possible abandon ship – have crew don lifejackets and life rafts ready
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Master): Communicate with other vessel/installation. If another vessel was involved, establish radio contact with its Master immediately after the impact. Exchange essential information (vessel condition, injuries, need for assistance)
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Maritime law requires rendering assistance to the other vessel if you can do so safely
+file-kpzyxshakbx8fodmnjaere
+. Stand by the other vessel until you’re sure they are not in imminent danger and have received help
+file-kpzyxshakbx8fodmnjaere
+. If the collision was with a platform or offshore structure, move your vessel a safe distance away once under control (up-wind and up-current) to avoid potential hazards like gas leaks or falling debris
+file-kpzyxshakbx8fodmnjaere
+. Visually assess the platform for obvious damage, and watch for any oil/gas leakage that could pose explosion or pollution risk
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Master): Distress calls and containment. Inform the crew of the situation over PA. If the vessel’s condition is deteriorating (flooding uncontrollably or severe damage), issue a MAYDAY call on VHF with location and nature of distress. Take actions to prevent worsening of the situation: close watertight doors, shut off machinery in affected areas, and deploy oil spill containment (like scuppers closed, absorbents) if any fuel spillage occurred. Ensure all crew are accounted for and in lifejackets. If abandon ship looks likely, follow the abandon procedures (sound 7 short + 1 long blasts, launch life rafts)
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+, but only after communicating with Silver/Gold to coordinate rescue assets.
+Silver (Emergency Coordinator): Notify field and rescue resources. Silver must be informed ASAP by the OSC or COSC that a collision has occurred. Silver notifies the client’s Marine Controller and field personnel so that all nearby operations stop and are prepared to assist
+file-kpzyxshakbx8fodmnjaere
+. Mobilize any standby vessel in the field to the scene if needed. Silver contacts national SAR authorities (Coast Guard) to report the incident and request rescue units if there is potential need for evacuation or oil spill response. If the collision involves a platform, Silver informs the platform operators and ensures they activate their emergency protocols too.
+Silver (EC): Coordinate multi-faceted response. A collision can create multiple emergencies (injuries, fire, flooding, pollution)
+file-kpzyxshakbx8fodmnjaere
+. Silver coordinates the various responses: medical (arrange medevac for injured), engineering (salvage or tug assistance for damaged vessel), environmental (oil spill response teams on standby). Ensure a Salvage company or emergency towing vessel is contacted if the vessel’s seaworthiness is in doubt. Silver also keeps Gold updated, especially if the situation escalates (e.g. vessel abandonment or major oil spill).
+Gold (Strategic): Liaison and strategic decisions. The Gold team will manage high-level communications – notifying corporate leadership, insurers, and regulators of the collision as required. If the vessel must go to a port of refuge after the incident, Gold assists in getting necessary clearances. Should the situation involve potential media attention (collision with an oil platform, for instance), Gold handles press releases jointly with the client. Gold also oversees that proper legal obligations are fulfilled (e.g. informing flag state authorities). Strategically, Gold might convene an emergency meeting with the other party (ship owner or platform operator) to coordinate the response and any investigation.
+Bronze (Master): Follow-up actions on scene. Once immediate danger is past (no sinking or fire threat), Master should document the incident (time, conditions, actions taken). If another vessel was involved, maritime regulations require exchanging details (ship’s name, flag, port of registry, voyage origin/destination)
+file-kpzyxshakbx8fodmnjaere
+ – ensure this is done in writing if possible. If pollution occurred, start containment if feasible and document the extent (for reporting). Before continuing voyage or heading to port, get class inspection if available at sea or otherwise proceed at safe speed to nearest suitable port as directed by Silver/Gold.
+(Roles: Bronze is the Vessel Master/OIM managing on-scene damage control; Silver is the onshore coordinator liaising with SAR, client, and specialist responders; Gold provides strategic support, communication, and resources.)
+Grounding (Vessel Run Aground)
+Bronze (Master/OSC): Immediate actions and assessment. If the vessel runs aground (hits the seabed or shoal), stop engines immediately to avoid worsening the damage. Sound the general alarm to muster crew and inform them of the situation. Assess damage: check all compartments for water ingress and inspect for hull breaches, especially around the bow and keel. Determine if the vessel is firmly aground or can be backed off. Location check: note the exact grounding position and nature of the ground (sand, mud, rocks) if known. If in an oilfield or sensitive area, notify the field control (e.g. “SPDC Marine Coordinator”) right away
+file-kpzyxshakbx8fodmnjaere
+ so they are aware of a potential hazard in the field.
+Bronze (Master): Prevent worsening of situation. If taking on water, use ballast adjustments to stabilize the vessel (e.g. shift water to raise the grounded part if possible). Close watertight doors and valves to isolate any flooded sections. Sound tanks to see if any fuel tanks are breached – a spill risk. If fuel is at risk of leaking, deploy absorbent booms overboard if available, and notify Silver to get spill response ready. The Master should also consider the state of the tide: if high tide, the vessel may settle worse on low tide; if low tide, there may be an opportunity to refloat on the rising tide. Plan accordingly.
+Silver (Emergency Coordinator): External notifications and assistance. Silver alerts relevant authorities of the grounding (Coast Guard, port authority if near shore) and the client/operator if in a field. Engage a salvage engineer or consult with vessel’s classification society for advice on refloating attempts. If the vessel is in a protected environmental zone, prepare oil spill response teams as a precaution. Silver might request tug support – if tugs are in reach, have them dispatched to assist in refloating or preventing further drift. Silver keeps Gold informed, especially if the grounding could become a high-profile incident (e.g. potential major pollution or traffic blockage).
+Bronze (Master): Refloating efforts. Under guidance from Silver/experts, attempt to refloat the vessel if it’s safe: e.g. lighten the ship by pumping out ballast or transferring cargo (if possible) to reduce draft. If tide is rising, wait for sufficient water then use engines gently in combination with tugs or bow thrusters to maneuver off the ground. Ensure all crew are at safe stations during such attempts and monitor the hull for new flooding. Do not overstress the engines or hull; if it doesn’t free easily, stop to avoid damage and wait for salvage help.
+Bronze/Silver: Prepare for abandonment or evacuation (if needed). Grounding itself might not demand abandoning ship unless the hull is badly damaged or the vessel is in immediate danger (e.g. breaking apart or at risk of capsizing). Continuously evaluate stability – if the vessel lists heavily or pounding waves threaten her integrity, the Master and Silver should prepare evacuation plans. Muster crew with lifejackets and launch boats only if absolutely required. Typically, it’s safer to stay on a grounded vessel unless she’s sinking, but be ready. Silver would coordinate SAR helicopters or nearby vessels to remove crew if abandonment is ordered.
+Gold (Strategic): Strategic management and communication. Gold will handle company-level issues: notifying insurers (hull and P&I clubs) of a potential claim, assembling a salvage contract (likely LOF – Lloyd’s Open Form – or similar if needed), and informing senior stakeholders. Gold manages media inquiries if the grounding becomes public (to control any reputational impact). If the grounding happens in international waters or foreign territory, Gold ensures legal and diplomatic protocols are observed (through the flag state or agents). Gold also ensures that environmental authorities are engaged if there's pollution risk.
+Follow-up: Once refloated or situation contained, the vessel should proceed to a safe port for thorough inspection. Bronze and Silver coordinate temporary repairs or escort tugs for the transit if hull strength is in question. An internal investigation should be launched (usually Gold will oversee this later) to find the cause of the grounding. All reports (to authorities, insurers, client) must be completed by Silver, with Gold reviewing for accuracy.
+(Roles: Bronze is Master on scene managing damage control and navigation; Silver is onshore coordinator arranging tugs, salvage, notifications; Gold handles high-level incident management, external communications, and support.)
+Oil Spill (Marine Pollution Incident)
+Bronze (Master/Chief Engineer): Stop the source and contain if possible. At the first sign of an oil spill (e.g. during bunkering or fuel transfer), stop the transfer operations immediately
+file-kpzyxshakbx8fodmnjaere
+. Close valves and attempt to drain or isolate any hoses or pipes leaking fuel
+file-kpzyxshakbx8fodmnjaere
+. If a tank overflowed, transfer fuel internally to another tank with spare capacity to drop the level below overflow point
+file-kpzyxshakbx8fodmnjaere
+. Ensure deck scuppers are plugged to prevent oil from reaching water via deck drains
+file-kpzyxshakbx8fodmnjaere
+. Eliminate ignition sources: institute a fire watch, shut down hot works, and have fire hoses and extinguishers deployed as a precaution
+file-kpzyxshakbx8fodmnjaere
+ (fuel spills can ignite). If the spill is on deck, deploy the ship’s oil spill kit (absorbent pads, booms) to soak up and contain oil
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Master): Assess the extent and notify. Estimate the quantity of oil spilled and identify the type of oil (e.g. marine diesel)
+file-kpzyxshakbx8fodmnjaere
+. Over the radio, notify the relevant authority of a pollution incident – if offshore, call the Marine Controller or coast guard; if within port limits, inform the Port Authority
+file-kpzyxshakbx8fodmnjaere
+. Also notify the client’s Marine Coordinator about the extent of pollution
+file-kpzyxshakbx8fodmnjaere
+ and your company’s Silver EC. Provide details: location, type of oil, approximate volume, and actions being taken. This ensures the Oil Spill Contingency Plan is activated.
+Silver (Emergency Coordinator): Activate oil spill response plan. Silver will alert specialized oil spill response teams if the spill is beyond the vessel’s handling capacity. This may include contractors with containment booms, skimmer vessels, and dispersants (note: use dispersants only if approved by authorities). Silver notifies environmental authorities as required by law (e.g. NOSDRA in Nigeria, EPA, etc., typically within 24 hours or as mandated). The EC also informs Gold, especially if the volume is significant or sensitive areas are threatened.
+Silver (EC): External coordination. If in an offshore field, Silver coordinates with the Field Operator’s oil spill plan – they might have Tier 2/3 resources (like aircraft for aerial dispersant or big booms) on standby. Silver ensures that marine traffic is warned (issue a NAVTEX or Notice to Mariners if needed) to avoid the polluted area or assist if they have capability. If near shore, prepare for shoreline protection (through local authorities). Throughout, Silver keeps a log of notifications and actions for compliance records
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Crew): Mitigation on board. Crew should continue to do all possible onboard mitigation: use absorbers to pick up oil on deck and water, secure any source of leak. If the spill came from a hull breach (collision or grounding scenario causing a spill), attempt to transfer fuel out of the breached tank into other tanks to limit outflow (perform under guidance to maintain stability). Rig boom around the ship if available to contain the slick spread.
+Gold (Strategic): Strategic oversight and stakeholder comms. Gold will lead the crisis management for a large spill. This includes media communication (acknowledging the incident, what is being done, etc.), liaising with government regulators and possibly local communities if they might be impacted. Gold may also authorize additional resources or international aid (for instance, activating a global Tier 3 response through an oil spill response organization) depending on severity. They also keep the company’s executives and the client informed regularly. If the spill is large, Gold might dispatch a company rep to the incident site or establish a dedicated command center.
+Follow-up: After containment and clean-up, ensure all required reports are completed (an internal investigation, spill incident report to authorities, client report). The vessel should replenish spill kit supplies used. Environmental monitoring might be required (water samples, impact assessment) per regulatory requirements – Silver/Gold will manage that. Lessons learned should be integrated into revised procedures (for example, improving “Safe Offshore Bulk Transfer” procedures
+file-kpzyxshakbx8fodmnjaere
+ to prevent recurrence).
+(Roles: Bronze is Master/chief officer/engineer addressing on-scene spill control; Silver is the onshore coordinator engaging response resources and agencies; Gold manages high-level response, external comms, and resource support.)
+Man Overboard (Person Overboard)
+Bronze (Witness/Deck Crew): Raise the alarm immediately. If someone sees a person fall into the water, they must shout loudly “Man Overboard, port side!” or starboard as applicable
+file-kpzyxshakbx8fodmnjaere
+. Throw a life ring (lifebuoy) with an attached light and smoke float overboard, aiming as close to the person as possible
+file-kpzyxshakbx8fodmnjaere
+. This provides flotation to the victim and marks the spot with smoke for visibility. Keep pointing at the person in the water so others know their location.
+Bronze (Bridge – OOW/Master): Alert and maneuver the vessel. Upon hearing the MOB alarm or shout, the Officer of the Watch sounds the Man Overboard signal (three prolonged blasts on the ship’s whistle) and presses the general alarm
+file-kpzyxshakbx8fodmnjaere
+. Immediately mark the MOB position on the GPS or ECDIS and initiate the vessel’s man overboard maneuver (e.g. Williamson turn or Anderson turn, depending on circumstances)
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. The helm should be put over toward the side the person went over, to swing the stern away from them
+file-kpzyxshakbx8fodmnjaere
+. Engine to idle or as required for maneuver. Post a lookout (preferably with binoculars) solely to keep the person in sight at all times and guide the recovery
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Master/Deck Crew): Deploy rescue resources. Launch the FAST rescue boat/FRC as soon as possible
+file-kpzyxshakbx8fodmnjaere
+. Many vessels have a dedicated MOB boat; a crew should be mustered (often the rescue boat crew is pre-designated) and launch it quickly but safely. Nighttime: use searchlights to illuminate the person in the water
+file-kpzyxshakbx8fodmnjaere
+; throw additional floating markers if needed. Reduce speed/stop near the victim to create a lee for the rescue boat. The rescue boat approaches the person (from downwind if possible) and pulls them onboard. Deck crew on the mother vessel standby with heaving lines, scramble nets, and recovery cranes to assist getting the person back on deck if needed
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Bridge/Master): Notify and coordinate. Broadcast a “PAN-PAN, Man Overboard” message on the radio to alert other vessels in the vicinity that you have an MOB and might need assistance
+file-kpzyxshakbx8fodmnjaere
+. Include your location and that you are maneuvering to recover a person. If in a field, also alert the field Marine Coordinator. Assign crew to muster with first aid gear – once the person is recovered, they may need immediate medical attention (hypothermia or injuries). If the person is not found on initial pass (lost from sight), initiate a formal search pattern (e.g. expanding square search from the point of loss)
+file-kpzyxshakbx8fodmnjaere
+. Continuously update the last known position and time.
+Silver (Emergency Coordinator): Support extended search or evacuation. If the person is not recovered promptly (e.g. after initial ship maneuver and rescue boat sweep), Silver will coordinate a broader Search and Rescue operation. Request assistance from nearby vessels or SAR services (Coast Guard helicopters/boats) providing them the MOB’s last known position and description. If the person is recovered but injured, Silver ensures medevac arrangements if beyond onboard capability. Silver also prepares to notify Gold if the situation might become protracted or if the individual is missing for an extended time.
+Gold (Strategic): Escalation if person missing. If despite searching the person remains missing, Gold will decide on escalating the search effort (e.g. involving national authorities at higher levels, aerial search assets). Gold would also handle communication with the missing person’s family as needed, in coordination with HR. If the person is recovered but in serious condition (or deceased), Gold ensures proper care or repatriation and that counseling is offered to crew as needed. They also prepare any press statements if the incident draws public attention (especially if the MOB was not recovered).
+Bronze (Master): All-clear and follow-up. Once the person is recovered aboard, sound “Man Overboard recovery accomplished – All clear” (usually pass the word and cancel the alarm)
+file-kpzyxshakbx8fodmnjaere
+. Inform other vessels or authorities who were notified that the MOB has been resolved (or if still missing, continue coordination). Provide first aid or medical treatment to the victim immediately – treat for shock/hypothermia. Conduct a headcount to verify no other persons went overboard. Later, investigate how the incident occurred (was the person wearing a lifejacket, were safety lines used, etc.) and report the incident per company and regulatory requirements (Silver to ensure reports to HSE and marine authority).
+(Roles: Bronze is primarily the vessel crew (watchstanders, Master) handling the immediate rescue actions; Silver comes into play if the situation escalates into a larger search or requires medevac; Gold becomes involved if the incident turns into a prolonged or critical event requiring higher-level management.)
+Missing Personnel (Unaccounted Individual Offshore)
+Bronze (Master/OSC): Muster and verify. When a person is discovered missing (e.g. not present at a routine muster or shift change), initiate a Personnel Accountability check. Sound the general alarm (if appropriate) to muster all crew and project personnel. Conduct a roll call against the roster to confirm who is missing. Double-check that the person isn’t in a known safe location (e.g. sick bay, restroom, or assigned post that wasn’t included in muster). Interview colleagues to establish when and where the person was last seen.
+Bronze (Master/OIM): Search the vessel/facility. Organize a thorough search of the vessel or installation. Divide the area into sectors and assign teams to sweep all cabins, workspaces, machinery spaces, lockable rooms, and waterline perimeters. Use PA announcements or UHF radio calls to attempt to contact the person (they may be stuck or incapacitated somewhere). The search should be swift but methodical – time is critical if the person went overboard. If the individual still cannot be found on board after a reasonable search, assume a Man Overboard scenario.
+Bronze (Master): Initiate man overboard response (if not found). Treat the missing person as MOB unless proven otherwise. This means deploying lookouts, life rings, and if at sea, backtracking the vessel’s route since the person was last seen. Trigger the Man Overboard alarm and follow the MOB recovery procedures (detailed in the previous section) – effectively, the response now shifts to an MOB situation with the added disadvantage that the exact fall point is unknown. Mark the time the person was last definitely accounted for and estimate when/where they could have gone overboard.
+Silver (EC): Escalate search & notify authorities. As soon as it’s determined someone is missing overboard, Silver notifies SAR authorities to begin a formal search effort (if not already engaged via initial MOB call). Provide them with the Search Datum – the best estimate of where/when the person went missing and prevailing currents/wind for drift calculation. Silver also alerts Gold about the serious incident (potentially lost at sea scenario). If in an oilfield, the client’s emergency team is informed and field vessels or standby boats are directed to join the search.
+Gold (Strategic): Crisis management for prolonged missing case. Gold will likely assemble the Emergency Team for a potential fatality scenario. They coordinate with SAR agencies at a high level (offering company resources, aircraft, etc., if needed). They handle communication with the missing person’s family, keeping them updated with empathy and support. Gold also prepares for the possibility of a medevac or recovery operation if the person is found (alive or deceased). Media handling is crucial – Gold drafts statements in case the news goes public, focusing on the ongoing search and company’s commitment to personnel safety.
+Bronze/Silver: Resolution and investigation. If the person is found (onboard hiding, or overboard rescued), give the all-clear and provide medical care or other support. If after an exhaustive search (per international SAR standards) the person is not found, coordinate with authorities to suspend the active search. Hold a crew meeting for support – such events are traumatic for everyone. Silver ensures all reporting is done (to flag state, client, HSE, etc.). Gold oversees the post-incident investigation to determine how the person went missing and to prevent future occurrences (e.g. improve fall prevention, man-alone checks, etc.).
+(Roles: Bronze leads onboard search and initial response; Silver engages external search and coordinates multi-agency efforts; Gold manages the broader consequences and family/authority liaison.)
+Severe Weather / High Winds and Seas
+Bronze (Master/OIM): Monitor and warn. Keep a close eye on weather forecasts and onsite conditions. When high winds, large swell, or storm conditions are predicted that could affect operations, initiate the Heavy Weather Procedure. Warn all departments and the client representative that severe weather is approaching. Begin securing operations well in advance: for a diving project, the Dive Supervisor should suspend diving before conditions exceed safe limits (typically as weather deteriorates to the pre-set stop criteria).
+Bronze (All Departments): Secure the worksite and personnel. Stop all non-essential operations: e.g. suspend crane lifts, back onto drilling, or construction tasks. Secure loose equipment on deck – lash down anything that could shift in heavy rolls. For example, ensure dive bell or ROVs are secured in the cradle, project tools are stowed, hatches/doors dogged down, and ventilation openings prepared to be closed if necessary. Have engineering check emergency power and propulsion systems, as heavy weather may require maneuvering to hold position. Muster crew indoors or in safe areas; minimize personnel on open deck (only those lashing equipment, wearing safety harnesses and lifejackets as needed). If waves are expected to breach the deck, rig safety lines and ensure everyone outside is clipped on.
+Bronze (Master): Ship/vessel handling. If the vessel is moored to an installation or structure (e.g. alongside a platform or attached to a pipeline or cable), initiate safe disconnection or pull off in a controlled manner before the weather hits its worst. If on dynamic positioning (DP), enhance the DP settings for heavy weather (put motors in high power, consider changing heading to take seas on the bow) – but be prepared that if weather exceeds DP capability, you may need to halt operations and move off location to ride out the storm (this itself should be part of the contingency planning
+law.resource.org
+). Ballast the vessel appropriately for stability in heavy seas. For a jack-up or platform, ensure all loose items are secured and personnel are indoors; if wind speeds approach limits, consider down-manning non-essential crew via the last safe helicopter or boat transfer.
+Silver (Onshore Coordinator): Operational decisions and support. Silver should be in the loop early – they might convene a weather call with the project and marine teams. If the weather threat is severe (e.g. a named storm or hurricane), Silver coordinates with Gold on whether to evacuate personnel entirely from the offshore installation/vessel. (Only essential crew might ride out a storm, or in extreme cases, a full evacuation is done.) Silver also ensures any critical transportation (supply boats, helicopters) are scheduled appropriately before weather worsens or after it passes. The EC keeps the client informed of operational status (e.g. “on weather standby”) and any help needed (perhaps a standby vessel to assist if things go wrong).
+Gold (Strategic): Emergency readiness and communication. Gold monitors the situation at a high level, especially for major cyclones or hurricanes. They ensure the overall emergency response team is ready in case the severe weather causes an incident (collision, grounding, etc.). They might also liaise with other operators in the region for weather updates and shared response resources. If a decision to evacuate offshore personnel is needed, Gold typically authorizes it in consultation with the client and authorities. They handle external communication if the project will be delayed or impacted by the storm (messaging to stakeholders that operations are paused for safety).
+Bronze: During and post-storm actions. While the storm hits, ride-out crews continuously monitor the vessel’s condition – hull, moorings, DP holding, etc. Maintain navigation watches in case of drift. After the severe weather passes, conduct thorough inspections: look for any damage, check all systems, and verify that critical equipment (like the dive system, cranes, etc.) is still in good working order. Only resume operations after conditions are back within limits and any issues are fixed. Report to Silver that all clear and normal operations can resume. Silver and Gold should review the adequacy of the heavy weather preparations and capture any improvements for next time.
+(Roles: Bronze (Master/OIM/Supervisors) secure the site and people for the storm; Silver makes broader operational decisions (standby, evacuation) and supports logistics; Gold oversees strategic safety decisions and external comms especially for extreme weather events.)
+Helicopter Ditching (Offshore Helicopter Emergency Landing)
+Bronze (Witness or Radio Operator): Recognize and report. If a helicopter ditches (crash-lands on water) near the vessel or installation, it may or may not have been able to broadcast a Mayday. Anyone observing a helicopter going into the sea must immediately inform the Bridge/Master
+file-kpzyxshakbx8fodmnjaere
+. If you receive a distress call from a helicopter pilot about ditching, log the position and nature of emergency at once.
+Bronze (Master/OSC): Initiate rescue response. Sound the emergency alarm and prepare for man overboard/mass rescue operations. The Master (OSC) should navigate the vessel toward the ditching site as soon as its location is known or observed
+file-kpzyxshakbx8fodmnjaere
+, while broadcasting on marine and aviation emergency frequencies that you are responding to a helicopter ditching. Maintain radio watch on the distress channel for any transmission from the helicopter or updates from rescue coordination center
+file-kpzyxshakbx8fodmnjaere
+. As you approach, limit radio communications to emergency traffic only (to avoid clutter)
+file-kpzyxshakbx8fodmnjaere
+.
+Bronze (Master): Rescue the survivors. On reaching the area, deploy rescue boats immediately
+file-kpzyxshakbx8fodmnjaere
+. Launch fast rescue craft with properly equipped crews (including swimmers if trained) to retrieve personnel from the water. Coordinate with any other vessels: direct them to form a search grid or to provide lee/windbreak for the rescue operation
+file-kpzyxshakbx8fodmnjaere
+. Prioritize lives: get people out of the water first, then worry about wreckage. Prepare medical facilities onboard: have the medics/first aid team ready with stretchers, blankets, and trauma kits for incoming survivors
+file-kpzyxshakbx8fodmnjaere
+. Time is critical, as survivors may be injured or hypothermic.
+Bronze (On-Scene Teams): Provide first aid and information. As survivors are brought aboard, treat serious injuries and begin re-warming those who may be hypothermic. Try to quickly ascertain from them how many people were on the helicopter in total, and how many have been rescued versus still missing
+file-kpzyxshakbx8fodmnjaere
+. This will guide the ongoing search. Also ask if there were any dangerous goods on the helicopter (to assess any hazmat risk in the water).
+Silver (Emergency Coordinator): Coordinate external SAR efforts. Upon notification of a helicopter ditching, Silver immediately contacts the nearest Rescue Coordination Centre (RCC) (often the national SAR authority) to ensure they are aware and deploying assets (if in a field, the client’s emergency procedure will also do this). Likely, SAR helicopters or standby vessels will also head to the scene. Silver should relay information from OSC: number of people involved, coordinates of the ditching, weather conditions, and what support is needed. If the downed helicopter was operating for the project/client, Silver also informs the client’s emergency team. Keep Gold updated with accurate status reports (especially casualty numbers).
+Gold (Strategic): High-level management and support. Gold will treat this as a major incident (potential multiple casualty event). They liaise with the helicopter operator company’s crisis team, coordinate with local authorities (e.g. air accident investigators) and possibly media, since helicopter accidents draw attention. Gold ensures that family notification processes are in place for those involved (working with the helicopter operator who typically handles their passenger manifest notifications). Gold also might mobilize additional support, e.g. arranging onshore medical evacuation flights if survivors need to be moved to hospitals, or arranging for trauma counseling for other crew.
+Bronze/Silver: Search completion and stand-down. Continue searching for any missing persons until RCC or authorities call off the search. Once all survivors are recovered or all reasonable hope is exhausted, the Master should liaise with SAR authorities to formally conclude the search. Silver will coordinate the transfer of any injured to shore-based care as soon as possible (via medevac helicopter or the fastest vessel). Secure any wreckage recovered on deck for investigators.
+Follow-up: The incident transitions to an investigation phase by aviation authorities. Bronze provides statements/reports of actions taken. Silver compiles all documentation of the emergency. Gold supports the investigation and any necessary communication in aftermath. The dataset of lessons (e.g. ditching position relative to nearest support, efficiency of rescue, etc.) should be analyzed to improve future responses.
+(Roles: Bronze (Master/crew) perform the immediate rescue operations; Silver coordinates with SAR and other external resources; Gold manages overall crisis, including interfacing with the helicopter operator and authorities.)
+Security Threat (Piracy/Armed Attack)
+Bronze (Crew spotting threat): Raise piracy alarm. If suspicious vessels or armed attackers are seen approaching, immediately raise the dedicated piracy alarm (distinct from fire/general alarm)
+file-kpzyxshakbx8fodmnjaere
+. This alerts crew to imminent security threat without necessarily tipping off intruders (if silent alarm system exists). Shout a plain-language warning if needed (e.g. “Piracy attack! All crew to citadel!”).
+Bronze (Master/OSC): Evasive maneuvers and crew protection. Increase to maximum speed and begin evasive maneuvers (zigzagging) to make boarding difficult, if the vessel can outrun or outmaneuver the attackers. Activate water spray anti-boarding systems if available (fire hoses on guard rails, etc.). Order all crew except critical watchstanders to the safe muster area (citadel or designated secure room) according to the vessel’s anti-piracy plan. Lock down all access points to accommodation – secure doors, hatches. Turn off lights at night to reduce visibility of crew on deck. If attackers are already on board, and crew are unarmed/non-security, do not engage in direct confrontation – follow pre-established surrender procedures to preserve life.
+Bronze (Master/Security Officer): Distress call and surveillance. Broadcast a MAYDAY (piracy attack) on VHF and activate the Ship Security Alert System (SSAS) if equipped, to silently notify authorities and company of the attack
+file-kpzyxshakbx8fodmnjaere
+. Provide coordinates, vessel identity, and nature of attack. Continually update with any critical info (number of attackers, weapons, any injuries). If the vessel has CCTV, monitor intruders’ movements from the citadel if possible.
+Silver (Company Security/EC): Activate emergency protocols. Once alerted (often via SSAS or a relayed Mayday), Silver (with a Security Advisor) will implement the company’s piracy response plan. Contact regional maritime security centers (such as MDAT-GoG or UKMTO/MSC HOA if in other regions) to report the attack and request military assistance. Share vessel’s last known position, heading, and any received updates. Silver also alerts Gold that a security crisis is occurring.
+Bronze (Dive/Operations Specific): Special actions for divers. If a diving operation is underway during a piracy attack:
+If the diver is in the water, the Dive Supervisor should immediately recover the diver to surface and get them out of the water and out of dive gear as fast as possible
+file-kpzyxshakbx8fodmnjaere
+. The goal is to avoid the diver being left in the water or exposed during an attack.
+If the diver is in a chamber (saturation or DDC) undergoing decompression, the Dive Supervisor and LST should lock down the chamber – secure all hatches from inside if possible
+file-kpzyxshakbx8fodmnjaere
+. The chamber can act as a safe haven; maintain life support but do not open it until the situation is resolved. Essentially, keep divers under pressure safe and isolated from intruders.
+For surface divers on deck, if attackers board, have them remove helmets but possibly remain in a locked dive control or machinery space if that’s safer than coming out.
+Gold (Strategic): Crisis management and negotiation. Gold convenes a Crisis Management Team including security experts. If pirates successfully board and take hostages, Gold will lead negotiations (often via professional hostage negotiators or employing government resources). Do not allow ad-hoc crew negotiations. Gold coordinates with naval forces responding to ensure any action does not endanger crew. All external communications are handled by Gold – e.g., reassuring families (through HR) and managing media (likely a blackout or limited info release due to sensitivity). Gold also ensures compliance with laws (e.g. anti-piracy rules about ransom, etc., often working with insurance like K&R policies).
+Silver (EC): Coordinate post-incident support. If the attackers leave or are apprehended, Silver ensures any injured crew get immediate medical care (coordinate medevac if needed). If crew were taken hostage (kidnapped), Gold/Silver coordinate with authorities for their safe return; the emergency isn’t over until all personnel are recovered. Silver should also send a security alert to all other company vessels in the region to heighten their awareness.
+Follow-up: Once the threat is over, Bronze/Master must do a full headcount and attend to any damage on the vessel. Secure any weapons left behind. Silver will handle incident reporting to international bodies (IMO Piracy report, Flag State report) and client. Gold manages the long-term actions: counseling for crew, debrief, and enhanced security measures for future (perhaps hiring armed guards or avoiding high-risk areas if applicable).
+(Roles: Bronze is Master/crew on scene executing the anti-piracy drills and immediate survival actions; Silver is the security focal point onshore coordinating with navies and Gold; Gold handles strategic decisions like negotiations, stakeholder communications, and overall crisis leadership.)
+Diving Emergency Scenarios
+(In all diving emergencies, the Dive Supervisor on shift is the On-Scene Bronze Commander for the diving team, while the Diving Superintendent or Project Manager onshore may act as Silver for dive-specific support, alongside the vessel’s own emergency hierarchy.)
+Diver Injury or Unconscious Underwater
+Bronze (Dive Supervisor – OSC): Recognize and abort dive. The moment a diver reports an injury, severe illness, or becomes unresponsive, immediately halt the diving operation. If the injured diver is underwater and conscious but injured, instruct them to cease work and begin a safe ascent if possible (with or without in-water decompression depending on severity). If the diver is unconscious or incapacitated, deploy the standby diver to assist without delay
+scribd.com
+. The standby diver’s priority is to secure the injured diver’s airway (if regulator knocked out) and bring them up.
+Bronze (Dive Team): Recover the diver to a safe environment. Bring the injured diver to the surface or into the diving bell as quickly as safely possible
+scribd.com
+. If using surface-supplied diving, winch up the diver (guide by umbilical) once standby has a grip on them. If scuba (rare offshore), standby diver provides ascent assistance. On surfacing, retrieve the diver onto the deck or into the dive control area. If the diver is unconscious and not breathing, commence CPR and 100% oxygen at the surface. Time is critical in preventing drowning or hypoxia.
+Bronze (DMT/Medic): Immediate medical treatment. The on-site Dive Medic or vessel Medic takes over medical care. Move the diver to the deck decompression chamber (DDC) if the issue is likely dive-related (e.g. arterial gas embolism) and pressurization is needed, otherwise to the infirmary. Treat obvious injuries (bleeding control, immobilize fractures). If the diver sustained barotrauma or shows neurological symptoms, assume decompression illness and put them on oxygen (in chamber if possible)
+file-kpzyxshakbx8fodmnjaere
+. The diving medical doctor on call must be contacted for consultation
+mds.uy
+ – provide details of the incident and condition.
+Silver (Dive Superintendent/EC): Evacuation and notifications. If injuries are beyond on-site capacity or diver is critical, Silver coordinates a MEDEVAC. As per IMCA guidance and company protocol, initiate emergency transport to the nearest hyperbaric medical facility
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. This could involve helicopter evacuation or fast boat transfer after initial stabilization. Ensure the receiving facility (hospital or coastal chamber) is alerted and ready
+file-kpzyxshakbx8fodmnjaere
+. Silver also notifies Gold and the client of the incident (without delay if life-threatening) and keeps them updated.
+Gold (Strategic): Support and oversight. Gold ensures that all necessary resources for the injured diver are provided – e.g. if an emergency hyperbaric evacuation to a regional specialist is needed, Gold facilitates that (perhaps via IOGP networks or insurance). They manage any potential media or regulatory notification if the incident is severe (especially if it could result in permanent injury or fatality). Gold will also ensure the rest of the project is stood down if needed and focus is on the casualty.
+Follow-up: After the diver is cared for, investigate the cause of the injury (equipment failure? procedural lapse?). Silver ensures incident reports and IMCA DIR/FIR forms are completed. Gold reviews and disseminates lessons learned across the company.
+(Example scenarios: a diver is hit by falling object subsea, diver has a medical emergency like heart attack underwater, or diver loses consciousness from hypercapnia. In all cases, immediate retrieval and treatment are paramount
+scribd.com
+.)
+Diver Decompression Illness (DCI)
+Bronze (Dive Supervisor): Recognize symptoms and secure diver. If a diver shows signs of decompression illness (e.g. pain, numbness, weakness, dizziness) during or after a dive, act quickly. Stop any further activity and have the diver lie down on oxygen at the surface. If symptoms appear while the diver is still in the water or bell, bring them to surface/bell as soon as safely possible (balance urgency with not causing an arterial gas embolism by rushing ascent).
+Bronze (Dive Team): Recompress in chamber. Transfer the affected diver into the deck decompression chamber (DDC) immediately for therapeutic recompression
+file-kpzyxshakbx8fodmnjaere
+. Follow the appropriate treatment table (e.g. U.S. Navy Table 6 or equivalent) as per the dive medical protocols. Ensure a tender is in the chamber to assist, and start treatment on 100% oxygen at pressure as directed by the diving medical officer. Maintain constant communication with the diver for neurological checks.
+Bronze (DMT/Medic): Consult hyperbaric doctor. Contact the company’s hyperbaric/dive physician (or DMAC duty doctor) to advise on treatment progression
+mds.uy
+. Provide details: dive profile, time to symptom onset, symptom description. Adjust treatment table or medications as per doctor’s orders (e.g. fluids for hydration, possibly IV if serious, and any recommended drugs).
+Silver (Dive/Project Manager): Prepare evacuation contingencies. If the diver’s condition is not improving in chamber or if additional medical complications exist, arrange for evacuation to a onshore hyperbaric facility
+file-kpzyxshakbx8fodmnjaere
+. IOGP recommends identifying such facilities in remote areas in advance
+scribd.com
+ – use that info now. Coordinate a helicopter or boat to transfer the diver under pressure if needed (this might involve a portable chamber or keeping them in the DDC and moving the whole chamber). For example, the plan might be to take the chamber by vessel to a port where it can be craned to a truck or connected to a land chamber
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. If the primary chamber is compromised or busy, have backup arrangements (neighboring dive contractor’s chamber or nearest hospital with capability)
+file-kpzyxshakbx8fodmnjaere
+.
+Gold: Resource mobilization and liaison. Gold ensures all necessary support is given: perhaps alerting a specialist hyperbaric rescue team (if needing to move chamber long distance), handling any insurance for medical evacuation, and communicating with the diver’s family. Gold also notifies the client and regulatory bodies if required (since serious DCI can be classified as a reportable incident). They oversee that the emergency response is executed per plan and provide strategic decisions if any unplanned risks arise (e.g. if weather delays medevac, decide next steps).
+Follow-up: Document the incident – depth, dive table, where protocol might have failed (was it an unexpected DCI within tables or procedural error). Silver convenes an investigation with the diving team. Ensure the diver gets a proper medical evaluation post-incident and clearance before diving again (if at all). Gold will review the case and circulate any necessary changes to dive procedures or emergency plans (e.g. additional training if recognition of symptoms was delayed).
+(Note: Decompression illness is considered a foreseeable diving emergency – site plans must have contingency for treatment and evacuation
+scribd.com
+. In practice, timely chamber treatment on site often resolves most DCI without evacuation.)
+Diver Trapped or Entangled Underwater
+Bronze (Dive Supervisor): Identify the problem and standby deploy. If a diver reports being trapped, entangled, or unable to ascend due to an underwater obstruction (or stops responding and is suspected trapped), immediately halt any other tasks and focus on rescue. Dispatch the standby diver to the water with the necessary tools (e.g. cutting equipment, rope, lift bags) to assist the trapped diver. Ensure the standby’s umbilical is tended clear of the same hazard.
+Bronze (Standby Diver): Free the diver. Upon reaching the trapped diver, assess the entanglement. If it’s fishing line or netting, use knives or line cutters to carefully cut them free. If the diver is pinned by a heavy object or structure, inflate a lift bag or use available rigging to remove the weight, or use mechanical leverage if possible. Constantly reassure the trapped diver (if conscious) to keep them calm. If the diver’s umbilical is snarled, consider switching them to the standby diver’s bailout gas or umbilical once you arrive, to ensure an uninterrupted breathing supply during the disentanglement.
+Bronze (Dive Supervisor): Maintain life support and communications. Meanwhile topside, ensure the trapped diver’s umbilical has slack (don’t pull if it’s entangled around something, which could tighten it on the diver). Monitor the diver’s gas supply and depth – if the diver is trapped at depth longer than planned, you may need to start calculating extended decompression once freed. Keep talking to the diver (if conscious) to assess their condition, or rely on standby diver’s reports at the scene. If the situation is protracted, consider lowering additional emergency tanks or tools to the standby as needed.
+Silver (Onshore Dive Manager): Contingency planning. If the diver cannot be freed quickly, Silver should be notified and start considering higher-level assistance: e.g. mobilizing a crane barge or ROV if the diver is trapped under a structure or inside a confined space subsea. Silver informs Gold that a prolonged rescue is underway. If necessary, call in search & rescue divers or standby vessel with additional dive team if your vessel’s resources are limited (time is of the essence, so don’t hesitate if your team is struggling). Ensure continuous risk assessment – do not endanger more personnel without proper measures (one trapped diver is an emergency, but two would be a disaster).
+Gold: External resource coordination. Gold can liaise with third-party rescue services or government/military if the scenario is beyond the project’s capability (for example, a diver trapped inside a sunken ship might need specialized rescue divers or cutting equipment). Gold also handles any client or media communication if this incident becomes extended. They ensure the company’s full support (extra equipment, experts) is made available to assist the Silver and Bronze teams.
+Outcome: Once the diver is freed, follow normal resurfacing protocols if possible (likely a shortened bottom time but possibly missed deco – treat as emergency: put diver on O₂ and into chamber asap). If the diver was stuck long enough to panic or suffer trauma, have DMT ready upon surfacing. If despite efforts the diver cannot be freed alive, this becomes a recovery operation – Gold/Silver would then involve recovery divers or ROV to retrieve the body when safe to do so, in coordination with authorities.
+Follow-up: Silver assembles a report on what trapped the diver (was it unforeseen hazard or procedural miss). Ensure tools are available to prevent recurrence (e.g. cutting tools were on hand or need improvement). Psychological support should be offered to the rescued diver and team, as being trapped is traumatic.
+(Roles: Bronze (Dive Sup + standby diver) execute the rescue underwater; Silver provides backup plans, calls in extra help; Gold manages big-picture resources and communications during a complex rescue.)
+Umbilical Severance / Lost Diver (Surface-Supplied)
+Bronze (Dive Supervisor): Detect loss of signal/gas and respond. If a diver’s umbilical is cut or communication is suddenly lost with a diver (and bubble stream if visible stops), assume the worst: the diver is adrift on emergency gas. Immediately deploy the standby diver to the last known location to search for the lost diver. Activate any diver locating devices – for example, an emergency transponder or pinger on the diver (if carried). Sound the dive alarm for emergency surfacing.
+Bronze (Dive Support Crew): Search and retrieval. Begin a quick surface search around the dive site: the lost diver may free-float to the surface once their umbilical is cut (divers wear positive buoyancy devices or can drop weights in an emergency). Look for helmet or bubbles breaking the surface nearby. The standby diver and any support ROV should systematically search the area where contact was lost. If available, lower a scanning sonar or use the vessel’s sonar to detect a diver’s body in the water column.
+Bronze (Master of Vessel): Assist in search. If the vessel is DP, hold station or run a search pattern; if on anchor, consider launching the fast rescue boat to expand the search radius. Throw lifebuoys to mark the position of loss and help gauge current drift. Notify any nearby vessels to keep a sharp lookout and not to approach too close with thrusters (which could endanger a surfacing diver). Suspend any other operations that might interfere with the search.
+Silver (Onshore/Dive Superintendent): Emergency support. Notify Silver immediately that a diver is missing underwater. Silver should prepare to get additional rescue resources (maybe another dive team from nearby, or if near shore, a coast guard dive unit)
+law.resource.org
+. Keep the SAR authorities informed as well in case this turns into a larger search. Silver will coordinate between the vessel, any standby rescue craft, and onshore support.
+Bronze (Standby Diver): Recovery and first aid. If the standby diver locates the lost diver, they should do an immediate assessment: if the diver is unconscious and out of gas, the standby should donate their secondary supply (like buddy breathe via bailout or full face mask swap underwater) and bring the diver up. On deck, the team must be ready to commence CPR/O₂ as needed. Assume decompression obligations have been ignored – treat for both drowning and DCI possibility (100% O₂, immediate recompression if the diver has pulse but signs of embolism).
+Gold: Escalation if diver not found. If minutes turn to hours and the diver is still missing, Gold takes charge of a broader SAR operation. Notify government SAR to possibly bring in helicopters or additional search assets. Gold handles the next-of-kin notifications that a diver is missing and ensures family support is in place. Prepare for media attention if a diver remains lost.
+Conclusion: If the diver is found alive, follow medical emergency procedures. If the search is unsuccessful beyond the survivability window, Gold/Silver will work with authorities on shifting to recovery status and investigation. Silver makes sure evidence (the severed umbilical pieces, dive logs, etc.) is preserved for analysis of what went wrong (equipment failure? boat movement? etc.). Gold will oversee the incident investigation at the highest level.
+(Roles: Bronze coordinates immediate in-water search and rescue; Silver brings in external help and coordinates multi-party efforts; Gold manages the crisis if it escalates to a prolonged missing-diver situation.)
+Lost Bell (Closed Bell Diving Emergency)
+Bronze (Dive Supervisor/LST): Recognize bell separation and stabilize situation. A “lost bell” means the closed diving bell has inadvertently detached from its tether or umbilicals. Alarms will trigger if the bell loses main umbilical pressure or communications. Immediately try to re-establish comms with bell via emergency through-water communications (if available). The Life Support Technician (LST) in the bell or on surface should ensure the bell’s internal* life support is activated – switch to onboard oxygen supply, scrubbers, and clamp shut any leaking valves. The bell occupants should lock the hatch and stay calm on internal systems.
+Bronze (Master/Dive Sup): Locate the bell. Initiate tracking – most closed bells have an acoustic locator beacon. Use the vessel’s bell tracking sonar or a handheld pinger receiver to get a bearing and distance to the bell
+law.resource.org
+. Mark the position (DGPS) where the bell was lost and note time and currents. Immediately maneuver the vessel (or assign a standby vessel/ROV) to search above the bell’s last known location. Deploy an ROV if available to visually locate the bell under water.
+Bronze (Dive Team): Prepare for bell recovery. Get the bell recovery equipment ready: this may include a standby ROV to hook onto the bell’s lifting eye, a dedicated “bell recovery winch” or davit, and extra divers if shallow enough for surface divers to assist. Ensure the hyperbaric rescue chamber (if part of system) is ready to receive divers if the bell is brought to surface and mating is needed. Maintain communication with the bell via emergency channel if possible – talk to the divers to reassure them and get their condition.
+Silver (Onshore Dive Manager): Mobilize external resources. Lost bell scenarios are dire; Silver should notify any nearby dive support vessels (DSVs) or rescue assets in the region. IOGP guidance stresses having contingency plans and possibly shared resources for bell recovery
+law.resource.org
+. If the company has a submarine rescue or a backup vessel, put them on standby. Also notify the client and possibly the government/navy – they may have heavy lifting or ROV assets to help. Silver coordinates the overall search-and-recovery efforts, allowing the vessel crew (Bronze) to focus on immediate tasks.
+Gold (Strategic): High-level emergency management. Gold convenes the full emergency team and possibly an industry mutual aid, as saturation divers’ lives are at extreme risk. Gold may trigger the company’s hyperbaric rescue agreement (if one exists with a rescue company or neighboring operator). Ensure that a hyperbaric rescue facility is ready at a safe location to receive the bell or the divers after recovery (this could be a known safe refuge as required by IOGP
+scribd.com
+). Gold coordinates media and stakeholder communications, as a lost bell will draw significant attention. They also ensure regulatory notifications are immediate (e.g. the HSE or relevant offshore safety body).
+Bronze/Recovery Team: Perform bell recovery. Once the bell is located, use ROV or suitable means to attach the recovery line to the bell’s lifting point. If the original handling system is still usable (e.g. cable intact but snagged), carefully work it free; otherwise, use an auxiliary winch. Winch the bell up slowly, monitoring bell integrity and ensuring it doesn’t tilt excessively. Once near surface or at mating depth, transfer the bell to the deck or mating trunk as per your system. The LST and medics should be standing by – do not open the bell until it’s properly mated or in a controlled environment (to avoid dropping pressure if divers are under pressure). If an SPHL (self-propelled hyperbaric lifeboat) was the lost bell, locate and retrieve it similarly, then connect to deck chamber.
+Aftermath: When the divers are safe and transferred to a chamber or on deck, ensure they get medical checks – they may have CO₂ exposure, anxiety issues, etc. They will likely need to undergo normal decompression unless an emergency ascent was done. Silver and Gold should then focus on investigating the cause of the bell loss (wire failure? clump weight issue? human error?) and reporting to industry bodies (IMCA safety alert perhaps). The effectiveness of the contingency plan
+law.resource.org
+ will be reviewed and improved as needed.
+(Roles: Bronze (on vessel Dive Sup/Master) run the immediate tracking and recovery rigging; Silver orchestrates additional help and ensures nothing is missing; Gold manages the critical crisis at the organizational level, given the life-or-death stakes and potential for wide impact.)
+Chamber Emergency (Fire or Rapid Depressurization in DDC)
+Bronze (LST/Dive Supervisor): React to chamber fire. A fire in the decompression chamber is an extremely urgent situation – the chamber atmosphere can fuel fire intensely. If smoke or fire is detected in a chamber: immediately cut power to chamber electrics (many systems have an emergency shutoff) to remove ignition sources
+law.resource.org
+. Initiate the chamber’s built-in fire suppression if available (CO₂ dump system into the chamber). Chamber occupants should be instructed (via intercom or banging on hull) to don emergency breathing masks (EBAs) which supply fresh air/oxygen from outside sources
+law.resource.org
+. Do not open the chamber to atmosphere while at pressure – that could cause catastrophic decompression and feed the fire with oxygen. Instead, fight the fire internally: if occupants are conscious, have them use onboard fire extinguishers (often chambers have internal handheld extinguishers suitable for use at pressure).
+Bronze (LST/Dive Tech): Handle rapid depressurization. If the chamber suddenly loses pressure (due to a leak or accidental door opening), act to contain the pressure drop: close any reachable valves, isolate the chamber if it’s part of a system (close compartment valves). If pressure loss cannot be stopped, it will result in an emergency surfacing of any divers inside – prepare to treat those divers for severe DCI and barotrauma. As soon as the chamber can be opened (when equalized with ambient), have medical personnel ready to render aid. If a bell loses pressure underwater (e.g. hatch inadvertently opened or seal failure), instruct the bell divers via comms to get on their back-up breathing gas and try to close/secure the source of leak; bring bell to surface if possible. In all cases, prioritize life over assets – a controlled emergency ascent is preferable to asphyxiation.
+Bronze (Master/OSC): General vessel response. In case of chamber fire especially, treat it as a shipboard fire too: sound the alarm, muster fire teams to the chamber area with firefighting gear. They must be cautious of using water on a chamber (could crack hot metal) – better to use dry powder or CO₂ extinguishers around the outside and cool the area. Ensure ventilation to the compartment housing the chamber is shut down (to starve fire of O₂). If chamber is venting smoke from relief valves, vent it overboard via duct if possible.
+Silver (Dive/Project Manager): Medical and technical backup. Get hyperbaric medical experts on the line immediately – for guidance on managing chamber emergencies
+mds.uy
+. For a fire, once out, the occupants may have burns or smoke inhalation; plan for their evacuation to a hospital with a specialized burns or lung treatment facility. For a blow-up (rapid decompression), multiple divers could have severe DCI: coordinate multiple recompression facilities if one chamber is out of commission. Essentially, implement the contingency for recompression at an alternate site since the primary chamber is compromised
+scribd.com
+. This might mean mobilizing the injured by helicopter to the nearest dive chamber (even if in another country, time is critical). Silver also alerts Gold about the severity (these are likely to be recordable accidents).
+Gold: Major incident management. Gold will oversee this as a serious incident – possibly multiple casualties or a near-miss fatal. They will engage all needed external support: manufacturers (if technical advice needed on chamber issues), additional hyperbaric experts, and communications to authorities. If a fatality or hospitalization occurs, Gold handles official notifications and media statements. They ensure full support to the on-site team who will be shaken by such an event, and might decide to halt all project operations until safety can be assured.
+Outcome: Once the immediate emergency is over (fire out or chamber stabilized at ambient), secure the area. Do not use the chamber again until a thorough investigation and recertification. Treat and evacuate all injured. Later, investigate root causes: e.g. was it an electrical fault that caused fire (IMCA requires no ignition sources in chamber beyond minimal)? Was there a procedural failure leading to rapid decompression (human error on door closure)? Implement improved controls. This scenario being realized is extremely hazardous; learning from it is crucial for industry guidance updates.
+(Roles: Bronze (LST/Dive Supervisor and vessel crew) handle direct firefighting or containment; Silver coordinates medical response and alternate arrangements for pressure-related treatment; Gold manages overall emergency and aftermath at company level.)
+Hyperbaric Evacuation (Saturation Dive Rescue)
+Bronze (Master/Dive Sup): Initiate hyperbaric rescue mode. If the vessel must be abandoned or cannot support life support due to a major emergency (sinking, massive fire) while divers are under saturation, you must launch the self-propelled hyperbaric lifeboat (SPHL) or hyperbaric rescue capsule. Sound the abandon ship for diving crew specifically and get all saturation divers into the designated evacuation chamber (if they aren’t already in the living chamber, they may need to be transferred under pressure to the SPHL). Ensure the SPHL’s life support umbilicals are disconnected and its internal systems activated (scrubbers, oxygen supply). Launch the SPHL from the vessel as per procedure – usually by free-fall or crane – ensuring it clears the vessel safely
+law.resource.org
+. If using a portable HRU (Hyperbaric Rescue Unit) that must be craned off, do so as early as possible in the emergency, when crane power is still available.
+Bronze (SPHL Crew): Navigate to safe area. The SPHL, once waterborne with divers inside, should move away from the danger area (e.g. if the main vessel is on fire or sinking). Typically a trained coxswain inside the SPHL will navigate it. The craft’s first objective is to reach the pre-designated safe refuge – this might be a nearby platform, another vessel, or a mother ship that can receive it
+law.resource.org
+. If no propulsion, the SPHL will rely on currents or rescue vessels to tow it. The occupants will maintain themselves – they have minimum 24 hours of life support onboard by design
+law.resource.org
+.
+Silver (Onshore Dive/Marine Coordinator): Guide rescue vessel to lifeboat and alert receiving facility. As soon as a hyperbaric evacuation is launched, Silver notifies the standby rescue vessel (or any nearby ship designated to pick up the lifeboat). Provide coordinates or tracking info for the SPHL. Arrange for a lift onto a support vessel or tow as needed. Critically, alert the Hyperbaric Reception Facility – as per IOGP 478, a shoreside (or ship-based) facility should be prepared to take the SPHL and transfer divers under pressure for controlled decompression
+iogp.org
+. Silver coordinates with that facility (could be a specialized deck chamber system on a quayside) to be ready at the time the SPHL arrives. Also coordinate medical support in case any diver’s health is deteriorating inside (they might have trauma or panic issues).
+Gold (Strategic): Global emergency support. A hyperbaric evacuation is a rare and critical event. Gold will notify other authorities (coast guard, naval SAR) that a special rescue operation is underway – this often grants priority assistance. They will likely engage the company’s global resources – possibly flying in additional saturation experts or connecting with the equipment manufacturer for technical help on the transfer. Gold also manages corporate communications: a sat diver evacuation will draw industry attention; they must communicate carefully once divers are safe, and not before (to avoid premature information). Family members of the divers will need personal assurance and updates, which Gold/HR handles.
+Rescue & Transfer: The rescue vessel retrieves the SPHL. Ideally, it has a mating trunk or cradle to secure the SPHL on deck. Once stable, do not open the SPHL. Instead, transfer the SPHL (still sealed) to the prepared reception facility. This often involves lifting the SPHL onto a truck or directly mating to a deck chamber system depending on logistics. Maintain pressure and life support throughout. The divers will then undergo a normal decompression schedule in the safe location, overseen by hyperbaric doctors. This decompression could take days – ensure security and support for them throughout.
+Follow-up: After the divers are safely decompressed and out, Gold and Silver focus on the primary incident that caused the evacuation (the vessel emergency) and also thoroughly review the hyperbaric evacuation process effectiveness. This is typically reviewed by industry bodies too (IOGP etc., per Report 478 recommendations)
+iogp.org
+. All equipment used must be inspected and any shortcomings fixed. The fact that this scenario was executed means the contingency planning was validated, but any hiccups (communication issues, delays) should be learned from and documented.
+(Roles: Bronze (dive/vessel crew) carry out the physical evacuation of sat divers; Silver orchestrates the rendezvous and receiving facilities; Gold handles the high-level crisis management and ensures no resource is spared in bringing the divers home safely.)
+Contaminated Diver (Diving in Hazardous Waters)
+Bronze (Dive Supervisor): Identify contamination and isolate diver. If a diver reports exposure to a hazardous substance (chemicals, hydrocarbons, H₂S) or dives in known contaminated water, special procedures apply. Before the diver surfaces, have the deck team ready at the designated decontamination station (often a specific area on deck). If the contaminant is toxic gas like H₂S, ensure everyone handling the diver is in proper PPE (SCBA if high levels). Do not bring the diver into the normal personnel areas until decontaminated – this may mean keeping their hat/gear on and washing down externally first.
+Bronze (Dive Team): Decontamination process. Use copious amounts of water (preferably warm, with appropriate detoxifying agent if known) to rinse the diver’s suit and gear while still on the dive stage or at water level. For example, for oil-based contaminants, use degreaser or detergent in the wash. Pay attention to areas around seals, boots, and hands. Once gross decon is done, carefully remove the diver’s helmet and suit, avoiding contact with their skin and avoiding exposing support crew to contaminants (use gloves, etc.). Place contaminated gear into sealed bags or barrels for later cleaning/disposal.
+Bronze (Medic/DMT): Assess the diver’s health. If the diver ingested or inhaled something (e.g. chemical fumes or H₂S), move them to fresh air and administer oxygen as a precaution. Remove any clothing and further decon their body (shower the diver) if there was skin contact with a toxic substance. Some chemicals can cause burns or systemic toxicity – check the diver for any burns, dizziness, breathing difficulty. The medic should contact the poison control center or hyperbaric doctor with details of the exposure for specific first aid advice
+scribd.com
+.
+Silver (HSE Manager/EC): Notify and seek specialist help. Report the incident to onshore HSE and, if needed, call in a specialist hazmat team (for example, if the contaminant is unknown or extremely dangerous). Silver should have the Safety Data Sheet (SDS) of the suspected contaminant if known (e.g. if diving near an oil platform, substances like methane, benzene, or production chemicals might be known hazards). Provide this to medical personnel. Also notify the client/operator since contaminated water incidents might indicate a leak (for example, if divers encountered an unexpected chemical, the source might be a pipeline leak that the client needs to address).
+Gold: Oversight and external reporting. Gold monitors the diver’s medical status – if hospital care is needed, ensure a medevac is arranged. For example, H₂S poisoning might require hyperbaric oxygen therapy or simply critical care if severe. Gold also ensures any regulatory reporting is done (environmental release, recordable injury, etc.). If multiple crew were potentially exposed (say through handling the diver before realizing contamination), manage that by medical checks for all.
+Follow-up: Treat all used decon water and materials as hazardous waste – dispose of according to regulations (client can assist if on their site). Investigate how the exposure happened: Did risk assessment foresee this? Were proper protective measures in place (was the diver in a hot-water suit or splash suit that should protect from contaminants? Was monitoring for H₂S in place?)
+scribd.com
+. Update procedures to ensure future dives in such conditions have better controls (e.g. use of surface-supplied umbilicals with gas monitoring, standby with EBA for diver, etc.). If the contaminant was from the environment (like a pollution event), it may trigger an environmental response parallel to this – which Silver/Gold would coordinate with relevant parties.
+(Roles: Bronze handles on-site decon and immediate care; Silver engages necessary onshore resources and experts; Gold ensures strategic response including medical evacuation and compliance.)
+Critical Equipment Failure (DP Failure / Power Loss during Diving)
+Bronze (Master/Dive Supervisor): Immediate dive safety actions. If the vessel’s dynamic positioning (DP) system fails or power is lost while divers are in the water, there is a risk the vessel will drift off station. The Bridge should inform the Dive Supervisor immediately of the failure. The Dive Supervisor must then execute emergency diver retrieval: instruct the diver to leave the work and start ascending immediately (or head to the bell). If a bell is in use, the bellman should secure the diver back into the bell quickly. If it’s a surface-supplied dive with no bell, the diver should begin a controlled ascent (hopefully with umbilical being hauled in by the deck crew). In a power loss, the winches might not work, so be prepared to manually heave umbilicals. Use the emergency recovery winch if available (air powered). The goal is to get the diver to surface or bell before the vessel moves significantly from above them.
+Bronze (Master): Maintain position if possible. On the bridge, engage backup DP systems (emergency DP, or manual thruster control) to keep position. If total power loss, immediately drop an anchor (if depth allows and you have quick-release system) to create some holding, provided it doesn’t risk the diver. If multiple thrusters failed but some propulsion remains, try to create minimal movement. Also, inform the diver via through-water comms (if umbilical comms lost with DP) that DP is lost and to brace for potential pull or slack – this may psychologically prepare them.
+Bronze (Deck Crew): Umbilical management. The dive team should be ready to manually shear the diver’s umbilical if the vessel is about to capsize or drag the diver – as a last resort, to let the diver free (they would then resort to bailout gas and free ascent). This is extremely dangerous, but better than dragging a diver by a moving vessel. Typically, quick-release fittings or axes are on hand for this reason. Stay in constant contact with Bridge to know if a drive-off is occurring.
+Silver (Onshore): Support restoration or rescue. Silver is notified of the critical failure. They might coordinate an additional support vessel to assist or to take over holding station above divers if possible. If the divers made it to bell or surface safely but the vessel is now incapacitated, Silver will arrange for tow or repair crew. If a diver was injured or separated in the chaos, treat as a diver missing or injured scenario concurrently.
+Gold: High-level response if incident escalates. If the DP failure led to an actual incident (diver stranded, bell on seabed without ship above, or vessel collision), Gold steps in to handle that multi-faceted emergency (some aspects covered in previous scenarios). If not, Gold will at least be involved in investigating the DP failure cause and ensuring operations do not resume until safety is assured.
+Outcome: Ideally, the diver is recovered to surface or bell without injury. The dive may have to be aborted and divers put through a shortened deco or surface decompression due to the emergency ascent – ensure proper DCI monitoring after. If the diver did an emergency ascent (skipping deco), put them on O₂ and into chamber for treatment table as a precaution. Only once power/DP is fully restored and an investigation is done should diving resume. The cause of DP failure (human error, tech fault) should be identified by Silver/Gold with the marine team, and any necessary changes made (e.g. more redundancy or different weather limits).
+(Roles: Bronze (Master & Dive Sup) act immediately to save the diver’s life and stabilize vessel position; Silver provides external support and coordination after the initial emergency; Gold oversees the investigation and any compounded emergencies as a result of the failure.)
+Integration-Ready Data Format (JSON Example)
+Below is an example JSON structure encapsulating the above scenarios, procedures, and roles. This can be used in code to power search queries, AI Q&A, or a mobile app backend. Each scenario is an object with fields for the scenario name, roles, and step-by-step procedures. The procedures are listed in order, each step including the responsible role and the action to be taken:
+json
+Copier
+Modifier
+[
+  {
+    "scenario": "Medical Emergency (Serious Injury/Illness)",
+    "roles": {
+      "Gold": "General Manager (Strategic Commander)",
+      "Silver": "Project/HSE Manager (Emergency Coordinator)",
+      "Bronze": "On-Scene Coordinator (e.g. Vessel OCM or Medic)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Raise alarm and provide immediate first aid to the injured person. Do not move the casualty unless in danger:contentReference[oaicite:141]{index=141}. If multiple injuries, call for additional first aiders and prepare ship’s clinic."
+      },
+      {
+        "role": "Bronze",
+        "action": "Notify the Emergency Coordinator (Silver) via radio with incident details. Preserve incident scene if possible (for investigation):contentReference[oaicite:142]{index=142}. Continue first aid and monitor vital signs."
+      },
+      {
+        "role": "Silver",
+        "action": "Activate medevac protocol if injury is beyond onsite treatment:contentReference[oaicite:143]{index=143}. Contact on-call diving doctor and arrange evacuation (e.g. helicopter):contentReference[oaicite:144]{index=144}. Inform Gold about the situation."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate communications between on-scene and medevac assets. Ensure receiving hospital or hyperbaric facility is alerted:contentReference[oaicite:145]{index=145}. Update client/authorities as required."
+      },
+      {
+        "role": "Gold",
+        "action": "Mobilize onshore emergency team to support. Approve major decisions (e.g. divert vessel, special resources) and handle external notifications if needed:contentReference[oaicite:146]{index=146}. Oversee that next-of-kin notification is done through proper channels for serious cases."
+      },
+      {
+        "role": "Bronze",
+        "action": "Assist medevac team with safe transfer of casualty (via basket, stretcher). Provide medical report of treatment given to the medevac crew."
+      },
+      {
+        "role": "Silver",
+        "action": "After casualty is evacuated, secure incident scene for investigation. Collect witness statements and fill accident report forms:contentReference[oaicite:147]{index=147}. Stand down emergency once Bronze confirms site is safe and no further injuries."
+      },
+      {
+        "role": "Gold",
+        "action": "Follow up on the casualty’s status at hospital. Lead internal incident investigation and report to stakeholders. Implement any lessons learned into the ERP."
+      }
+    ]
+  },
+  {
+    "scenario": "Fire Onboard Vessel/Installation",
+    "roles": {
+      "Gold": "Onshore Management (Strategic Gold Commander)",
+      "Silver": "Emergency Coordinator / Client Rep (Silver)",
+      "Bronze": "Vessel Master/OIM (On-Scene Bronze Commander)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Upon detecting fire or smoke, immediately raise the general alarm:contentReference[oaicite:148]{index=148}. Initiate firefighting with the trained shipboard fire team; don PPE and SCBA. Attack the fire at its source using appropriate extinguishers or fixed systems."
+      },
+      {
+        "role": "Bronze",
+        "action": "Muster all crew to emergency stations and conduct headcount. If any person is missing, assign a search team (with SCBA) to last known location of missing personnel:contentReference[oaicite:149]{index=149}, conditions permitting."
+      },
+      {
+        "role": "Bronze",
+        "action": "Secure ventilation and fuel supply to affected compartments to starve the fire:contentReference[oaicite:150]{index=150}. If near other vessels or platforms, sound danger signal (prolonged blasts) and broadcast distress call with fire details."
+      },
+      {
+        "role": "Silver",
+        "action": "On notification of a fire, alert nearby support vessels for assistance and notify coastal authorities/Coast Guard. Coordinate possible firefighting support or evacuation resources:contentReference[oaicite:151]{index=151}. Keep Gold informed of fire status."
+      },
+      {
+        "role": "Bronze",
+        "action": "Continuously re-assess fire control. If fire is not containable and endangers the vessel, prepare to abandon ship:contentReference[oaicite:152]{index=152}. Issue abandon signal (7 short, 1 long) and muster crew to liferafts if ordered:contentReference[oaicite:153]{index=153}."
+      },
+      {
+        "role": "Bronze",
+        "action": "If abandoning, send Mayday with location:contentReference[oaicite:154]{index=154}. Launch liferafts and evacuate crew in orderly fashion, bringing grab-bags (first aid, radio, EPIRB):contentReference[oaicite:155]{index=155}. Ensure all persons have lifejackets and are accounted for in liferafts."
+      },
+      {
+        "role": "Bronze",
+        "action": "For diving operations: if divers are underwater or under pressure, initiate emergency recovery. Surface any divers in water immediately (if safe) and put sealed divers on O2 for emergency deco:contentReference[oaicite:156]{index=156}. If saturation divers on board, consider hyperbaric lifeboat launch (see Hyperbaric Evacuation scenario)."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate rescue of liferafts with standby vessels or SAR helicopters. Ensure medical treatment is ready for any burn or smoke inhalation victims. Once fire is extinguished or vessel evacuated, formally signal fire-out or full evacuation to Gold/authorities."
+      },
+      {
+        "role": "Gold",
+        "action": "Activate onshore emergency center. Liaise with national rescue authorities and client:contentReference[oaicite:157]{index=157}. Manage external communications (media statements) as necessary since fire at sea is high-profile. Post-incident, oversee headcount, crew support, and investigation into fire cause."
+      }
+    ]
+  },
+  {
+    "scenario": "Vessel Collision (Ship or Structure)",
+    "roles": {
+      "Gold": "Onshore Management (Gold Commander)",
+      "Silver": "Emergency Coordinator / Marine Supt (Silver)",
+      "Bronze": "Vessel Master/OIM (On-Scene Commander)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Immediately sound general alarm upon collision. Investigate extent of damage: assign teams to check for injuries and flooding:contentReference[oaicite:158]{index=158}:contentReference[oaicite:159]{index=159}. If taking water, start pumps and damage control (seal off flooded sections)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Establish communication with the other vessel or platform if involved. Offer assistance to other vessel if safe to do so:contentReference[oaicite:160]{index=160}. Obtain details of their condition. If collided with an installation, move vessel a safe distance upwind/upcurrent to avoid additional hazards (like gas leaks):contentReference[oaicite:161]{index=161}."
+      },
+      {
+        "role": "Bronze",
+        "action": "Address any fire resulting from collision (engine room, etc.) simultaneously as per Fire procedure. If structural integrity is in doubt or heavy flooding persists, prepare for potential abandon ship (have crew don lifejackets, ready lifeboats)."
+      },
+      {
+        "role": "Silver",
+        "action": "Upon notification, alert field control and rescue resources. Notify Coast Guard and nearby support vessels of the collision and potential need for assistance. If oil spill is possible, activate oil spill response teams as well."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate multi-aspect response: medical evacuation for injured:contentReference[oaicite:162]{index=162}, salvage/tug assistance for damaged vessel, and operational shutdowns in the field if a platform was hit. Keep Gold updated with evolving status, especially if abandon ship is likely."
+      },
+      {
+        "role": "Bronze",
+        "action": "If vessel stability is compromised and cannot be corrected, execute abandon ship orders (MAYDAY, evacuation signals):contentReference[oaicite:163]{index=163}. Ensure crew deploys into liferafts safely. If vessel is stable, continue to assess damage and proceed to nearest safe harbor when able."
+      },
+      {
+        "role": "Gold",
+        "action": "Provide strategic guidance and communication. Inform company executives, insurers, and regulatory bodies of the incident. Manage public relations if news of collision emerges (especially if with a platform or spill)."
+      },
+      {
+        "role": "Gold",
+        "action": "Post-incident, oversee that proper incident investigation is launched jointly with involved parties. Verify all required reports (marine casualty, pollution, etc.) are filed. Support crew through post-collision trauma or legal inquiries."
+      }
+    ]
+  },
+  {
+    "scenario": "Grounding (Vessel Run Aground)",
+    "roles": {
+      "Gold": "Onshore Management (Gold Commander)",
+      "Silver": "Emergency Coordinator / Marine Supt (Silver)",
+      "Bronze": "Vessel Master/OIM (On-Scene Commander)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Immediately stop engines on grounding to prevent further damage. Sound general alarm and inform crew of situation. Send teams to inspect hull for flooding or damage in all compartments."
+      },
+      {
+        "role": "Bronze",
+        "action": "If in a field or port area, notify relevant authority (e.g. Field Marine Coordinator) of the grounding:contentReference[oaicite:164]{index=164}. Determine ground characteristics (mud, sand, rock) if possible. Ensure fuel tanks and environmental risks are checked (close valves, set up spill gear in case)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Attempt to refloat: for example, transfer ballast to lighten bow, wait for rising tide. Use engines carefully or tugs (if available) to try to free vessel. Do not attempt refloat if it could worsen hull damage without assistance."
+      },
+      {
+        "role": "Silver",
+        "action": "On notification, alert coast guard/port authority of grounding incident. Mobilize tugboats or salvage support if vessel cannot refloat on its own. Coordinate with Gold on whether to evacuate non-essential personnel (if severe weather or hull status is uncertain)."
+      },
+      {
+        "role": "Silver",
+        "action": "If vessel is in immediate danger (heavy flooding, breaking up), prepare for abandon ship and coordinate SAR. Otherwise, focus on assisting Bronze in refloating efforts (arrange salvage plans, approve ballast changes etc.)."
+      },
+      {
+        "role": "Gold",
+        "action": "Monitor high-level response. Engage salvage experts or insurers' input for refloating strategy. Manage external comms especially if grounding could impact traffic or environment (e.g. blocking a channel or near coral reef)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once refloated or situation stable, check vessel integrity thoroughly. Proceed to safe port for inspection with tug escort if needed. Continue to monitor for any delayed effects (like progressive flooding)."
+      },
+      {
+        "role": "Silver",
+        "action": "File required reports with maritime authorities about the grounding. Ensure any minor pollution is cleaned up. Debrief crew and implement additional training or route adjustments to avoid repeat."
+      },
+      {
+        "role": "Gold",
+        "action": "Oversee the investigation into why the grounding occurred (navigation error, bad charts, etc.) and drive company-level corrective actions. Handle any legal claims or environmental fines through appropriate channels."
+      }
+    ]
+  },
+  {
+    "scenario": "Oil Spill (Offshore Fuel/Oil Release)",
+    "roles": {
+      "Gold": "Onshore Management (Environmental/Strategic)",
+      "Silver": "Emergency Coordinator (Spill Response Lead)",
+      "Bronze": "Vessel Master/Chief Engineer (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Detect oil spill (e.g. during bunkering or after collision) and immediately stop the source: shut down fuel transfer, close valves:contentReference[oaicite:165]{index=165}. Activate ship's oil spill response kit: deploy absorbent booms around vessel if possible to contain spread."
+      },
+      {
+        "role": "Bronze",
+        "action": "Take actions to limit spill volume: if tank overflow, transfer fuel to another tank with space:contentReference[oaicite:166]{index=166}. Ensure deck scuppers are plugged to prevent further deck oil from reaching water:contentReference[oaicite:167]{index=167}. Eliminate ignition sources (no smoking, electrical isolation) and maintain fire watch with hoses ready:contentReference[oaicite:168]{index=168}."
+      },
+      {
+        "role": "Bronze",
+        "action": "Estimate spill size and type (e.g. diesel, lub oil) and inform Silver and nearby installations. Over VHF, notify marine traffic in vicinity to avoid the area or be cautious."
+      },
+      {
+        "role": "Silver",
+        "action": "Activate the vessel or field Oil Spill Response Plan. Notify client/operator and national oil spill response authority (per regulations) with details of the spill:contentReference[oaicite:169]{index=169}. Mobilize external response resources if needed: Tier-2 response vessels, dispersant aircraft (with authorities' approval), etc."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate on-scene and external efforts: instruct on-scene crew on cleanup (e.g. use absorbents on deck, skimmers if available) while awaiting specialized teams. Liaise with Gold on escalation - e.g. engaging an Oil Spill Response Organization (OSRO) for large spills."
+      },
+      {
+        "role": "Gold",
+        "action": "Provide strategic support and liaise with government and stakeholders. For a large spill, establish a company incident management team focusing on environmental impact. Approve resources (e.g. hiring specialized cleanup vessels). Handle media statements emphasizing response actions."
+      },
+      {
+        "role": "Bronze",
+        "action": "Continue mitigation: recover any spilled oil on deck, and keep monitoring the sea surface around vessel. If spill resulted from collision/grounding, focus also on stabilizing the vessel (as per those scenarios) to prevent worsening release."
+      },
+      {
+        "role": "Silver",
+        "action": "Ensure all required notifications and reports are made (often a written report within 24 hours to regulator). Oversee initial cleanup operations until specialized teams take over or spill is contained. Collect samples of spilled oil if needed for analysis/source identification."
+      },
+      {
+        "role": "Gold",
+        "action": "Oversee the long-term response: environmental monitoring, claims management (if impacting fisheries or third parties), and company reputation management. Post-incident, review the cause (e.g. transfer procedure failure, hose burst) and enforce preventive measures or policy changes."
+      }
+    ]
+  },
+  {
+    "scenario": "Man Overboard (MOB)",
+    "roles": {
+      "Gold": "Onshore Management (Support/Comms)",
+      "Silver": "Emergency Coordinator (SAR Liaison)",
+      "Bronze": "Vessel Master/Crew (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Shout 'Man Overboard!' and specify side (port/starboard):contentReference[oaicite:170]{index=170} if witnessed. Immediately throw a life ring with light and smoke float near the person:contentReference[oaicite:171]{index=171}."
+      },
+      {
+        "role": "Bronze",
+        "action": "Sound the MOB alarm (3 prolonged blasts on whistle) and mark MOB position on navigation systems:contentReference[oaicite:172]{index=172}. Post a dedicated lookout to keep the person in sight:contentReference[oaicite:173]{index=173}, continuously pointing to them."
+      },
+      {
+        "role": "Bronze",
+        "action": "Maneuver the vessel for recovery: execute a Williamson or Anderson turn toward the MOB side to return to the datum point:contentReference[oaicite:174]{index=174}. Slow down upon approach."
+      },
+      {
+        "role": "Bronze",
+        "action": "Launch the fast rescue boat (FRB) with a rescue crew ASAP:contentReference[oaicite:175]{index=175}. Equip crew with retrieval gear. If at night, use searchlights to illuminate the area:contentReference[oaicite:176]{index=176}."
+      },
+      {
+        "role": "Bronze",
+        "action": "Notify nearby vessels via radio (PAN-PAN) that you have a man overboard and might need assistance:contentReference[oaicite:177]{index=177}. Request they keep clear or help with lookout."
+      },
+      {
+        "role": "Bronze",
+        "action": "Rescue boat or vessel crew recovers the person from water. Use heaving lines or scramble nets if bringing directly onto vessel:contentReference[oaicite:178]{index=178}. Once the person is secured onboard, announce 'Man Overboard Recovered - All Clear':contentReference[oaicite:179]{index=179}."
+      },
+      {
+        "role": "Bronze",
+        "action": "Provide first aid to the rescued person: treat for hypothermia or injuries. The Medic should be ready with warm blankets and oxygen. Evaluate the need for further medical treatment or evacuation."
+      },
+      {
+        "role": "Silver",
+        "action": "If the person is not immediately found, coordinate an expanding search pattern:contentReference[oaicite:180]{index=180} and call in official Search and Rescue (e.g. coast guard helicopter/boat). Silver liaises with SAR authorities, providing last known position and drift info."
+      },
+      {
+        "role": "Gold",
+        "action": "Support the SAR operation at a high level if it continues (missing person). Provide additional resources if requested and keep the family or company management informed. If the outcome is bad (fatality), manage next-of-kin notifications and media inquiries with care."
+      },
+      {
+        "role": "Silver",
+        "action": "Document the incident (time, location, how person fell). Ensure a safety stand-down/talk with all crew after, to reinforce MOB prevention measures (e.g. wearing life vests, safety lines). Complete incident report for client/company."
+      }
+    ]
+  },
+  {
+    "scenario": "Missing Personnel (Unaccounted Individual)",
+    "roles": {
+      "Gold": "Onshore Management (Support)",
+      "Silver": "Emergency Coordinator (SAR Liaison)",
+      "Bronze": "Vessel Master/OIM (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Conduct a full muster/roll-call when a person is reported missing. Double-check all areas like cabins, engine room, etc. Announce on PA for the person to respond if they can hear."
+      },
+      {
+        "role": "Bronze",
+        "action": "If not found onboard after thorough search, assume Man Overboard. Immediately initiate MOB procedures (alarm, search, notify SAR) at the last credible time/place the person was seen."
+      },
+      {
+        "role": "Bronze",
+        "action": "Continue to search the vessel periodically in case the person was unconscious or hiding. Have crew check any confined spaces, lockouts, or overboard hanging positions."
+      },
+      {
+        "role": "Silver",
+        "action": "Treat as an MOB incident – inform SAR authorities that one person is missing and possibly overboard. Provide estimated time they went missing and potential coordinates (the vessel's track)."
+      },
+      {
+        "role": "Silver",
+        "action": "Notify Gold and client that a person is missing. Coordinate with SAR for an extensive search effort (multiple vessels, helicopter grid search). Ensure another vessel or standby boat assists the search while primary vessel also participates."
+      },
+      {
+        "role": "Gold",
+        "action": "Engage crisis management if the person remains missing. Manage communication to the missing person's family, providing regular updates and support. Prepare for potential media attention (especially if search is lengthy)."
+      },
+      {
+        "role": "Bronze",
+        "action": "If the person is found onboard (false alarm), inform all parties and stand down the external search. Identify how the muster was missed or why they were not found initially."
+      },
+      {
+        "role": "Silver",
+        "action": "If search is unsuccessful after recommended period, coordinate with authorities to suspend the active search. Ensure all crew are given a briefing on the outcome and support (counseling) if needed."
+      },
+      {
+        "role": "Gold",
+        "action": "Oversee post-incident actions: incident investigation, regulatory reporting, and any insurance or legal follow-up. Ensure lessons (e.g. need for better headcount systems or man-down alarms) are integrated into procedures."
+      }
+    ]
+  },
+  {
+    "scenario": "Severe Weather / Storm",
+    "roles": {
+      "Gold": "Onshore Management (Strategic)",
+      "Silver": "Operations Coordinator (Tactical)",
+      "Bronze": "Vessel Master/OIM (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Monitor weather forecasts continuously. When high winds or heavy seas are forecast beyond safe limits, initiate heavy weather preparations. Secure loose equipment on deck (lash down or stow) and cease delicate operations (e.g. crane lifts, diving)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Weather-sensitive operations: Stop diving operations well before conditions become unsafe:contentReference[oaicite:181]{index=181}; recover ROVs or any towed equipment to avoid damage. For drilling or production, follow the facility's shut-in procedures if needed."
+      },
+      {
+        "role": "Bronze",
+        "action": "Ensure all personnel are aware of the weather approach. Advise crew to secure personal items in cabins, and provide seasickness medication if needed. Restrict outdoor work; those on deck must wear PDF (lifejackets) and safety lines if waves/swell present a washout risk."
+      },
+      {
+        "role": "Bronze",
+        "action": "Maneuver the vessel for optimum heading into seas (bow to waves) to ride out motion if on DP. If on anchors, check anchor holding and prepare to drop additional anchor or powered moor as reinforcement. If storm is extreme (hurricane), consider sailing to a safer location if time permits."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate with Gold on any crew evacuation decisions (for example, flying non-essential crew to shore before a cyclone). Notify the client and any nearby facilities of the downtime and ensure mutual aid if things go wrong (e.g. another vessel ready in case of emergency)."
+      },
+      {
+        "role": "Silver",
+        "action": "Ensure emergency equipment is ready: extra pumps in case of heavy rain flooding, engines on standby for DP hold, and backup communications tested (storm may affect primary comms). If wave height may exceed operational thresholds, implement field stand-down (no small boat transfers, etc.)."
+      },
+      {
+        "role": "Gold",
+        "action": "Strategically, make decisions on project suspension. Approve any preemptive demobilization if required by prolonged bad weather. Liaise with coastal authorities if port shelter is needed."
+      },
+      {
+        "role": "Bronze",
+        "action": "During the storm, maintain watch rotations with sufficient rest (heavy weather can be exhausting). Continuously monitor for any emergency (e.g. mooring failure, cargo shift). After the weather passes, do a full inspection of vessel and equipment for any damage."
+      },
+      {
+        "role": "Silver",
+        "action": "Once conditions are normal, give all-clear to resume operations if the site and vessel are in good order. Debrief with crew on any issues that arose during the storm. If any emergency occurred (like a near-miss or actual damage), involve Gold in further action."
+      }
+    ]
+  },
+  {
+    "scenario": "Helicopter Ditching (Crash at Sea)",
+    "roles": {
+      "Gold": "Onshore Management (Crisis Lead)",
+      "Silver": "Emergency Coordinator (SAR Liaison)",
+      "Bronze": "Vessel Master/OIM (On-Scene SAR)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "If a helicopter crashes/ditches near the vessel, immediately raise the alarm and treat it as a Mass Rescue. Note the position of ditching. Navigate the vessel to the scene as quickly as possible:contentReference[oaicite:182]{index=182}:contentReference[oaicite:183]{index=183}, keeping communication on emergency freq with any mayday from the helo."
+      },
+      {
+        "role": "Bronze",
+        "action": "Launch rescue boats and prepare multiple recovery points (port and starboard ladders, scramble nets):contentReference[oaicite:184]{index=184}. Instruct rescue teams to retrieve all survivors. Provide flotation (lifebuoys, etc.) if people are in water."
+      },
+      {
+        "role": "Bronze",
+        "action": "As survivors are recovered, bring them onboard and to medical care. Have medics perform triage: prioritize treatment for critical injuries or hypothermia. Obtain headcount from survivors: how many were onboard the helicopter vs how many recovered:contentReference[oaicite:185]{index=185}."
+      },
+      {
+        "role": "Bronze",
+        "action": "If fire risk (fuel on water) post-ditching, use fire hoses to push fuel away or foam if available, while continuing rescue. Keep yourself upwind of any fuel slick."
+      },
+      {
+        "role": "Silver",
+        "action": "The moment a mayday or ditching report is heard, notify SAR authorities (Marine and Aviation). Coordinate with client’s field emergency team to possibly launch their standby vessel or SAR helicopter. Provide updates on number of people to search for and any needed medical evacuations."
+      },
+      {
+        "role": "Silver",
+        "action": "Alert nearest hyperbaric or medical facility if survivors have injuries requiring immediate evacuation once on deck. Essentially plan the second phase: getting injured survivors to shore hospitals (which Gold can help with aircraft for)."
+      },
+      {
+        "role": "Gold",
+        "action": "Activate the company crisis management team. A helicopter crash likely involves multiple stakeholders (helicopter operator, oil company, SAR agencies); Gold coordinates high-level communication among them:contentReference[oaicite:186]{index=186}. Ensure that families of passengers are informed through proper channels (usually helicopter operator does, but company may support)."
+      },
+      {
+        "role": "Gold",
+        "action": "Handle media inquiries proactively with factual statements, in cooperation with the helicopter operator. Deploy additional support to the vessel if needed (e.g., a second vessel with more medical facilities). Track the progress of SAR until all persons are accounted for."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once all survivors are aboard and treated, assist any official rescue units in recovery of others or wreckage if safe. When authorities take over, provide them passenger manifests, etc., if available."
+      },
+      {
+        "role": "Silver",
+        "action": "After immediate response, arrange transfer of survivors to shore (via the next available crew change helicopter or a dedicated medevac flight). Debrief rescue crew and preserve any personal effects or evidence requested by investigators."
+      }
+    ]
+  },
+  {
+    "scenario": "Piracy/Armed Attack",
+    "roles": {
+      "Gold": "Onshore Management (Crisis/Negotiation Lead)",
+      "Silver": "Company Security Coordinator (Silver)",
+      "Bronze": "Vessel Master/Crew (On-Scene Response)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Activate the vessel’s piracy alarm (distinct from general alarm) to signal a security threat:contentReference[oaicite:187]{index=187}. Crew should immediately proceed to the citadel/safe room if one is designated, or lock down in secure areas as per the vessel's anti-piracy plan."
+      },
+      {
+        "role": "Bronze",
+        "action": "Take evasive action: increase speed, conduct evasive maneuvers (zigzag) to make boarding difficult. Start fire pump water jets to deter boarding (if available). Turn on physical barriers (e.g. razor wire, electrified fencing if installed)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Broadcast a distress call (MAYDAY – piracy attack) on VHF Channel 16 and activate SSAS (Ship Security Alert System):contentReference[oaicite:188]{index=188} to alert authorities silently. Provide position, nature of attack, and any details (number of skiffs, armed with guns/RPGs, etc.)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Non-essential crew should stay hidden in citadel; do not resist if pirates board and you are not in a protected position. If attackers board, the bridge team should comply and communicate calmly (unless armed security on board can engage per rules of use of force)."
+      },
+      {
+        "role": "Silver",
+        "action": "Upon SSAS or distress alert, company Security (Silver) contacts the regional maritime security center (such as MDAT-GoG in Gulf of Guinea) to confirm receipt and request military assistance. Provide vessel details, last known position, course, speed, and attack details."
+      },
+      {
+        "role": "Silver",
+        "action": "Keep communication lines open (sat phone/inmarsat) with the vessel if possible (perhaps via citadel communication). Advise crew to hold out until naval forces arrive if they are safe in citadel. Coordinate with Gold for any possible negotiation strategy if pirates make contact."
+      },
+      {
+        "role": "Gold",
+        "action": "Activate the corporate crisis management team including security consultants. If crew are taken hostage, Gold will lead the negotiation efforts (often by engaging professional negotiators and liaising with relevant government authorities). **Do not** allow crew or untrained personnel to negotiate directly, to avoid mistakes."
+      },
+      {
+        "role": "Gold",
+        "action": "Ensure families of crew are informed of situation in a controlled manner (likely via company HR with security guidance). Manage media blackout or press releases in coordination with authorities – typically minimal information is released during ongoing piracy incidents."
+      },
+      {
+        "role": "Bronze",
+        "action": "If attackers leave or are repelled: do headcount to ensure all crew are safe. Provide first aid to any injured crew quietly once secure. Do not give 'all clear' until confirmed pirates are off the vessel and no immediate threat nearby."
+      },
+      {
+        "role": "Silver",
+        "action": "After the incident, coordinate with navies or coast guard to escort the vessel to a safe port. Commence a trauma counseling process for crew. Increase security measures for the vessel (additional guards for next transits, etc.). Log the incident with IMB Piracy Reporting Centre."
+      },
+      {
+        "role": "Gold",
+        "action": "Oversee the post-incident debrief and analysis. Implement any recommended security upgrades or route adjustments. If ransom was paid or incident became prolonged, manage the legal and insurance aspects accordingly, keeping client and authorities in loop."
+      }
+    ]
+  },
+  {
+    "scenario": "Diver Injury Underwater (Unconscious/Distressed Diver)",
+    "roles": {
+      "Gold": "Onshore Dive Manager (Strategic Support)",
+      "Silver": "Dive Superintendent (Onshore Coordinator)",
+      "Bronze": "Dive Supervisor (On-Scene Commander)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "If a diver is injured or unresponsive underwater, immediately abort the dive. Notify the diving team: 'Diver emergency – standby deploy.' Send the standby diver in to assist the injured diver without delay:contentReference[oaicite:189]{index=189}."
+      },
+      {
+        "role": "Bronze",
+        "action": "Recover the injured diver to safety as fast as possible: if surface supplied, haul umbilical while standby diver guides the stricken diver. If a bell dive, get the diver back into the bell or basket. Ensure the diver has a breathing gas supply (switch to bailout if necessary)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once at surface, retrieve diver on deck. Remove helmet and begin immediate first aid. If diver is not breathing or has no pulse, start CPR and ventilate with 100% O2. Have the deck chamber ready for pressurization in case of arterial gas embolism."
+      },
+      {
+        "role": "Bronze",
+        "action": "The Dive Medic (DMT) or vessel medic takes charge of medical treatment. Stabilize the diver: secure airway, stop any bleeding, immobilize injuries. Contact the 24/7 diving medical doctor for guidance and inform them of the diver’s condition:contentReference[oaicite:190]{index=190}."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate a medevac if needed: if the injury is critical (e.g. severe trauma, suspected spinal injury, or diver remains unconscious), arrange for helicopter evacuation to nearest appropriate medical facility:contentReference[oaicite:191]{index=191}. Also notify the hyperbaric facility if pressure-related issue."
+      },
+      {
+        "role": "Silver",
+        "action": "Inform Gold and client about the incident. Ensure the onshore emergency team is activated to support (e.g. reserving hospital bed, arranging ground transport). Provide continuous updates on diver’s status."
+      },
+      {
+        "role": "Gold",
+        "action": "Oversee high-level decisions, such as potentially halting all site operations until cause is known. Ensure the injured diver’s family is notified per protocol (often once the diver is in hospital, via HR). Deploy additional support or personnel to the site if investigation or extra help is needed."
+      },
+      {
+        "role": "Bronze",
+        "action": "Document the dive profile and events leading to the injury (depth, time, what happened). Secure any involved equipment (e.g. dive helmet, tools) for examination in case of failure. After emergency, conduct a debrief with dive team."
+      },
+      {
+        "role": "Silver",
+        "action": "File incident reports with IMCA or authorities as required. Facilitate the investigation led by Gold or client. Implement any immediate corrective actions (e.g. suspend similar dives, inspect equipment) until root cause is determined."
+      }
+    ]
+  },
+  {
+    "scenario": "Diver Decompression Illness (DCI)",
+    "roles": {
+      "Gold": "Onshore Dive Manager/Medical (Strategic)",
+      "Silver": "Dive Superintendent (Coordination)",
+      "Bronze": "Dive Supervisor / DMT (Onsite Response)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "At first sign of DCI (joint pain, dizziness, paralysis, etc.), place diver on oxygen immediately at the surface. If symptoms occur during ascent in water, bring diver up to surface pressure promptly (or into bell if sat dive) while minimizing further risk."
+      },
+      {
+        "role": "Bronze",
+        "action": "Transfer the diver into the deck decompression chamber (DDC) as soon as possible for treatment:contentReference[oaicite:192]{index=192}. Initiate a therapeutic recompression table (e.g. Table 6). Inside chamber, diver breathes 100% O2 on demand while attendant monitors."
+      },
+      {
+        "role": "Bronze",
+        "action": "Notify the diving medical officer of the situation and treatment progress:contentReference[oaicite:193]{index=193}. Follow any tailored instructions (e.g. extensions of O2 periods, medications like IV fluids). Constantly observe the diver’s neurological status and pain levels during treatment."
+      },
+      {
+        "role": "Silver",
+        "action": "Prepare contingency for evacuation if diver does not improve after initial recompression or if complications arise. Identify nearest facility with a recompression chamber (as per project ERP, e.g. a shore-based hyperbaric center):contentReference[oaicite:194]{index=194}. Arrange transport (perhaps keep diver under pressure if feasible via portable chamber transport)."
+      },
+      {
+        "role": "Silver",
+        "action": "Keep Gold informed. If this is a severe DCI case (e.g. neurological symptoms), mobilize additional expert help – possibly a specialist hyperbaric physician to travel to site or advise more intensively. Ensure the client is informed as well, since a serious injury might require reporting."
+      },
+      {
+        "role": "Gold",
+        "action": "Support the medical response with any resources needed. For example, if an air ambulance is required to move the diver after initial stabilization, Gold approves and facilitates this. They also begin notification procedures if this DCI might be classified as serious (e.g. government report)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Upon completing chamber treatment table, evaluate diver’s condition. If residual symptoms persist, continue with follow-on treatment tables as per medical advice. Do not let the diver out of chamber until a medical professional confirms it's okay or all required treatment is done."
+      },
+      {
+        "role": "Silver",
+        "action": "Post-incident, analyze the dive profile against procedures – was there an omission or unexpected factor? Check if diving equipment (e.g. tables, computers) functioned correctly. Report the DCI case to IMCA (if required by membership) and to any local authority."
+      },
+      {
+        "role": "Gold",
+        "action": "Ensure the diver gets appropriate rehabilitation and follow-up. In the longer term, review whether any changes to diving practices are needed (e.g. more conservative decompression, better hydration, etc.). Communicate lessons learned to all company dive teams."
+      }
+    ]
+  },
+  {
+    "scenario": "Diver Trapped/Entangled Underwater",
+    "roles": {
+      "Gold": "Onshore Dive Manager (Strategic)",
+      "Silver": "Dive Superintendent/Client (Support)",
+      "Bronze": "Dive Supervisor (On-Scene Rescue)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "If a diver reports being stuck (trapped by structure or entangled in lines) and cannot free himself, immediately dispatch the standby diver to assist. Inform the vessel bridge of the situation (so they maintain DP/position precisely)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Keep the trapped diver calm via voice comms. Ensure his umbilical has no tension (pay out slack) to avoid further constriction. The diver should stop exerting to conserve breathing gas until help arrives."
+      },
+      {
+        "role": "Bronze",
+        "action": "Standby diver arrives and works to free the trapped diver: cutting entangling lines or removing obstacles. If an object pins the diver, use lift bags or lever tools to alleviate weight. Topside can assist by adjusting the diver’s umbilical from above gently as needed."
+      },
+      {
+        "role": "Bronze",
+        "action": "Monitor both divers’ gas supplies closely. If the rescue is taking time, consider lowering an additional umbilical from another source or have standby diver connect the trapped diver to his bailout or spare gas supply to extend endurance."
+      },
+      {
+        "role": "Silver",
+        "action": "If the diver cannot be freed within a few minutes, alert onshore (Gold) for possible extra resources. Maybe call in a work-class ROV from nearby to help, or prepare a crane on vessel to lift an object if that’s trapping the diver. Silver coordinates any external help or equipment requests."
+      },
+      {
+        "role": "Silver",
+        "action": "Inform client and, if in a saturated dive, consider whether a bell can be moved to the area (if applicable) or whether a surface decompression risk exists if timing goes long. Essentially Silver thinks ahead to once diver is freed: will he need immediate decompression due to extended bottom time?"
+      },
+      {
+        "role": "Gold",
+        "action": "Oversee the emergency from a high level, ensuring everything possible is being done. In a prolonged entrapment, Gold might engage additional dive rescue teams (from nearby vessels or authorities) to be on standby. Keep company leadership informed, as well as the client, given the severity."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once the diver is freed, verify his condition. Abort the dive and bring both the rescued diver and standby back to surface/bell. If the diver skipped any decompression due to emergency, treat accordingly (get into DDC and start recompression on O2)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Provide on-deck first aid if the diver has any injury from the entrapment (cuts, crushed limb, etc.). The Medic should be ready to intervene. Follow up with hyperbaric treatment if any DCI risk from a rapid ascent or extended bottom time."
+      },
+      {
+        "role": "Silver",
+        "action": "After the incident, document what caused the entrapment. Were proper pre-dive hazard mitigations in place? Silver and Gold to ensure any procedural gaps are filled – for example, more thorough underwater site surveys to identify entanglement hazards prior to diving."
+      }
+    ]
+  },
+  {
+    "scenario": "Lost Diver (Umbilical Cut/Lost Contact)",
+    "roles": {
+      "Gold": "Onshore Dive Manager (Strategic)",
+      "Silver": "Dive Superintendent/Client (Coordination)",
+      "Bronze": "Dive Supervisor (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "If a diver’s umbilical parts or communications and gas supply are lost unexpectedly, immediately deploy the standby diver to the last known location of the diver. Activate emergency recall (acoustical signal) for the lost diver to abort and surface if he can."
+      },
+      {
+        "role": "Bronze",
+        "action": "Drop a marked buoy or transponder at the diver’s last known position. Use any available through-water comms or pinger on the diver to locate him. Have topside observers scan for bubbles or the diver surfacing on bailout gas."
+      },
+      {
+        "role": "Bronze",
+        "action": "If the diver surfaces away from the vessel, launch rescue boat immediately to retrieve him. If not, coordinate with standby diver/ROV underwater to search the area methodically."
+      },
+      {
+        "role": "Bronze",
+        "action": "Prepare for an unconscious or not-breathing diver upon recovery: have CPR team and O2 ready on deck. If the diver is found underwater by standby and unresponsive, standby should share or replace his regulator with the lost diver’s bailout to give fresh gas, then bring him up."
+      },
+      {
+        "role": "Silver",
+        "action": "Alert nearby vessels or platforms of a missing diver and request they keep a lookout and avoid thruster use that could endanger the diver. Notify onshore (Gold) and consider requesting official SAR support (coast guard) if the diver is not found promptly."
+      },
+      {
+        "role": "Silver",
+        "action": "If the diver remains missing beyond a few minutes, escalate: more search assets (additional divers if available, ROV, etc.). Silver should implement the lost diver search pattern and coordinate any external search/rescue units."
+      },
+      {
+        "role": "Gold",
+        "action": "If the situation prolongs, Gold takes charge of a larger search-and-rescue operation. They coordinate with national SAR authorities for broader search resources (helicopters, etc.), and keep the family updated through company channels. They also prepare for crisis management if the diver is not recovered soon."
+      },
+      {
+        "role": "Bronze",
+        "action": "If diver is recovered: provide immediate medical care. Assume potential decompression sickness (since deco likely missed) and treat with 100% O2 and prompt recompression in chamber. Also treat any near-drowning or injuries."
+      },
+      {
+        "role": "Silver",
+        "action": "Conclude search if diver found. If after exhaustive search diver not found, coordinate with authorities to transition to recovery efforts. Support dive team; such an incident is traumatic – Gold may send counseling or relief personnel."
+      },
+      {
+        "role": "Gold",
+        "action": "Oversee internal review of how the diver became lost (equipment failure, DP incident, etc.) and ensure industry notifications as appropriate. Manage the aftermath with sensitivity, especially if the outcome was fatal, aligning with legal protocols and family support."
+      }
+    ]
+  },
+  {
+    "scenario": "Lost Bell (Saturation Diving)",
+    "roles": {
+      "Gold": "Onshore Diving Director (Strategic)",
+      "Silver": "Dive/Marine Superintendent (Coordination)",
+      "Bronze": "Dive Supervisor/LST/Master (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "Detect a lost bell emergency (e.g. umbilical failure or bell winch failure). Immediately activate bell emergency procedures: confirm bell sealed and switch life support to on-board supply:contentReference[oaicite:195]{index=195}. Establish communication via through-water comms or backup wireline if possible with bell."
+      },
+      {
+        "role": "Bronze",
+        "action": "Stabilize vessel position over where the bell was lost (to avoid dragging bell if umbilical is partly attached). Use ship’s sonar or tracking system to locate the bell’s beacon:contentReference[oaicite:196]{index=196}. Mark this position and note depth."
+      },
+      {
+        "role": "Bronze",
+        "action": "Deploy ROV or standby bell recovery equipment. If an ROV is available, send it down with a recovery line to latch onto the bell’s lifting point:contentReference[oaicite:197]{index=197}. Simultaneously, ready the bell recovery winch and any specialized clamps for retrieval."
+      },
+      {
+        "role": "Silver",
+        "action": "Notify all relevant emergency networks: client, nearby dive vessels, and onshore Gold that a closed bell is adrift. Request immediate assistance if needed (another vessel with crane or specific bell recovery expertise). Ensure the pre-identified hyperbaric rescue facility is on standby:contentReference[oaicite:198]{index=198}."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate with any available external resources: e.g. if in a field, perhaps a construction vessel with a heavy crane can help lift the bell. Make sure any rescue vessel understands to maintain the bell depth pressure until secured to avoid decompressing the divers."
+      },
+      {
+        "role": "Gold",
+        "action": "Assemble the company's emergency management team and possibly mutual aid from industry. Given the life-critical nature, engage top-level support: alert search-and-rescue authorities for potential help (navy ships with ROVs, etc.). Manage external communications by acknowledging an incident but focusing on ongoing rescue efforts."
+      },
+      {
+        "role": "Bronze",
+        "action": "Recover the bell: once ROV/crew attach the recovery line, slowly winch the bell to the surface. If the bell’s umbilical is still attached to ship, use caution to not tension it - could damage bell. Maintain environmental control for divers (temperature, CO2 scrubbers running) during lift."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once on deck, immediately secure the bell to the chamber system (or mating clamp) without opening. Equalize pressures and transfer divers to the main chamber safely. Only then can divers be checked medically; do not open to atmosphere until in a controlled chamber environment."
+      },
+      {
+        "role": "Silver",
+        "action": "After rescue, ensure divers continue their decompression schedule under care of the hyperbaric doctor. Debrief the divers (once safe) to understand if any bell systems failed internally. Arrange any medical treatment if they suffered e.g. CO2 exposure or trauma."
+      },
+      {
+        "role": "Gold",
+        "action": "Oversee a thorough investigation into the lost bell incident. Inform IMCA and relevant authorities as required. Manage any necessary press releases praising successful rescue (once divers are confirmed safe) and outlining steps taken. Review the contingency plan’s effectiveness and make improvements for future."
+      }
+    ]
+  },
+  {
+    "scenario": "Chamber Emergency (Fire or Rapid Decompression)",
+    "roles": {
+      "Gold": "Onshore Diving Director (Strategic)",
+      "Silver": "Dive Superintendent/HSE (Coordination)",
+      "Bronze": "LST/Dive Supervisor (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "If fire is detected inside the chamber: cut power to chamber systems and activate internal fire suppression (CO2 flooding):contentReference[oaicite:199]{index=199}. Communicate to chamber occupants (via intercom or banging) to don emergency breathing masks and fight fire with internal extinguisher if possible. Do NOT open chamber to atmosphere until absolutely necessary."
+      },
+      {
+        "role": "Bronze",
+        "action": "Have firefighting crew on standby outside chamber with hoses/extinguishers to cool the hull and be ready if chamber is opened. If smoke is venting, rig hoses to disperse it safely. Monitor chamber pressure – if it starts dropping due to a leak or intentional vent, be prepared for emergency decompression of occupants."
+      },
+      {
+        "role": "Bronze",
+        "action": "If there is a sudden loss of pressure (rapid decompression) in the chamber: quickly seal any accessible valves/doors to stop further loss. Once pressure equalizes with ambient, open chamber and immediately treat the divers for decompression injuries and barotrauma. Have O2 resuscitators and medics ready."
+      },
+      {
+        "role": "Silver",
+        "action": "Notify onshore (Gold) and medical support immediately. For a chamber fire, prepare for potential injured (burns, smoke inhalation). For a blowup, coordinate emergency recompression if survivors need it (e.g. possibly in another chamber if available, or transport to nearest facility)."
+      },
+      {
+        "role": "Silver",
+        "action": "If hyperbaric medical experts (like DMAC doctors) are available, get them on a call to advise handling of injured divers and any special decompression considerations:contentReference[oaicite:200]{index=200}. Ensure the vessel’s crew handles any vessel-wide impacts (if fire spreads beyond chamber)."
+      },
+      {
+        "role": "Gold",
+        "action": "Treat this as a critical incident. Gold to coordinate overall emergency response, including potentially evacuating the vessel if fire is uncontained. Liaise with client and authorities (this incident will likely be reportable immediately). If additional hyperbaric rescue units or support are needed from outside, Gold coordinates that."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once fire is extinguished, vent the chamber of smoke slowly (if still under pressure and safe to do so with scrubbers). Remove occupants into fresh air or medical care as soon as possible. Ensure any who were at pressure get evaluated for DCI even if no immediate symptoms."
+      },
+      {
+        "role": "Silver",
+        "action": "Secure the chamber and do not use it again until fully inspected and tested. Support investigation by preserving any evidence of cause (burnt wiring, etc.)."
+      },
+      {
+        "role": "Gold",
+        "action": "Manage the post-incident actions: provide support to affected personnel (medical treatment, counseling), and perform a root cause analysis. Share findings with industry bodies if relevant (e.g. IMCA safety alerts if equipment failure) so others can learn. Review emergency preparedness – what worked or didn’t – and update ERP manuals accordingly."
+      }
+    ]
+  },
+  {
+    "scenario": "Hyperbaric Evacuation (Saturation Emergency)",
+    "roles": {
+      "Gold": "Onshore Diving Director (Crisis Lead)",
+      "Silver": "Dive/Marine Superintendent (Rescue Coordination)",
+      "Bronze": "Vessel Master & Saturation Supervisor (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "When abandon ship is ordered and saturation divers are onboard under pressure, initiate SPHL/Hyperbaric Rescue Unit launch. Ensure all divers in saturation are safely in the evacuation chamber (disconnect trunk as needed) and sealed in. Launch the hyperbaric lifeboat or portable rescue chamber per procedure:contentReference[oaicite:201]{index=201}."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once the SPHL is waterborne, onboard crew (assigned Coxswain inside SPHL) starts engine and clears the area of the sinking or burning vessel. Navigate towards pre-determined safe haven or rendezvous point:contentReference[oaicite:202]{index=202}. Maintain life support systems (scrubbers, cooling) for the divers."
+      },
+      {
+        "role": "Bronze",
+        "action": "If no propulsion (e.g. rescue chamber lowered to sea), ensure a beacon is active for location. Surviving mother vessel crew or another standby vessel should attach tow line to the lifeboat and keep it safe from hazards."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate rescue vessels to recover the SPHL. Alert the nearest support vessel or ERRV to pick up the lifeboat as soon as possible. Also notify the designated Hyperbaric Reception Facility (HRF) onshore or on a nearby platform that a hyperbaric lifeboat is deployed and will need docking:contentReference[oaicite:203]{index=203}."
+      },
+      {
+        "role": "Silver",
+        "action": "Communicate with the SPHL (via radio or AIS if possible) to get status of occupants (pressure, condition, remaining life support). Relay this to Gold and rescue forces. Ensure the receiving facility is prepped: correct pressure interface, medical staff, and technicians on standby."
+      },
+      {
+        "role": "Gold",
+        "action": "At corporate level, treat this as top priority crisis. Liaise with national SAR and naval units for emergency support (they may send fast vessels or aircraft to assist locating/recovering the SPHL). Keep the client and families informed carefully – let them know rescue is in progress and divers are under life support. Manage external communications to avoid misinformation."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once a rescue vessel recovers the SPHL (either lifting it on deck or stabilizing it in water), keep it pressurized. Do not open until properly mated to a HRF. Continuously monitor the SPHL environmental conditions and diver vitals, treating any urgent medical issues through the medical lock if possible."
+      },
+      {
+        "role": "Silver",
+        "action": "Execute the transfer to the hyperbaric facility: either navigate/tow the SPHL to the pre-arranged port or platform where the HRF is ready, or if the rescue vessel has a portable HRF on deck, mate the SPHL to it once secured. Begin controlled decompression of divers only when all systems are connected and tested:contentReference[oaicite:204]{index=204}."
+      },
+      {
+        "role": "Gold",
+        "action": "After successful transfer, ensure all divers are cared for through complete decompression (which could take days). Debrief with rescue teams and facilitate any post-rescue needs (counseling, time off for involved staff). Manage any media coverage positively, highlighting successful rescue and company’s preparedness."
+      },
+      {
+        "role": "Gold",
+        "action": "Lead a full review of the incident that necessitated hyperbaric evacuation (the initial emergency) and the evacuation process itself. Share outcomes with industry (IOGP, IMCA) to contribute to improvements in hyperbaric rescue planning. Ensure the SPHL and support equipment are refurbished or replaced as needed post-incident."
+      }
+    ]
+  },
+  {
+    "scenario": "Diving in Contaminated Water (Diver Contamination)",
+    "roles": {
+      "Gold": "Onshore HSE/Diving Manager (Strategic)",
+      "Silver": "Dive/Project Manager (Coordination)",
+      "Bronze": "Dive Supervisor & DMT (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "If diver reports contact with hazardous substance (chemical, oil, H2S, etc.), terminate the dive. Inform all personnel to initiate decontamination procedures. Set up decon area on deck (away from normal clean areas)."
+      },
+      {
+        "role": "Bronze",
+        "action": "While the diver is still in the water or on stage, begin gross decontamination: rinse the diver and gear thoroughly with seawater or dedicated decon solution before removing any gear:contentReference[oaicite:205]{index=205}:contentReference[oaicite:206]{index=206}. Ensure runoff is controlled (don’t let it into deck drains without containment)."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once rinsed, carefully remove the diver’s helmet and suit, avoiding skin contact with contaminants. Seal and segregate the contaminated dive gear for later cleaning or disposal. Continue to wash the diver’s body (shower) if substance was skin-contacting."
+      },
+      {
+        "role": "Bronze",
+        "action": "DMT/Medic to assess the diver for any adverse effects: breathing difficulty, skin irritation, dizziness. Administer oxygen if inhalation of toxic gas (like H2S) is suspected, and basic first aid for chemical burns or eye exposure (flush eyes). Consult the SDS of the substance if known for specific first aid."
+      },
+      {
+        "role": "Silver",
+        "action": "Notify onshore HSE (Gold) and possibly client that a contamination incident occurred. Provide details on the contaminant and exposure. If medical evacuation is potentially needed (e.g. serious H2S poisoning symptoms), arrange that immediately."
+      },
+      {
+        "role": "Silver",
+        "action": "Engage specialized advice: for chemicals, call a Poison Control center or chemical hazard specialist; for hydrocarbons or sewage, still monitor for infection or other effects. Ensure appropriate medical evaluation for the diver even if they feel fine (some effects can be delayed)."
+      },
+      {
+        "role": "Gold",
+        "action": "Coordinate with environmental and regulatory entities if needed (for instance, if this indicates a leak in the environment that needs addressing, or if this is a reportable safety incident). Oversee that proper waste disposal of contaminated water and gear is arranged through certified contractors."
+      },
+      {
+        "role": "Gold",
+        "action": "Support the diver’s health follow-up – possibly involve company doctor or arrange hospital check-up. If the substance is extremely hazardous, consider replacing the diver’s gear entirely. Also, reassure and inform the rest of the crew about any remaining risk (or lack thereof) to prevent rumors/fear."
+      },
+      {
+        "role": "Silver",
+        "action": "After incident: analyze why this exposure happened. Was there a lapse in detecting contamination risk (e.g. sensors for H2S not in place, or diver ventured into unknown pipeline discharge)? Implement stricter controls: e.g. pre-dive water quality tests, personal monitors for divers, etc., as appropriate:contentReference[oaicite:207]{index=207}."
+      }
+    ]
+  },
+  {
+    "scenario": "Dynamic Positioning (DP) Failure During Diving",
+    "roles": {
+      "Gold": "Onshore Marine/Dive Manager (Strategic)",
+      "Silver": "Marine Superintendent (Coordination)",
+      "Bronze": "Vessel Master & Dive Supervisor (On-Scene)"
+    },
+    "procedure": [
+      {
+        "role": "Bronze",
+        "action": "If DP alarm or failure occurs (vessel can no longer hold position) while a diver is in the water, **immediately** inform the Dive Supervisor and diving team. Announce 'DP failure – recover divers now.'"
+      },
+      {
+        "role": "Bronze",
+        "action": "Dive Supervisor to abort the dive: instruct diver to stop work and begin ascent *immediately*. If using a stage/basket, have surface crew start hauling in. If diver is on bottom on umbilical, they should begin free ascent as you pull slack in steadily. The standby diver, if already in water, can assist the ascent but avoid entanglement."
+      },
+      {
+        "role": "Bronze",
+        "action": "Bridge (Master) to attempt to maintain position or slow drift: engage manual thrusters, use available power to minimize movement away from diver’s location. If multiple thrusters or complete power is lost, consider dropping an emergency anchor (if shallow enough) as a drag to slow drift, weighing against risk to diver."
+      },
+      {
+        "role": "Bronze",
+        "action": "If the vessel is moving off and diver is not up yet, be prepared to implement emergency umbilical disconnect: as a last resort, the Dive Sup may instruct to cut the umbilical to prevent dragging the diver. This leaves diver on bailout gas to free ascend. This is highly risky and done only if vessel movement will certainly harm the diver."
+      },
+      {
+        "role": "Silver",
+        "action": "Notify onshore (Gold) of the DP failure incident. Request any nearby support (e.g. another vessel) to assist if needed. Also notify the client, especially if operations are under a permit that requires immediate reporting of DP station-keeping incidents."
+      },
+      {
+        "role": "Silver",
+        "action": "Coordinate technical support to help restore DP or propulsion if possible (guide crew through resets, etc.). Simultaneously, prepare for possible rescue operations (if diver was separated, treat as lost diver scenario). Put rescue boat on standby to pick diver if they surface away from the vessel."
+      },
+      {
+        "role": "Gold",
+        "action": "Provide strategic oversight: ensure all efforts are being made to recover diver safely. Authorize any external resources needed (tug assistance, additional personnel). If diver was injured or lost, Gold initiates emergency response per those scenarios. Also plan for a thorough investigation after emergency is over."
+      },
+      {
+        "role": "Bronze",
+        "action": "Once diver is recovered (on deck or in bell), assess their condition. Treat as necessary for any rapid ascent (place on O2, get in chamber for eval). Secure all diving equipment."
+      },
+      {
+        "role": "Silver",
+        "action": "Stand down the diving operation until DP system is fully checked and repaired. File a DP incident report and a diving near-miss/incident report. Only resume diving after both dive and marine teams and client agree it’s safe and any corrective measures (like re-testing redundancy or weather restrictions) are in place."
+      },
+      {
+        "role": "Gold",
+        "action": "Lead the root cause analysis of the DP failure (technical malfunction vs human error). Share findings and lessons within the company and with the DP system manufacturer if relevant. Ensure any fleet-wide checks or changes (e.g. software updates, additional UPS for DP) are implemented to prevent recurrence."
+      }
+    ]
+  }
+]
+Each scenario entry can be extended with additional fields (e.g., “description” or “equipment” involved) as needed. The structure above prioritizes clarity and modularity, allowing the ERP tool to retrieve scenario-specific guidance, search keywords, and facilitate Q&A (e.g., “What is the first step if a diver is unconscious underwater?” would find the relevant scenario and steps). Sources: This consolidated dataset is derived from HydroDive’s ERP manual and industry guidelines including IMCA D014 (Offshore Diving Code) and IOGP Report 411/478 recommendations for emergency response
+law.resource.org
+scribd.com
+. It covers foreseeable offshore emergencies and aligns with the Gold–Silver–Bronze command structure detailed in the ERP framework
+file-kpzyxshakbx8fodmnjaere
+file-kpzyxshakbx8fodmnjaere
+. Each scenario’s procedures reflect best practices and regulatory requirements, ensuring readiness for integration into training, AI assistants, or operational checklists.
+
+
+
+
+
+Sources
+
+
+
+
+
+Vous avez dit :
+so is this for replit and python 
+
+
+ChatGPT a dit :
+Yes!
+Everything above is 100% ready for use in Python and on Replit — whether as a backend, CLI, or for instant integration with a Streamlit web demo. Here’s how you can use it:
+
+How to Use This in Python & Replit
+1. Copy the Data
+Take the “scenarios” JSON and save it as a Python list of dictionaries in a file, e.g., erp_scenarios.py:
+
+python
+Copier
+Modifier
+erp_scenarios = [
+    {
+        "scenario": "Medical Emergency (Serious Injury/Illness)",
+        "roles": {
+            "Gold": "...",
+            "Silver": "...",
+            "Bronze": "..."
+        },
+        "procedure": [
+            {"role": "Bronze", "action": "Raise alarm..."},
+            # etc.
+        ]
+    },
+    # ...add the rest...
+]
+2. Plug Into Your Python CLI or Streamlit App
+For a simple CLI app (like the one I wrote for you before), import erp_scenarios and add search/display logic.
+
+For a Streamlit app, import erp_scenarios, build search UI, and display results in a nice way.
+
+3. How This Works on Replit
+Just upload your Python files (erp_scenarios.py and your main app) to Replit.
+
+Run the CLI or the web app (Streamlit: streamlit run app.py).
+
+No need for any non-Python backend or database at this stage — everything’s in your Python code, so it’s fast, simple, portable, and FREE on Replit’s Python runtime.
+
+4. How to Connect to an AI
+If you want to make it “AI-powered” (e.g., ask questions about each scenario), you can:
+
+Use the openai library (as shown earlier) for GPT-4o Q&A.
+
+Store the full scenario texts so your AI assistant can fetch, display, and answer from the official, fully compliant procedures.
+

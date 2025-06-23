@@ -3,6 +3,7 @@ import { storage } from './storage';
 import { AuditLog, Project, User } from '../shared/schema';
 import { ERPKnowledgeService } from './erpKnowledge';
 import { ERPScenariosService } from './erpScenarios';
+import { ERPQnAService } from './erpQnA';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -111,10 +112,16 @@ export class AIAuditReferee {
   static async auditAction(context: AuditContext): Promise<AuditResponse> {
     const { projectData, user, recentActions, actionDetails } = context;
     
+    // Get comprehensive context from all knowledge sources
     const protocolExcerpts = this.getProtocolExcerpts(actionDetails.type, projectData.description || '');
+    const relevantScenarios = ERPScenariosService.searchScenarios(actionDetails.type);
+    const scenarioContext = relevantScenarios.slice(0, 2).map(scenario => 
+      ERPScenariosService.getScenarioContextForAI(scenario.id)
+    ).join('\n\n');
+    const qnaContext = ERPQnAService.getQnAContextForAI(actionDetails.type);
     
     const auditPrompt = `
-You are HydroSafe's AI Safety Referee - a strict compliance auditor for offshore operations.
+You are HydroSafe's AI Safety Referee - a strict compliance auditor for offshore operations with comprehensive knowledge of emergency response protocols.
 
 PROJECT CONTEXT:
 - Project: ${projectData.name} (${projectData.number})
@@ -125,11 +132,16 @@ PROJECT CONTEXT:
 APPLICABLE PROTOCOLS:
 ${protocolExcerpts}
 
-RECENT AUDIT HISTORY (Last 10 actions):
-${recentActions.map(log => `
+RELEVANT EMERGENCY SCENARIOS:
+${scenarioContext}
+
+EMERGENCY RESPONSE Q&A GUIDANCE:
+${qnaContext}
+
+RECENT AUDIT HISTORY (Last 5 actions):
+${recentActions.slice(0, 5).map(log => `
 - ${log.createdAt}: ${log.actionType} by User ${log.userId}
 - Description: ${log.description}
-- Data: ${JSON.stringify(log.newData)}
 `).join('\n')}
 
 CURRENT ACTION UNDER REVIEW:
@@ -140,12 +152,13 @@ CURRENT ACTION UNDER REVIEW:
 - Evidence Provided: ${actionDetails.evidence?.length || 0} files
 - Timestamp: ${actionDetails.timestamp}
 
-AUDIT TASK:
-1. Review this action against offshore safety protocols
-2. Check for missing evidence, documentation, or approvals
-3. Verify user has appropriate role permissions for this action
-4. Flag any protocol violations or compliance gaps
-5. Determine if action should be blocked until requirements are met
+COMPREHENSIVE AUDIT ASSESSMENT:
+1. Review against offshore safety protocols and emergency procedures
+2. Check compliance with Bronze-Silver-Gold command hierarchy requirements
+3. Verify appropriate role permissions and escalation procedures
+4. Assess emergency response timing and protocol adherence
+5. Flag any missing evidence, documentation, or approvals
+6. Determine if action should proceed or be blocked for safety
 
 Respond in JSON format with:
 - complianceStatus: COMPLIANT/WARNING/NON_COMPLIANT/CRITICAL_VIOLATION
