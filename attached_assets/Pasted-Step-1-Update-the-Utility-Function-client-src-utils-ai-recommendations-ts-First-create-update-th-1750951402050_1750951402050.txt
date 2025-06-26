@@ -1,0 +1,180 @@
+Step 1: Update the Utility Function (client/src/utils/ai-recommendations.ts)
+First, create/update this utility so it tries to match simple rules/keywords BEFORE it hits GPT/OpenAI.
+This is the file where the logic lives:
+
+File: client/src/utils/ai-recommendations.ts
+
+typescript
+Copier
+Modifier
+// client/src/utils/ai-recommendations.ts
+
+export type IncidentInput = {
+  observationType: string[];
+  description: string;
+  files: File[]; // or string[] if just URLs
+  priorityLevel: string;
+  observationFields: Record<string, any>;
+};
+
+// Simple built-in rules to save credits
+const builtInRules = [
+  {
+    keywords: ['slip', 'trip', 'fall'],
+    correctiveActions: ['Check floor for spills', 'Put up wet floor signs', 'Ensure non-slip mats in use'],
+    nextSteps: ['Notify HSE', 'Review housekeeping protocol'],
+    urgency: 'High',
+  },
+  {
+    keywords: ['electrical', 'shock', 'cable'],
+    correctiveActions: ['Isolate power supply', 'Label hazard', 'Call certified electrician'],
+    nextSteps: ['Log hazard', 'Report to Silver Controller'],
+    urgency: 'High',
+  },
+  // Add more rules as needed...
+];
+
+function keywordMatch(description: string) {
+  const lowerDesc = description.toLowerCase();
+  for (const rule of builtInRules) {
+    if (rule.keywords.some((k) => lowerDesc.includes(k))) {
+      return rule;
+    }
+  }
+  return null;
+}
+
+export async function getAIRecommendations(input: IncidentInput) {
+  // 1. Try rules first
+  const ruleMatch = keywordMatch(input.description);
+  if (ruleMatch) {
+    return {
+      correctiveActions: ruleMatch.correctiveActions,
+      nextSteps: ruleMatch.nextSteps,
+      urgency: ruleMatch.urgency,
+      missingInfo: checkMissingInfo(input),
+    };
+  }
+
+  // 2. If no rule, fallback to AI (OpenAI call)
+  // Make sure this part uses as few tokens as possible
+  const payload = {
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: "You are a strict HSE compliance expert for offshore oil & gas. Respond only with action lists, next steps, and missing info for audit purposes. Reference IMCA, FMECA, and company procedures." },
+      { role: "user", content: `Incident report: ${input.description}. Observation types: ${input.observationType.join(", ")}. Priority: ${input.priorityLevel}. Extra fields: ${JSON.stringify(input.observationFields)}. What are the corrective actions, next steps, urgency, and any missing required info? Respond in JSON.` }
+    ],
+    max_tokens: 200,
+  };
+
+  // You would call your backend API here; this is a placeholder:
+  const res = await fetch("/api/ai/recommend", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+
+  // Assume response has structure: { correctiveActions, nextSteps, urgency, missingInfo }
+  return data;
+}
+
+function checkMissingInfo(input: IncidentInput): string[] {
+  const missing: string[] = [];
+  if (!input.files || input.files.length === 0) missing.push("No photo evidence attached");
+  if (!input.observationType || input.observationType.length === 0) missing.push("No observation type selected");
+  if (!input.description) missing.push("Description missing");
+  // Add more as needed
+  return missing;
+}
+Step 2: Update the Form to Call This Utility
+File: client/src/pages/incidents.tsx
+
+Find the section where your form logic lives.
+Add the “Suggest Actions (AI)” button and code as shown:
+
+tsx
+Copier
+Modifier
+// client/src/pages/incidents.tsx
+
+import { useState } from "react";
+import { getAIRecommendations, IncidentInput } from "../utils/ai-recommendations";
+
+// ...existing code...
+
+const IncidentForm = () => {
+  // ...existing form state/logic...
+  const [ai, setAI] = useState<null | Awaited<ReturnType<typeof getAIRecommendations>>>(null);
+
+  async function handleRecommendClick() {
+    const input: IncidentInput = {
+      observationType: selectedObservationTypes, // replace with your state variable
+      description,
+      files: attachedFiles, // replace with your state variable
+      priorityLevel,
+      observationFields: { location },
+    };
+    const recs = await getAIRecommendations(input);
+    setAI(recs);
+  }
+
+  return (
+    <>
+      {/* ...your form fields... */}
+      <button type="button" onClick={handleRecommendClick}>
+        Suggest Actions (AI)
+      </button>
+      {ai && (
+        <div className="bg-gray-50 p-4 mt-4 rounded-xl shadow">
+          <h4>AI Recommendations</h4>
+          <ul>
+            {ai.correctiveActions.map((a, i) => <li key={i}>Corrective: {a}</li>)}
+            {ai.nextSteps.map((n, i) => <li key={i}>Next Step: {n}</li>)}
+            <li>Urgency: <b>{ai.urgency}</b></li>
+            {ai.missingInfo.length > 0 && (
+              <li style={{color: 'red'}}>Missing Info: {ai.missingInfo.join(', ')}</li>
+            )}
+          </ul>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default IncidentForm;
+Step 3: (Optional) Backend Route for AI Call
+If you need an API route to safely call OpenAI, create:
+
+File: server/routes/ai.ts
+
+ts
+Copier
+Modifier
+// server/routes/ai.ts (Node/Express, ESM)
+
+import express from "express";
+import { openai } from "../lib/openai"; // Your OpenAI SDK/init
+
+const router = express.Router();
+
+router.post("/recommend", async (req, res) => {
+  const { model, messages, max_tokens } = req.body;
+  try {
+    const aiRes = await openai.chat.completions.create({
+      model,
+      messages,
+      max_tokens,
+    });
+    // Extract JSON from aiRes and send
+    const jsonText = aiRes.choices[0].message.content;
+    const json = JSON.parse(jsonText);
+    res.json(json);
+  } catch (err) {
+    res.status(500).json({ error: "AI call failed", details: err.message });
+  }
+});
+
+export default router;
+Wire up the route in your main server/index.ts or wherever Express is configured.
+

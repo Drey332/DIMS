@@ -18,7 +18,10 @@ import {
   Eye,
   Camera,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Brain,
+  FileText,
+  Shield
 } from "lucide-react";
 import { Incident, IncidentAction } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
@@ -27,6 +30,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { getAIRecommendations, type IncidentInput } from "@/utils/ai-recommendations";
 
 const incidentSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -40,6 +44,9 @@ export default function Incidents() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -83,6 +90,36 @@ export default function Incidents() {
       projectId: 1,
     },
   });
+
+  const analyzeIncident = async (incidentData: any) => {
+    setIsAnalyzing(true);
+    try {
+      const incidentInput: IncidentInput = {
+        title: incidentData.title,
+        description: incidentData.description || "",
+        category: incidentData.type === "Accident" ? "Accident" : 
+                 incidentData.type === "Near Miss" ? "NearMiss" :
+                 incidentData.type === "Hazard" ? "Hazard" : "Observation",
+        attachments: []
+      };
+      
+      const analysis = await getAIRecommendations(incidentInput);
+      setAiAnalysis(analysis);
+      setShowAiPanel(true);
+      
+      toast({
+        title: "AI Analysis Complete",
+        description: `Incident classified as Tier ${analysis.severity.tier} - ${analysis.severity.escalation}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Analysis Error",
+        description: "Failed to analyze incident with AI",
+        variant: "destructive",
+      });
+    }
+    setIsAnalyzing(false);
+  };
 
   const onSubmit = (data: z.infer<typeof incidentSchema>) => {
     createIncidentMutation.mutate(data);
@@ -224,21 +261,42 @@ export default function Incidents() {
                   
                   <div className="flex space-x-3">
                     <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => {
+                        const formData = form.getValues();
+                        if (formData.title && formData.type) {
+                          analyzeIncident(formData);
+                        } else {
+                          toast({
+                            title: "Missing Information",
+                            description: "Please fill in title and type before analyzing",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      disabled={isAnalyzing}
+                    >
+                      <Brain className="w-4 h-4 mr-2" />
+                      {isAnalyzing ? "Analyzing..." : "Analyze with AI"}
+                    </Button>
+                    <Button 
                       type="submit" 
                       className="flex-1 hydro-button-primary"
                       disabled={createIncidentMutation.isPending}
                     >
                       {createIncidentMutation.isPending ? "Creating..." : "Create Incident"}
                     </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={() => setIsCreateModalOpen(false)}
-                    >
-                      Cancel
-                    </Button>
                   </div>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    className="w-full"
+                    onClick={() => setIsCreateModalOpen(false)}
+                  >
+                    Cancel
+                  </Button>
                 </form>
               </Form>
             </DialogContent>
@@ -306,25 +364,165 @@ export default function Incidents() {
             </Card>
           </div>
 
-          {/* Incident Details */}
+          {/* AI Analysis Panel */}
           <div>
-            <Card className="hydro-card">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>Incident Details</span>
-                  {selectedIncident && (
+            {showAiPanel && aiAnalysis ? (
+              <Card className="hydro-card border-l-4 border-l-blue-500">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <Brain className="w-5 h-5 mr-2 text-blue-600" />
+                      AI Analysis
+                    </div>
                     <Button
                       size="sm"
-                      onClick={() => setIsPhotoModalOpen(true)}
-                      className="bg-blue-600 text-white hover:bg-blue-700"
+                      variant="outline"
+                      onClick={() => setShowAiPanel(false)}
                     >
-                      <Camera className="w-4 h-4 mr-1" />
-                      Photo
+                      ×
                     </Button>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Severity Classification */}
+                  <div>
+                    <h4 className="font-medium text-hydro-dark mb-2 flex items-center">
+                      <Shield className="w-4 h-4 mr-2" />
+                      Severity Classification
+                    </h4>
+                    <div className={cn(
+                      "p-3 rounded-lg border-l-4",
+                      aiAnalysis.severity.tier === 3 ? "bg-red-50 border-l-red-500" :
+                      aiAnalysis.severity.tier === 2 ? "bg-orange-50 border-l-orange-500" :
+                      aiAnalysis.severity.tier === 1 ? "bg-yellow-50 border-l-yellow-500" :
+                      "bg-green-50 border-l-green-500"
+                    )}>
+                      <div className="font-medium text-sm">
+                        Tier {aiAnalysis.severity.tier} - {
+                          aiAnalysis.severity.tier === 3 ? "Strategic Response" :
+                          aiAnalysis.severity.tier === 2 ? "Operational Response" :
+                          aiAnalysis.severity.tier === 1 ? "Tactical Response" : "Business as Usual"
+                        }
+                      </div>
+                      <div className="text-sm text-gray-600 mt-1">
+                        {aiAnalysis.severity.escalation}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Corrective Actions */}
+                  <div>
+                    <h4 className="font-medium text-hydro-dark mb-2 flex items-center">
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Recommended Actions ({aiAnalysis.actions.length})
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {aiAnalysis.actions.map((action: string, index: number) => (
+                        <div key={index} className="p-2 bg-gray-50 rounded text-sm">
+                          <div className="flex items-start">
+                            <span className="inline-block w-5 h-5 bg-blue-100 text-blue-600 rounded-full text-xs flex items-center justify-center mr-2 mt-0.5 flex-shrink-0">
+                              {index + 1}
+                            </span>
+                            <span className="text-gray-700">{action}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Documentation Requirements */}
+                  <div>
+                    <h4 className="font-medium text-hydro-dark mb-2 flex items-center">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Documentation Status
+                    </h4>
+                    <div className={cn(
+                      "p-3 rounded-lg",
+                      aiAnalysis.documentation.complete ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                    )}>
+                      <div className="font-medium text-sm">
+                        {aiAnalysis.documentation.complete ? "✓ Complete" : "⚠ Missing Documentation"}
+                      </div>
+                      {!aiAnalysis.documentation.complete && aiAnalysis.documentation.missingItems.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {aiAnalysis.documentation.missingItems.map((item: string, index: number) => (
+                            <div key={index} className="text-xs">• {item}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Command Hierarchy */}
+                  <div>
+                    <h4 className="font-medium text-hydro-dark mb-2">Command Structure</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className={cn(
+                        "flex items-center justify-between p-2 rounded",
+                        aiAnalysis.severity.tier >= 1 ? "bg-bronze/20" : "bg-gray-100"
+                      )}>
+                        <span>Bronze (On-Scene):</span>
+                        <span className="font-medium">Nick Roddy</span>
+                      </div>
+                      <div className={cn(
+                        "flex items-center justify-between p-2 rounded",
+                        aiAnalysis.severity.tier >= 2 ? "bg-silver/20" : "bg-gray-100"
+                      )}>
+                        <span>Silver (Tactical):</span>
+                        <span className="font-medium">Dean Golding</span>
+                      </div>
+                      <div className={cn(
+                        "flex items-center justify-between p-2 rounded",
+                        aiAnalysis.severity.tier >= 3 ? "bg-gold/20" : "bg-gray-100"
+                      )}>
+                        <span>Gold (Strategic):</span>
+                        <span className="font-medium">David Mooney</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="space-y-2">
+                    <Button className="w-full hydro-button-primary" size="sm">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Generate Report
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      size="sm"
+                      onClick={() => {
+                        // Re-analyze with updated information
+                        const formData = form.getValues();
+                        if (formData.title && formData.type) {
+                          analyzeIncident(formData);
+                        }
+                      }}
+                    >
+                      <Brain className="w-4 h-4 mr-2" />
+                      Re-analyze
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="hydro-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Incident Details</span>
+                    {selectedIncident && (
+                      <Button
+                        size="sm"
+                        onClick={() => setIsPhotoModalOpen(true)}
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        <Camera className="w-4 h-4 mr-1" />
+                        Photo
+                      </Button>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
                 {selectedIncident ? (
                   <div className="space-y-4">
                     <div>
@@ -394,8 +592,9 @@ export default function Incidents() {
                     Select an incident to view details
                   </div>
                 )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>

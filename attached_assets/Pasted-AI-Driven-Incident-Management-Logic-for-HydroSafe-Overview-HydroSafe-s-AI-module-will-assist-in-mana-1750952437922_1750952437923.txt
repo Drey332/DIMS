@@ -1,0 +1,362 @@
+AI-Driven Incident Management Logic for HydroSafe
+Overview
+HydroSafe’s AI module will assist in managing incidents by automatically classifying severity, suggesting corrective/preventive actions, validating data completeness, and generating structured reports. The logic is built on HydroDive’s Emergency Response Plan (ERP) rules and industry standards (FMECA principles, IMCA and IOGP guidelines). It is implemented as a modular TypeScript utility (e.g. client/src/utils/ai-recommendations.ts) with functions that can be invoked from the incidents page (client/src/pages/incidents.tsx). By default, the system uses built-in rule-based recommendations derived from the ERP and standards. A configuration toggle allows switching to an OpenAI-powered completion mode for extended suggestions when needed. Key capabilities include:
+Dynamic Severity Classification: Determine incident tier (0 through 3) based on impact and trigger appropriate escalation (notify Bronze/Silver/Gold emergency controllers as per ERP).
+Corrective/Preventive Action Suggestions: Auto-generate recommendations informed by the ERP’s mitigation measures, FMECA analysis (address root causes of failures), and IMCA/IOGP best practices. This covers immediate response steps and long-term preventive actions (e.g. safety stand-downs, procedural reviews, training, etc.).
+Hazard/Observation Recommendations: Fill in suggestion fields for reported hazards or near-miss observations, proposing actions to eliminate the hazard or improve controls before an incident occurs.
+Documentation Completeness Checks: Detect any missing critical information or attachments (for example, missing a Diver Medic’s certification document) and prevent incident closure until these are resolved.
+PDF Report Generation: Compile all incident details, classifications, actions, and outcomes into a detailed PDF report following the layout of HydroDive’s ERP for use in audits, client reports, and HSE reviews. The report structure will mirror ERP sections (initial response, on-site/off-site actions, roles involved, communications, etc.) for consistency.
+Below is the implementation in client/src/utils/ai-recommendations.ts, illustrating the modular functions and how they incorporate the ERP rules and standards:
+typescript
+Copier
+Modifier
+// File: client/src/utils/ai-recommendations.ts
+
+// Define types for incident data (simplified for this context)
+interface Incident {
+  id: string;
+  title: string;
+  description: string;
+  category: 'Accident' | 'NearMiss' | 'Hazard' | 'Observation';
+  severity?: number;           // Calculated severity tier (0-3)
+  fatalities?: number;
+  injuries?: number;           // count of injuries (excluding fatalities)
+  environmentalImpact?: boolean;
+  equipmentDamage?: boolean;
+  highPotentialNearMiss?: boolean;  // flag if a near-miss with high potential consequences
+  attachments: string[];       // list of attachment filenames or types
+  // ... (other fields like location, date, involved persons, etc.)
+}
+
+// Configuration to toggle AI mode
+const AI_CONFIG = {
+  useOpenAI: false  // set true to enable OpenAI completion fallback
+};
+
+// Severity classification thresholds and mapping based on ERP Tier definitions
+const SeverityTier = {
+  TIER0: 0,  // Business as Usual (no significant impact):contentReference[oaicite:4]{index=4}
+  TIER1: 1,  // Tactical Response (minor disruption, managed on-site):contentReference[oaicite:5]{index=5}
+  TIER2: 2,  // Operational Response (project affected, requires Silver support):contentReference[oaicite:6]{index=6}
+  TIER3: 3   // Strategic Response (life-threatening or major incident, Gold level):contentReference[oaicite:7]{index=7}
+} as const;
+
+export function classifySeverity(incident: Incident): { tier: number; escalation: string } {
+  // Determine the incident severity tier (0–3) using rule-based criteria
+  let tier = SeverityTier.TIER0;
+  let escalation = "None";  // default no escalation needed
+
+  // Fatality or life-threatening situation -> Tier 3 (Strategic Response)
+  if ((incident.fatalities && incident.fatalities > 0) || 
+      (incident.description.toLowerCase().includes("life-threatening")) || 
+      (incident.description.toLowerCase().includes("mayday"))) {
+    tier = SeverityTier.TIER3;
+    escalation = "Gold Controller (Strategic Management)"; 
+  }
+  // Serious injury, major equipment/vessel damage, or high-potential near miss -> Tier 2
+  else if ((incident.injuries && incident.injuries > 0) || incident.equipmentDamage === true || 
+           incident.highPotentialNearMiss === true) {
+    tier = SeverityTier.TIER2;
+    escalation = "Silver Controller (Operational Management)";
+  }
+  // Minor on-site incident (e.g. first aid case) causing some disruption -> Tier 1
+  else if (incident.category === 'Accident' || incident.category === 'NearMiss') {
+    // If it was an accident with no serious injury and minimal impact
+    tier = SeverityTier.TIER1;
+    escalation = "On-scene Bronze (Handled on-site, notify HSE)"; 
+  }
+  // Hazard observation or no impact incident -> Tier 0
+  else {
+    tier = SeverityTier.TIER0;
+    escalation = "On-scene team (Monitor, business-as-usual)";
+  }
+
+  // Refine escalation based on tier (ERP dictates who leads at each level)
+  if (tier >= SeverityTier.TIER2) {
+    // Tier 2+ should involve Silver level coordination:contentReference[oaicite:8]{index=8}
+    escalation = "Silver Controller"; 
+  }
+  if (tier >= SeverityTier.TIER3) {
+    // Tier 3 also requires Gold level involvement:contentReference[oaicite:9]{index=9}
+    escalation = "Gold Controller (with full Emergency Response Team)";
+  }
+
+  // Attach the tier to incident for reference (optional, if needed elsewhere)
+  incident.severity = tier;
+  return { tier, escalation };
+}
+
+export function suggestCorrectiveActions(incident: Incident): string[] {
+  // Generate recommended corrective and preventive actions for the incident
+  // These suggestions follow HydroDive ERP guidelines and industry best practices.
+  const recommendations: string[] = [];
+
+  // 1. Immediate on-site response actions (for accidents/incidents)
+  if (incident.category === 'Accident' || incident.category === 'NearMiss') {
+    // Ensure initial emergency actions were taken (raise alarm, assess, stabilize, etc.):contentReference[oaicite:10]{index=10}
+    recommendations.push(
+      "Verify initial response steps were executed: raise alarm, make the scene safe, provide first aid/triage, and stabilize any casualties:contentReference[oaicite:11]{index=11}."
+    );
+    // If serious incident, ensure on-scene Bronze notified Silver promptly:contentReference[oaicite:12]{index=12}
+    recommendations.push(
+      "Confirm the On-Scene Coordinator (Bronze) has notified the Emergency Controller (Silver) and begun incident logging:contentReference[oaicite:13]{index=13}."
+    );
+  }
+
+  // 2. Medical emergency specific actions
+  if (incident.description.toLowerCase().includes("injury") || incident.description.toLowerCase().includes("medical")) {
+    // Suggest medevac protocol if severe injury or if doctor is needed
+    if (incident.severity && incident.severity >= SeverityTier.TIER2) {
+      recommendations.push(
+        "Initiate medevac procedure for injured personnel as needed and ensure on-board doctor/DMT stabilizes the casualty for transport:contentReference[oaicite:14]{index=14}."
+      );
+    }
+    // Contact hyperbaric or specialized medical support if a diving-related injury
+    if (incident.description.toLowerCase().includes("diver") || incident.description.toLowerCase().includes("DCS") /* decompression sickness */) {
+      recommendations.push(
+        "Contact hyperbaric medical support (e.g., ISOS) for expert advice, and have the on-call doctor liaise with the on-scene team:contentReference[oaicite:15]{index=15}."
+      );
+    }
+  }
+
+  // 3. Containment and restoration actions for environmental or equipment incidents
+  if (incident.environmentalImpact) {
+    recommendations.push(
+      "Contain and report any environmental release/spill immediately according to the spill response plan. Deploy cleanup resources and notify regulatory bodies if required."
+    );
+  }
+  if (incident.equipmentDamage) {
+    recommendations.push(
+      "Isolate and lock out damaged equipment to prevent further harm. Perform a Failure Modes and Effects analysis to identify the cause of failure:contentReference[oaicite:16]{index=16} and schedule repair or replacement."
+    );
+  }
+
+  // 4. Preventive / long-term actions based on severity
+  if (incident.severity === SeverityTier.TIER0) {
+    // Minor incident: apply simple mitigations:contentReference[oaicite:17]{index=17}
+    recommendations.push(
+      "Issue a safety bulletin or flash to communicate the minor incident and lessons learned to the crew:contentReference[oaicite:18]{index=18}. Conduct a brief Time-Out-For-Safety to review relevant procedures."
+    );
+    recommendations.push(
+      "Review and update the risk assessment for the task, and implement any minor changes needed to prevent recurrence:contentReference[oaicite:19]{index=19}."
+    );
+  }
+  if (incident.severity === SeverityTier.TIER1) {
+    // Tier 1: On-site managed, involve HSE for lessons learned:contentReference[oaicite:20]{index=20}
+    recommendations.push(
+      "Engage the HSE team to document the incident and develop lessons learned. Update training or toolbox talks for staff as needed:contentReference[oaicite:21]{index=21}."
+    );
+    recommendations.push(
+      "Implement any quick corrective measures (e.g., improved PPE, signage, or procedure tweaks) to address the immediate cause."
+    );
+  }
+  if (incident.severity === SeverityTier.TIER2) {
+    // Tier 2: Significant disruption, requires procedural review and training:contentReference[oaicite:22]{index=22}
+    recommendations.push(
+      "Conduct a formal investigation and root cause analysis with involvement from the Silver level management. Include a procedural review to address any system or process failures:contentReference[oaicite:23]{index=23}."
+    );
+    recommendations.push(
+      "Provide additional training or drills focused on the incident scenario to improve team readiness and prevent recurrence:contentReference[oaicite:24]{index=24}."
+    );
+    // High-potential near miss handling
+    if (incident.highPotentialNearMiss) {
+      recommendations.push(
+        "Even though this was a near-miss, treat it as a high-potential incident: share the scenario and preventive measures company-wide (Safety Alert) and reinforce critical safety controls."
+      );
+    }
+  }
+  if (incident.severity === SeverityTier.TIER3) {
+    // Tier 3: Major incident, full management response:contentReference[oaicite:25]{index=25}
+    recommendations.push(
+      "Mobilize the full Emergency Response Team under Gold Controller leadership, and involve corporate management in the response:contentReference[oaicite:26]{index=26}."
+    );
+    recommendations.push(
+      "Suspend operations if not already done. Preserve the scene for investigation and involve external authorities/regulators as appropriate."
+    );
+    recommendations.push(
+      "Enforce communication control: route all external communications through the Silver/Gold controllers and legal/HSE advisors:contentReference[oaicite:27]{index=27}. Arrange for HR to support family notifications if there are serious injuries or fatalities:contentReference[oaicite:28]{index=28}."
+    );
+    recommendations.push(
+      "Impose a social media blackout among project personnel to prevent misinformation, as per company policy:contentReference[oaicite:29]{index=29}."
+    );
+  }
+
+  // 5. Hazard observation (no actual incident)
+  if (incident.category === 'Hazard' || incident.category === 'Observation') {
+    recommendations.push(
+      "Take immediate action to eliminate or control the observed hazard (e.g., remove the unsafe condition or stop the unsafe practice)."
+    );
+    recommendations.push(
+      "Log the observation in the hazard register and assign an action party to implement a permanent fix or improvement (engineering control, updated PPE, etc.)."
+    );
+    recommendations.push(
+      "Communicate the observation and corrective actions to the team (e.g., in next safety meeting) to raise awareness and prevent potential incidents."
+    );
+  }
+
+  // Use OpenAI completion for additional suggestions if enabled and needed
+  if (AI_CONFIG.useOpenAI) {
+    const aiHints = generateAIRecommendations(incident);
+    recommendations.push(...aiHints);
+  }
+
+  return recommendations;
+}
+
+// (Optional) Helper function to call OpenAI API for supplementary recommendations
+async function generateAIRecommendations(incident: Incident): Promise<string[]> {
+  // This function would integrate with an OpenAI API endpoint to get additional recommendations.
+  // For example, it could send a prompt summarizing the incident and asking for suggested actions.
+  // Here we provide a placeholder implementation.
+  const aiRecs: string[] = [];
+
+  // ... call to OpenAI API (pseudo-code, not actual implementation) ...
+  // const response = await fetchOpenAICompletion(prompt);
+  // aiRecs = response.split('\n');
+
+  return aiRecs;
+}
+
+export function checkMissingDocumentation(incident: Incident): { complete: boolean, missingItems: string[] } {
+  // Check for missing critical documentation or fields required before closing the incident.
+  const missing: string[] = [];
+
+  // Example: if a Diver Medic (DMT) was involved in response, ensure their certification proof is attached
+  if (incident.description.toLowerCase().includes("dmt") || incident.description.toLowerCase().includes("medic")) {
+    const hasDMTcert = incident.attachments.some(file => file.toLowerCase().includes("dmt_cert") || file.toLowerCase().includes("medic_cert"));
+    if (!hasDMTcert) {
+      missing.push("DMT certification document (ensure the diver medic on duty had a valid certification)"); 
+    }
+  }
+
+  // If the incident involved any injured person, check that a medical report or injury form is attached
+  if ((incident.injuries && incident.injuries > 0) || (incident.fatalities && incident.fatalities > 0)) {
+    const hasMedReport = incident.attachments.some(file => file.toLowerCase().includes("medical_report") || file.toLowerCase().includes("injury_form"));
+    if (!hasMedReport) {
+      missing.push("Injury/medical report for the casualties");
+    }
+  }
+
+  // If equipment failure, check for maintenance records or inspection reports attached
+  if (incident.equipmentDamage) {
+    const hasMaintRecord = incident.attachments.some(file => file.toLowerCase().includes("maintenance") || file.toLowerCase().includes("inspection"));
+    if (!hasMaintRecord) {
+      missing.push("Equipment maintenance/inspection record");
+    }
+  }
+
+  // Ensure investigation report (root cause analysis) is attached for significant incidents (Tier 1+)
+  if (incident.severity !== undefined && incident.severity >= SeverityTier.TIER1) {
+    const hasInvestigation = incident.attachments.some(file => file.toLowerCase().includes("investigation_report") || file.toLowerCase().includes("root_cause"));
+    if (!hasInvestigation) {
+      missing.push("Incident investigation report");
+    }
+  }
+
+  // Other potential checks (permit to work, risk assessment, photos, etc.) can be added as needed...
+  // e.g., if incident involves working at height, require permit attachment, etc.
+
+  return { complete: missing.length === 0, missingItems: missing };
+}
+
+export function generateIncidentReportPDF(incident: Incident, actions: string[]): Blob {
+  // Generate a structured PDF report for the incident, following the HydroDive ERP layout.
+  // This function would use a PDF library (e.g., jsPDF, PDFKit) to create the document.
+  // It returns a Blob or Data URL representing the PDF.
+
+  // Pseudo-code outline for PDF content:
+  const pdfDoc = initializePdfDocument();  // placeholder for PDF document creation
+
+  // Cover Page and Incident Overview
+  pdfDoc.addTitle(`Incident Report: ${incident.title}`);
+  pdfDoc.addText(`Project: ${/* project name from incident if available */ "Unknown Project"}`);
+  pdfDoc.addText(`Date: ${new Date().toLocaleDateString()}`);
+  pdfDoc.addText(`Incident ID: ${incident.id}`);
+  pdfDoc.addText(`Severity Classification: Tier ${incident.severity} – ${incident.severity === 3 ? 'Strategic' : incident.severity === 2 ? 'Operational' : incident.severity === 1 ? 'Tactical' : 'Minor'} Response`);
+  if (incident.severity !== undefined) {
+    const escalationRole = incident.severity >= SeverityTier.TIER3 ? 'Gold (Strategic)' 
+                        : incident.severity >= SeverityTier.TIER2 ? 'Silver (Operational)' 
+                        : incident.severity >= SeverityTier.TIER1 ? 'Bronze (On-Scene)' : 'N/A';
+    pdfDoc.addText(`Escalation Level: ${escalationRole} Controller`);
+  }
+  pdfDoc.addSpacer(); // add a line break or spacer
+
+  // Incident Description and Timeline
+  pdfDoc.addHeading("Incident Details:");
+  pdfDoc.addParagraph(incident.description);
+  // (Could include a timeline of events if available, e.g., from incident log)
+
+  // Emergency Response Actions (On-scene)
+  pdfDoc.addHeading("Initial On-Scene Response:");
+  pdfDoc.addBullet("Alarm raised immediately and site team initiated first response:contentReference[oaicite:30]{index=30}.");
+  pdfDoc.addBullet("On-Scene Coordinator (Bronze) took charge and assessed the situation.");
+  if (incident.severity && incident.severity >= SeverityTier.TIER1) {
+    pdfDoc.addBullet("Bronze notified Silver Emergency Controller and onshore support was put on standby:contentReference[oaicite:31]{index=31}.");
+  }
+  pdfDoc.addBullet("Casualties treated by DMT/Doctor on site, scene stabilized.");
+
+  // Emergency Management (Offshore/Onshore)
+  if (incident.severity && incident.severity >= SeverityTier.TIER2) {
+    pdfDoc.addHeading("Escalated Response (Offshore/Onshore):");
+    pdfDoc.addBullet("Silver Emergency Controller assembled Emergency Response Team onshore:contentReference[oaicite:32]{index=32}.");
+    if (incident.severity >= SeverityTier.TIER3) {
+      pdfDoc.addBullet("Gold Controller assumed overall command and full management response mobilized:contentReference[oaicite:33]{index=33}.");
+    }
+    pdfDoc.addBullet("Incident logged continuously; all decisions recorded and verified:contentReference[oaicite:34]{index=34}.");
+    pdfDoc.addBullet("External communications managed through official channels (Legal/HR) to control information:contentReference[oaicite:35]{index=35}.");
+  }
+
+  // Investigation and Analysis
+  pdfDoc.addHeading("Investigation & Analysis:");
+  pdfDoc.addParagraph("An investigation was conducted to determine root causes. Key findings and contributing factors are documented in the attached investigation report. FMECA principles were applied to assess failure modes and effects, guiding the corrective actions.");
+  // (Could enumerate causes if available)
+
+  // Recommendations and Corrective Actions
+  pdfDoc.addHeading("Corrective and Preventive Actions:");
+  actions.forEach(action => pdfDoc.addBullet(action));
+  // Emphasize lessons learned implementation
+  pdfDoc.addParagraph("All lessons learned will be communicated across the organization and incorporated into training and procedures:contentReference[oaicite:36]{index=36}:contentReference[oaicite:37]{index=37}.");
+
+  // Approvals and Sign-off
+  pdfDoc.addHeading("Review and Sign-off:");
+  pdfDoc.addParagraph("Prepared by: __________________    Date: ___________");
+  pdfDoc.addParagraph("HSE Manager: __________________    Date: ___________");
+  pdfDoc.addParagraph("Project Manager: ______________    Date: ___________");
+
+  // Generate the PDF file (this would use the actual PDF library's output method)
+  const pdfBlob = pdfDoc.output();  // placeholder for getting PDF as Blob
+  return pdfBlob;
+}
+In the code above, classifySeverity uses explicit rules from the ERP to assign a Tier rating. For example, any life-threatening incident or fatality is classified as Tier 3 (Strategic) which “requires full managerial response” and involvement of the Gold-level controller. A significant injury or major equipment failure that “will adversely affect project delivery” is Tier 2, triggering the Silver-level coordination. Minor on-site incidents with only “minor disruption” are Tier 1 and handled by Bronze/on-scene command with HSE support, while negligible-impact cases are Tier 0 “Business as Usual” handled by first aiders with simple mitigations. The function returns both the tier and which level of management should be notified/escalated (Bronze/Silver/Gold) accordingly. suggestCorrectiveActions generates a list of recommended actions. It covers immediate response verification (ensuring steps like raising the alarm, scene safety, first aid, etc., were done per the ERP’s initial response checklist) and then adds appropriate follow-up actions:
+For medical emergencies, it advises to initiate medevac and involve on-board medics or doctors as needed, and if diving-related, to contact hyperbaric medical support (e.g. ISOS).
+For environmental or equipment issues, it suggests containment of spills and securing of equipment, including performing analyses following FMECA principles to find root causes
+s3vi.ndc.nasa.gov
+.
+Preventive measures scale with severity: a Tier 0 might just need a safety flash, a risk assessment update or a brief safety stand-down; Tier 1 warrants HSE involvement and possibly minor procedure or training updates; Tier 2 requires a formal investigation, procedural review, and targeted re-training; Tier 3 triggers full management mobilization, external notifications, and strict communication control (e.g. involving HR for family communications and enforcing a social media blackout). The code reflects these with conditional additions to the recommendations list. It also ensures that even near-misses with high potential get treated seriously (Tier 2 behavior), promoting company-wide learning. By default, these recommendations are rule-based, but if AI_CONFIG.useOpenAI is enabled, the system will call generateAIRecommendations to get additional suggestions from an AI model (e.g., an OpenAI API) to supplement the rule-based list.
+For hazards and observations (reports of unsafe conditions or behaviors without an actual incident), the logic auto-fills suggestions to mitigate the hazard. This includes immediate removal or control of the hazard, logging it for tracking, assigning responsibility to fix it, and communicating the fix to the team. These proactive recommendations help address issues before they lead to an accident, aligning with a preventive safety culture (and FMECA’s emphasis on addressing failure modes early). The checkMissingDocumentation function reviews the incident data to ensure all critical documentation is present before closure. It looks for specific context cues in the incident: for example, if a Diver Medic (DMT) was involved in treating an injury, the system expects an attachment of the DMT’s valid certification (since all dive team medics must be certified). If the cert is missing, it flags "DMT certification document" as required. Similarly, for any injuries, it requires an injury report form; for equipment failures, a maintenance or inspection record should be attached to assist in the investigation; for any incident of Tier 1 or higher, an investigation report is expected. The function returns a list of missingItems and a boolean complete status. The incident closure workflow (in incidents.tsx) can use this to halt closure and prompt the user to provide the missing information. For example:
+tsx
+Copier
+Modifier
+// File: client/src/pages/incidents.tsx (excerpt)
+import { classifySeverity, suggestCorrectiveActions, checkMissingDocumentation, generateIncidentReportPDF } from '../utils/ai-recommendations';
+
+// ... inside incident submission/closure logic:
+const severityInfo = classifySeverity(currentIncident);
+const actions = suggestCorrectiveActions(currentIncident);
+const { complete, missingItems } = checkMissingDocumentation(currentIncident);
+if (!complete) {
+   alert("Cannot close incident. Please provide the following: " + missingItems.join("; "));
+   return;
+}
+// If complete, generate the PDF report
+const reportPdfBlob = generateIncidentReportPDF(currentIncident, actions);
+// ... (code to upload or display the PDF)
+Finally, generateIncidentReportPDF assembles all relevant information into a PDF document structured similarly to the HydroDive ERP format. It includes an overview (project, date, incident title/ID, severity tier and escalation level), a narrative of the incident (description and timeline of events), and sections mirroring the ERP’s response structure:
+Initial On-Scene Response: documenting actions taken by the Bronze (on-scene) controller and site team (e.g., “Raise Alarm, Assess and evaluate, Make safe the scene, ... Treat on site, Stabilize” as listed in the ERP).
+Escalated Response (Onshore): actions by Silver/Gold level if applicable, such as assembling the Emergency Response Team at the command center, management decisions, and external communications handled under control (no unauthorized information release, HR/legal handling sensitive notifications).
+Investigation & Analysis: notes that a root cause investigation was performed (applying FMECA techniques to identify failures) and references the attached detailed investigation report.
+Corrective and Preventive Actions: a list of all recommendations (the same ones the AI suggested), including long-term fixes and “lessons learnt implementation” which will be shared across the company.
+Sign-offs: placeholders for management to approve and sign the report (e.g., Project Manager, HSE Manager), as would be required for an official report.
+The PDF generation function in the code is shown in pseudo-code for brevity – in a real implementation, you would use a library like jsPDF or PDFKit to create the PDF, adding text, headings, and formatting as needed. The goal is that the final report can be used for audits, client communication, and internal HSE review, containing all information in a professional format consistent with the ERP’s style and requirements.
+Configuration for AI Mode
+The AI logic is designed to be configurable. The AI_CONFIG.useOpenAI flag can be toggled (via an environment variable or application setting) to switch between local rule-based mode and OpenAI completion mode. In rule-based mode, the system strictly follows the encoded rules and checklists derived from company procedures and standards. In OpenAI mode, it will still run the rule-based checks first (to ensure compliance and critical items are covered), but will then query an AI model for any additional insights or nuanced suggestions. This can help in complex or novel scenarios where the AI might suggest creative solutions or highlight factors not explicitly covered by the rules. However, by default the system uses the rule-based outputs to guarantee alignment with HydroDive’s approved ERP and industry guidelines. OpenAI (or any machine-learning model) acts only as a supplementary assistant if enabled, and its suggestions can be reviewed by the HSE team before being applied. By implementing the logic in a dedicated module (ai-recommendations.ts), it remains modular and easy to maintain. New rules from updated ERP documents or industry standards can be added to the knowledge base within these functions. This ensures HydroSafe’s AI recommendations stay up-to-date with the latest safety protocols and can be easily adjusted (for example, if IOGP/IMCA issues new guidelines, or if company policy changes, the code can be modified accordingly). The combination of rule-based intelligence and optional AI provides a robust yet flexible system to manage incidents effectively—ensuring immediate compliance with known safety processes and augmenting with AI-driven insights when needed. Overall, this AI-driven logic will help HydroSafe users to rapidly assess incident severity, take correct actions, ensure no steps are missed, and document everything in a thorough report, thereby improving emergency response and incident management in line with HydroDive’s ERP and global best practices.
