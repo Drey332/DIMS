@@ -1,9 +1,9 @@
 // attached_assets/Firebase.ts
 
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
-// Paste your Firebase config here!
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCO3AhGO9e7r83Eq-E6GPJrzqhSOAvkE2k",
   authDomain: "hydrosafe-5d245.firebaseapp.com",
@@ -14,8 +14,8 @@ const firebaseConfig = {
   measurementId: "G-GPXHPG1PZK"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase only if no apps exist
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firestore and export
 export const db = getFirestore(app);

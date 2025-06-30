@@ -1,5 +1,5 @@
         import React, { useState } from "react";
-        import { db } from "attached_assets/Firebase";
+        import { db } from "../firebase.js";
         import { collection, addDoc } from "firebase/firestore";
 
         // --- Command Team Contacts from ERP (HDG-PRJ-HSE-863-01-24) ---
