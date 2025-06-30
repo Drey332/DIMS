@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { db } from "../firebase";
+import { db } from "../firebase"; // or "../firebase.js" if needed
 import { collection, addDoc } from "firebase/firestore";
 
 
@@ -200,11 +200,21 @@ import { collection, addDoc } from "firebase/firestore";
               setForm(f => ({ ...f, [name]: value }));
             }
           }
-          function handleObsSubmit(e: React.FormEvent) {
+          async function handleObsSubmit(e: React.FormEvent) {
             e.preventDefault();
-            alert("Observation submitted! (API integration goes here.)");
-            setForm(defaultForm);
-            onClose();
+            try {
+              await addDoc(collection(db, "observations"), {
+                ...form,
+                createdAt: new Date().toISOString(),
+                status: form.closedOut === "Yes" ? "CLOSED" : "OPEN", // add a status field for filtering
+              });
+              alert("Observation submitted!");
+              setForm(defaultForm);
+              onClose();
+            } catch (err) {
+              console.error("Failed to save observation:", err);
+              alert("Could not save observation to the database!");
+            }
           }
 
           // --- UI Styles (responsive, clean) ---
