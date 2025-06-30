@@ -14,7 +14,7 @@ import {
   signOut,
   type User
 } from 'firebase/auth';
-import { auth, googleProvider } from '../firebase.js';
+import { auth, googleProvider } from '../firebase';
 import { Shield, Anchor, Chrome, Mail, Lock, User as UserIcon, UserPlus, LogOut } from 'lucide-react';
 
 export default function LoginPage() {

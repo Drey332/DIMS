@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '../firebase.js';
+import { auth } from '../firebase';
 import { User, LogOut } from 'lucide-react';
 
 export default function ProfileMenu() {

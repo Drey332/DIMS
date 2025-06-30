@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { db } from "../firebase.js";
+import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
 
 
@@ -152,12 +152,10 @@ import { collection, addDoc } from "firebase/firestore";
           const match = analyzeEmergency(emergencyDesc);
           const [form, setForm] = useState(defaultForm);
 
-          // --- Emergency Handler (async, crash-proof!) ---
           async function handleEmergencySubmit(e: React.FormEvent) {
             e.preventDefault();
             try {
               if (match) {
-                // Defensive: Only include contacts that exist!
                 const validContacts = match.notify
                   .filter(role => commandContacts[role])
                   .map(role => ({
@@ -165,17 +163,19 @@ import { collection, addDoc } from "firebase/firestore";
                     ...commandContacts[role]
                   }));
 
-                await saveEmergencyReport({
+                // --- Always set status and startTime! ---
+                await addDoc(collection(db, "emergencies"), {
+                  type: match.type,
+                  title: match.type, // Optional, for easy display
                   description: emergencyDesc,
-                  matchType: match.type,
-                  notify: match.notify,
-                  protocol: match.protocol,
+                  priority: "CRITICAL",
+                  status: "ACTIVE", // Always present!
+                  startTime: new Date().toISOString(), // Always present!
                   notifiedContacts: validContacts,
+                  createdAt: new Date().toISOString(),
                 });
               }
-              alert("Emergency report submitted!\n\n" + (match
-                ? `Type: ${match.type}\nNotify: ${match.notify.join(", ")}\nProtocol: ${match.protocol}`
-                : "No ERP protocol matched. Please escalate to GOLD/SILVER!"));
+              alert("Emergency report submitted!");
               setEmergencyDesc("");
               onClose();
             } catch (error) {

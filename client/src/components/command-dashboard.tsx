@@ -1,38 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import EmergencyModal from "./EmergencyModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  AlertTriangle, 
-  Users, 
-  Bell,
-  Eye,
-  ArrowUp
-} from "lucide-react";
+import { AlertTriangle, Users, Bell, Eye, ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { db } from "../firebase";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
 
-// Example incident type (replace with your actual type if you have it)
+// TypeScript type for an incident
 type Incident = {
   id: string;
-  status: string;
-  priority: string;
+  status: string;      // e.g. 'ACTIVE', 'CLOSED'
+  priority: string;    // e.g. 'CRITICAL'
   title: string;
-  startTime: string;
+  startTime: string;   // ISO string
+  description?: string;
 };
 
-// Dummy active incident for demo
-const dummyIncidents: Incident[] = [
-  {
-    id: "1",
-    status: "ACTIVE",
-    priority: "CRITICAL",
-    title: "Loss of Communications - DSV Pioneer",
-    startTime: new Date().toISOString()
-  }
-];
-
-// --- Hardcoded ERP Command Team ---
 const commandTeam = [
   { name: "Frank Ifedi", role: "GOLD", title: "MD/CEO - Gold Manager", initials: "FI", status: "Active" },
   { name: "Dave Ward", role: "SILVER", title: "Marine Operations Director", initials: "DW", status: "On Duty" },
@@ -42,41 +27,49 @@ const commandTeam = [
 
 export function CommandDashboard() {
   const [showModal, setShowModal] = useState(false);
+  const [incidentView, setIncidentView] = useState<'ACTIVE' | 'CLOSED' | 'ALL'>('ACTIVE');
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // --- Replace with your actual incident fetch or use dummy data
-  const incidents = dummyIncidents;
-  const incidentsLoading = false;
+  // Fetch incidents from Firestore
+  useEffect(() => {
+    async function fetchIncidents() {
+      setLoading(true);
+      let q;
+      if (incidentView === "ALL") {
+        q = query(collection(db, "emergencies"), orderBy("startTime", "desc"));
+      } else {
+        q = query(
+          collection(db, "emergencies"),
+          where("status", "==", incidentView),
+          orderBy("startTime", "desc")
+        );
+      }
+      const snapshot = await getDocs(q);
+      setIncidents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Incident)));
+      setLoading(false);
+    }
+    fetchIncidents();
+  }, [incidentView, showModal]); // refresh list after modal closes
 
-  const activeIncidents = incidents.filter(incident => incident.status === 'ACTIVE');
-
+  // UI helpers
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'CRITICAL':
-        return 'priority-critical border';
-      case 'HIGH':
-        return 'priority-high border';
-      case 'MEDIUM':
-        return 'priority-medium border';
-      case 'LOW':
-        return 'priority-low border';
-      default:
-        return 'bg-gray-50 border-gray-200';
+      case 'CRITICAL': return 'priority-critical border';
+      case 'HIGH': return 'priority-high border';
+      case 'MEDIUM': return 'priority-medium border';
+      case 'LOW': return 'priority-low border';
+      default: return 'bg-gray-50 border-gray-200';
     }
   };
-
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'GOLD':
-        return 'role-gold-light';
-      case 'SILVER':
-        return 'role-silver-light';
-      case 'BRONZE':
-        return 'role-bronze-light';
-      default:
-        return 'bg-gray-100';
+      case 'GOLD': return 'role-gold-light';
+      case 'SILVER': return 'role-silver-light';
+      case 'BRONZE': return 'role-bronze-light';
+      default: return 'bg-gray-100';
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Active':
@@ -90,20 +83,28 @@ export function CommandDashboard() {
     }
   };
 
-  if (incidentsLoading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>;
-  }
+  // Filtered incidents for display (if needed)
+  // const displayedIncidents = incidentView === "ALL" ? incidents : incidents.filter(i => i.status === incidentView);
 
   return (
     <>
+      <div className="mb-4 flex gap-2">
+        <Button onClick={() => setIncidentView("ACTIVE")} variant={incidentView === "ACTIVE" ? "default" : "outline"}>Active</Button>
+        <Button onClick={() => setIncidentView("CLOSED")} variant={incidentView === "CLOSED" ? "default" : "outline"}>Closed</Button>
+        <Button onClick={() => setIncidentView("ALL")} variant={incidentView === "ALL" ? "default" : "outline"}>All</Button>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Active Incidents Overview */}
+        {/* Incident Overview */}
         <div className="lg:col-span-2">
           <Card className="hydro-card">
             <CardHeader className="flex flex-row items-center justify-between pb-6">
               <CardTitle className="text-2xl font-bold text-hydro-dark flex items-center">
                 <AlertTriangle className="text-orange-500 mr-3 h-6 w-6" />
-                Active Incidents & Operations
+                {incidentView === "ACTIVE"
+                  ? "Active Incidents & Operations"
+                  : incidentView === "CLOSED"
+                  ? "Closed/Resolved Incidents"
+                  : "All Emergency Incidents"}
               </CardTitle>
               <Button
                 className="hydro-button-emergency"
@@ -115,7 +116,9 @@ export function CommandDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {activeIncidents.length === 0 ? (
+                {loading ? (
+                  <div className="text-center py-8">Loading...</div>
+                ) : incidents.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="inline-flex items-center px-6 py-3 rounded-full bg-green-50 text-green-800 font-medium">
                       <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
@@ -123,7 +126,7 @@ export function CommandDashboard() {
                     </div>
                   </div>
                 ) : (
-                  activeIncidents.map((incident) => (
+                  incidents.map((incident) => (
                     <div key={incident.id} className={cn("rounded-xl p-5 border", getPriorityColor(incident.priority))}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-4">
@@ -142,8 +145,8 @@ export function CommandDashboard() {
                       <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
                         <div>Bronze: <span className="font-medium text-bronze">Nick Roddy</span></div>
                         <div>Silver: <span className="font-medium text-silver">Dean Golding</span></div>
-                        <div>Started: <span>{new Date(incident.startTime).toLocaleTimeString()}</span></div>
-                        <div>Duration: <span>2h 18m</span></div>
+                        <div>Started: <span>{incident.startTime ? new Date(incident.startTime).toLocaleString() : "-"}</span></div>
+                        <div>Status: <span>{incident.status}</span></div>
                       </div>
                       <div className="mt-3 flex space-x-2">
                         <Button size="sm" variant="outline" className="bg-orange-600 text-white hover:bg-orange-700">
@@ -162,7 +165,6 @@ export function CommandDashboard() {
             </CardContent>
           </Card>
         </div>
-
         {/* Command Team Status */}
         <div>
           <Card className="hydro-card">
