@@ -499,15 +499,30 @@ export default function ProjectSetup() {
           <Header user={{ role: "GOLD", name: "David Mooney", title: "General Manager", initials: "DM" }} project={projectInfo || undefined} />
           <Navigation />
           <main className="container mx-auto px-4 py-6">
-            <Tabs defaultValue="project" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="project">Project Details</TabsTrigger>
-                <TabsTrigger value="contacts">Emergency Contacts</TabsTrigger>
-                <TabsTrigger value="erp">ERP Protocols</TabsTrigger>
-                <TabsTrigger value="assets">Assets & Equipment</TabsTrigger>
-                <TabsTrigger value="team">Team Assignments</TabsTrigger>
-                {/* --- Add your other tabs here ... --- */}
-              </TabsList>
+              <Tabs defaultValue="project" className="space-y-6">
+                <TabsList
+                  className="flex overflow-x-auto whitespace-nowrap no-scrollbar rounded-xl border border-gray-200 bg-gray-50 p-1 gap-2 max-w-full"
+                  style={{ WebkitOverflowScrolling: "touch" }}
+                >
+                  <TabsTrigger className="px-4 py-2 rounded-xl font-medium truncate" value="project">
+                    Project Details
+                  </TabsTrigger>
+                  <TabsTrigger className="px-4 py-2 rounded-xl font-medium truncate" value="contacts">
+                    Emergency Contacts
+                  </TabsTrigger>
+                  <TabsTrigger className="px-4 py-2 rounded-xl font-medium truncate" value="erp">
+                    ERP Protocols
+                  </TabsTrigger>
+                  <TabsTrigger className="px-4 py-2 rounded-xl font-medium truncate" value="assets">
+                    Assets & Equipment
+                  </TabsTrigger>
+                  <TabsTrigger className="px-4 py-2 rounded-xl font-medium truncate" value="team">
+                    Team Assignments
+                  </TabsTrigger>
+                  {/* --- Add your other tabs here ... --- */}
+                </TabsList>
+                {/* ...Tab content below... */}
+              </Tabs>
 
           {/* --- PROJECT DETAILS --- */}
           <TabsContent value="project">
@@ -1106,29 +1121,27 @@ export default function ProjectSetup() {
                                   </Card>
                                 </TabsContent>
 
-                                {/* --- TEAM ASSIGNMENTS TAB --- */}
-                                <TabsContent value="team">
-                                  <Card className="hydro-card">
-                                    <CardHeader>
-                                      <CardTitle className="flex items-center">
-                                        <FileText className="w-5 h-5 mr-2 text-primary" />
-                                        Team Assignments
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="p-6 text-gray-500 italic text-center">
-                                        {/* --- Plug in your team logic here, or extend from previous file! --- */}
-                                        (Team assignments management coming soon...)
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                </TabsContent>
+{/* --- TEAM ASSIGNMENTS TAB --- */}
+<TabsContent value="team">
+  <Card className="hydro-card">
+    <CardHeader>
+      <CardTitle className="flex items-center">
+        <FileText className="w-5 h-5 mr-2 text-primary" />
+        Team Assignments
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="p-6 text-gray-500 italic text-center">
+        {/* --- Plug in your team logic here, or extend from previous file! --- */}
+        (Team assignments management coming soon...)
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
 
-                                {/* --- Add your other tabs here ... --- */}
-                                </Tabs>
-                                </main>
-                                </div>
-                                
-           
-        );
-                                }
+{/* --- Add your other tabs here ... --- */}
+</Tabs>
+</main>
+</div>
+);
+}

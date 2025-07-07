@@ -1,25 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { Building, User, Shield, Activity } from "lucide-react";
+import { Building, Shield, Activity } from "lucide-react";
 
 interface ProjectHeaderProps {
+  project: any; // use your ProjectInfo type if you have one
   className?: string;
 }
 
-export function ProjectHeader({ className }: ProjectHeaderProps) {
-  // Get current user profile
+export function ProjectHeader({ project, className }: ProjectHeaderProps) {
+  // Get current user profile (optional: keep this logic)
   const { data: userProfile } = useQuery({
     queryKey: ['/api/user/profile'],
     queryFn: () => fetch('/api/user/profile').then(res => res.json()),
   });
-
-  // Get user projects (assuming first one is active)
-  const { data: projects = [] } = useQuery({
-    queryKey: ['/api/user/projects'],
-    queryFn: () => fetch('/api/user/projects').then(res => res.json()),
-  });
-
-  const activeProject = projects[0];
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -34,7 +27,7 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
     }
   };
 
-  if (!activeProject || !userProfile) {
+  if (!project || !userProfile) {
     return null;
   }
 
@@ -45,9 +38,9 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
         <div className="flex items-center gap-2">
           <Building className="h-4 w-4 text-gray-500" />
           <span className="font-semibold text-gray-900">
-            Project: {activeProject.name}
+            Project: {project?.name}
           </span>
-          <span className="text-gray-400">({activeProject.number})</span>
+          <span className="text-gray-400">({project?.number})</span>
         </div>
 
         <span className="text-gray-300">|</span>
@@ -56,7 +49,7 @@ export function ProjectHeader({ className }: ProjectHeaderProps) {
         <div className="flex items-center gap-2">
           <span className="text-gray-600">Client:</span>
           <span className="font-medium text-gray-900">
-            Shell Petroleum Development Company (SPDC)
+            {project?.client}
           </span>
         </div>
 

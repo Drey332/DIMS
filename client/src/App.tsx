@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,7 +8,10 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
 import { socket } from './socket.js';
-import { useEffect, useState } from 'react';
+
+// FIREBASE (match your setup)
+import { db } from "./firebase";
+import { doc, onSnapshot } from "firebase/firestore";
 
 import Dashboard from "@/pages/dashboard";
 import Incidents from "@/pages/incidents";
@@ -29,29 +33,32 @@ function Router() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // --- Live Project Info State ---
+  const [projectInfo, setProjectInfo] = useState(null);
+
   useEffect(() => {
-    // Check for authentication token
+    // Auth logic
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
-    
-    if (token && user) {
-      setIsAuthenticated(true);
-    }
+    if (token && user) setIsAuthenticated(true);
     setIsLoading(false);
 
-    // Initialize Socket.IO connection for authenticated users
+    // Socket logic
     if (token) {
       socket.connect();
-      
-      // Join user's projects for real-time updates
       const userData = JSON.parse(user || '{}');
-      if (userData.id) {
-        socket.emit('user-online', userData.id);
-      }
+      if (userData.id) socket.emit('user-online', userData.id);
     }
+
+    // --- Firestore live subscription for project info ---
+    // Replace "1" with your actual PROJECT_ID logic if needed
+    const ref = doc(db, "projects", "1");
+    const unsub = onSnapshot(ref, (snap) => {
+      if (snap.exists()) setProjectInfo({ ...snap.data(), id: snap.id });
+    });
+    return () => unsub();
   }, []);
 
-  // Show loading state
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -63,18 +70,16 @@ function Router() {
     );
   }
 
-  // Show login page for unauthenticated users (except for login/register routes)
   if (!isAuthenticated && !['/login', '/register'].includes(location)) {
     return <Login />;
   }
 
-  // Show authenticated app
   return (
     <>
       {isAuthenticated && (
         <>
           <PersistentNav />
-          <ProjectHeader />
+          <ProjectHeader project={projectInfo} />
         </>
       )}
       <div className="min-h-screen bg-gray-50">
@@ -91,7 +96,9 @@ function Router() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/reports/generate" component={Reports} />
                 <Route path="/reports/history" component={Reports} />
-                <Route path="/setup" component={ProjectSetup} />
+                <Route path="/setup">
+                  {() => <ProjectSetup project={projectInfo} />}
+                </Route>
                 <Route path="/asset-verification" component={AssetVerification} />
                 <Route path="/assets" component={AssetVerification} />
                 <Route path="/assets/upload" component={AssetUpload} />
