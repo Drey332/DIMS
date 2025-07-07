@@ -56,58 +56,5 @@ export function Navigation() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const renderNavItem = (item: NavItem) => {
-    const Icon = item.icon;
-    const isActive = location === item.href || (item.children && item.children.some(child => location === child.href));
-    
-    if (item.children) {
-      return (
-        <div 
-          key={item.href} 
-          className="relative"
-          onMouseEnter={() => setOpenDropdown(item.href)}
-          onMouseLeave={() => setOpenDropdown(null)}
-        >
-          <button
-            className={cn(
-              "px-6 py-3 flex items-center space-x-2 font-medium transition-colors",
-              isActive
-                ? "text-primary border-b-2 border-primary bg-primary/5"
-                : "text-gray-600 hover:text-primary hover:bg-gray-50"
-            )}
-          >
-            <Icon className="w-4 h-4" />
-            <span>{item.label}</span>
-            <ChevronDown className="w-3 h-3" />
-          </button>
-          
-          {openDropdown === item.href && (
-            <div className="absolute top-full left-0 mt-1 w-48 bg-white border rounded-md shadow-lg z-50">
-              {item.children.map((child) => {
-                const ChildIcon = child.icon;
-                return (
-                  <Link key={child.href} href={child.href}>
-                    <div className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                      <ChildIcon className="w-4 h-4 mr-2" />
-                      {child.label}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return null;
-  };
-
-  return (
-    <nav className="bg-white shadow-sm border-b">
-      <div className="container mx-auto px-4">
-        {navItems.map(renderNavItem)}
-      </div>
-    </nav>
-  );
+  return null;
 }
