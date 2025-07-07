@@ -100,21 +100,7 @@ export function Navigation() {
       );
     }
 
-    return (
-      <Link key={item.href} href={item.href}>
-        <button
-          className={cn(
-            "px-6 py-3 flex items-center space-x-2 font-medium transition-colors",
-            isActive
-              ? "text-primary border-b-2 border-primary bg-primary/5"
-              : "text-gray-600 hover:text-primary hover:bg-gray-50"
-          )}
-        >
-          <Icon className="w-4 h-4" />
-          <span>{item.label}</span>
-        </button>
-      </Link>
-    );
+    return null;
   };
 
   return (
