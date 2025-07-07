@@ -90,26 +90,5 @@ export function Header({ user, project }: HeaderProps = {}) {
     // and trigger re-fetching of all project-specific data
   };
 
-  return (
-    <header className="hydro-header">
-      <div className="container mx-auto px-4">
-        {/* Project Context Banner */}
-        <div className="bg-primary/10 px-4 py-2 rounded-lg mb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-medium text-hydro-dark">{effectiveProject.name}</h2>
-              <p className="text-sm text-gray-600">
-                Project No: <span className="font-medium">{effectiveProject.number}</span> | 
-                Client: <span className="font-medium">{effectiveProject.client}</span>
-              </p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm font-medium text-green-700">Active Operations</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
+  return null;
 }
