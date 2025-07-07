@@ -521,11 +521,9 @@ export default function ProjectSetup() {
                   </TabsTrigger>
                   {/* --- Add your other tabs here ... --- */}
                 </TabsList>
-                {/* ...Tab content below... */}
-              </Tabs>
-
-          {/* --- PROJECT DETAILS --- */}
-          <TabsContent value="project">
+                
+                {/* --- PROJECT DETAILS --- */}
+                <TabsContent value="project">
             <Card className="hydro-card">
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -1140,8 +1138,8 @@ export default function ProjectSetup() {
 </TabsContent>
 
 {/* --- Add your other tabs here ... --- */}
-</Tabs>
-</main>
-</div>
-);
-}
+              </Tabs>
+          </main>
+        </div>
+      );
+    }
