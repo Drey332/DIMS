@@ -93,39 +93,6 @@ export function Header({ user, project }: HeaderProps = {}) {
   return (
     <header className="hydro-header">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center py-4">
-          <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <Droplets className="text-primary text-2xl" />
-              <h1 className="text-2xl font-bold text-hydro-dark">HydroSafe</h1>
-              <span className="text-sm text-gray-600">AI Emergency Response Co-Pilot</span>
-            </div>
-            
-            {/* Project Switcher */}
-            <div className="hidden md:block">
-              <ProjectSwitcher
-                currentUser={currentUser}
-                activeProjectId={activeProjectId}
-                onProjectChange={handleProjectChange}
-              />
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <Badge className={`px-3 py-1 ${getRoleColor(safeRole)}/20 text-${getRoleColor(safeRole)} border-${getRoleColor(safeRole)}/30`}>
-              <div className={`w-3 h-3 ${getRoleColor(safeRole)} rounded-full mr-2`}></div>
-              {safeRole} Command
-            </Badge>
-            <div className="text-right">
-              <div className="font-medium">{effectiveUser.name}</div>
-              <div className="text-sm text-gray-600">{effectiveUser.title}</div>
-            </div>
-            <div className="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-medium">
-              {effectiveUser.initials}
-            </div>
-          </div>
-        </div>
-        
         {/* Project Context Banner */}
         <div className="bg-primary/10 px-4 py-2 rounded-lg mb-4">
           <div className="flex items-center justify-between">
