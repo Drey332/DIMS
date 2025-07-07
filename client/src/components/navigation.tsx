@@ -106,9 +106,7 @@ export function Navigation() {
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="container mx-auto px-4">
-        <div className="flex space-x-1">
-          {navItems.map(renderNavItem)}
-        </div>
+        {navItems.map(renderNavItem)}
       </div>
     </nav>
   );
