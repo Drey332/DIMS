@@ -462,14 +462,14 @@ export default function ProjectSetup() {
   };
 
   // --- Main Render ---
-      if (loading) {
-        return (
-          <div className="flex flex-col items-center justify-center h-72">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-hydro-dark mb-3"></div>
-            <div className="font-medium text-hydro-dark">Loading project info...</div>
-          </div>
-        );
-      }
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-72">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-hydro-dark mb-3"></div>
+        <div className="font-medium text-hydro-dark">Loading project info...</div>
+      </div>
+    );
+  }
 
   if (notFound) {
     return (
@@ -630,7 +630,8 @@ export default function ProjectSetup() {
       </div>
     );
   }
-      return (
+
+  return (
         <div className="min-h-screen bg-hydro-light">
           <Header user={{ role: "GOLD", name: "David Mooney", title: "General Manager", initials: "DM" }} project={projectInfo || undefined} />
           <Navigation />
@@ -1315,40 +1316,7 @@ export default function ProjectSetup() {
                       </Button>
                     </CardTitle>
                   </CardHeader>
-                  {showGoldAssetModal && (
-                    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 flex flex-col items-center">
-                        <h3 className="font-bold text-xl mb-4 text-hydro-dark text-center">Gold Command Only</h3>
-                        <p className="text-center text-gray-700 mb-2 font-medium">
-                          Enter Gold Command Code to add assets & equipment.
-                        </p>
-                        <Input
-                          type="password"
-                          placeholder="Gold Code"
-                          value={goldAssetCodeInput}
-                          onChange={e => setGoldAssetCodeInput(e.target.value)}
-                          className="mb-2"
-                          autoFocus
-                          onKeyDown={e => {
-                            if (e.key === "Enter") handleGoldAssetUnlock();
-                          }}
-                        />
-                        {goldAssetError && <div className="text-red-600 mt-1">{goldAssetError}</div>}
-                        <div className="flex gap-2 mt-3">
-                          <Button
-                            className="w-32 bg-yellow-600 hover:bg-yellow-700 text-white"
-                            onClick={handleGoldAssetUnlock}
-                          >
-                            Confirm
-                          </Button>
-                          <Button variant="outline" onClick={() => { setShowGoldAssetModal(false); setGoldAssetCodeInput(""); setGoldAssetError(""); }}>
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                    <CardContent>
+                  <CardContent>
                       <div className="space-y-4">
                         {assets.length === 0 && (
                           <div className="p-6 text-center text-gray-400 italic">
@@ -1532,27 +1500,64 @@ export default function ProjectSetup() {
                   </CardContent>
                 </Card>
               </TabsContent>
-{/* --- TEAM ASSIGNMENTS TAB --- */}
-<TabsContent value="team">
-  <Card className="hydro-card">
-    <CardHeader>
-      <CardTitle className="flex items-center">
-        <FileText className="w-5 h-5 mr-2 text-primary" />
-        Team Assignments
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="p-6 text-gray-500 italic text-center">
-        {/* --- Plug in your team logic here, or extend from previous file! --- */}
-        (Team assignments management coming soon...)
-      </div>
-    </CardContent>
-  </Card>
-</TabsContent>
+
+              {/* --- TEAM ASSIGNMENTS TAB --- */}
+              <TabsContent value="team">
+                <Card className="hydro-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <FileText className="w-5 h-5 mr-2 text-primary" />
+                      Team Assignments
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-6 text-gray-500 italic text-center">
+                      {/* --- Plug in your team logic here, or extend from previous file! --- */}
+                      (Team assignments management coming soon...)
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
 {/* --- Add your other tabs here ... --- */}
               </Tabs>
+
+              {/* Gold Asset Modal - placed outside Card structure */}
+              {showGoldAssetModal && (
+                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 flex flex-col items-center">
+                    <h3 className="font-bold text-xl mb-4 text-hydro-dark text-center">Gold Command Only</h3>
+                    <p className="text-center text-gray-700 mb-2 font-medium">
+                      Enter Gold Command Code to add assets & equipment.
+                    </p>
+                    <Input
+                      type="password"
+                      placeholder="Gold Code"
+                      value={goldAssetCodeInput}
+                      onChange={e => setGoldAssetCodeInput(e.target.value)}
+                      className="mb-2"
+                      autoFocus
+                      onKeyDown={e => {
+                        if (e.key === "Enter") handleGoldAssetUnlock();
+                      }}
+                    />
+                    {goldAssetError && <div className="text-red-600 mt-1">{goldAssetError}</div>}
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        className="w-32 bg-yellow-600 hover:bg-yellow-700 text-white"
+                        onClick={handleGoldAssetUnlock}
+                      >
+                        Confirm
+                      </Button>
+                      <Button variant="outline" onClick={() => { setShowGoldAssetModal(false); setGoldAssetCodeInput(""); setGoldAssetError(""); }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
         </main>
         </div>
-     
+      );
+    }
     }
