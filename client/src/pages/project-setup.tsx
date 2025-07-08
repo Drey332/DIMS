@@ -71,7 +71,36 @@ const contactSchema = z.object({
   email: z.string().email().optional().or(z.literal("")),
   responseTime: z.string().optional(),
 });
+// --- Asset & Equipment Types and Schema ---
+type AssetEquipment = {
+  id?: string;
+  name: string;
+  category: string;
+  modelSerial: string;
+  manufacturer: string;
+  year: string;
+  condition: "New" | "Good" | "Fair" | "Needs Repair";
+  assignedTo?: string;
+  specs?: string;
+  notes?: string;
+  attachments?: string[];
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  versions?: any[]; // For audit/versioning (optional)
+};
 
+const assetSchema = z.object({
+  name: z.string().min(1, "Asset name is required"),
+  category: z.string().min(1, "Category is required"),
+  modelSerial: z.string().min(1, "Model/Serial # required"),
+  manufacturer: z.string().min(1, "Manufacturer required"),
+  year: z.string().min(4, "Year required"),
+  condition: z.enum(["New", "Good", "Fair", "Needs Repair"]),
+  assignedTo: z.string().optional(),
+  specs: z.string().optional(),
+  notes: z.string().optional(),
+});
 // --- Main Component ---
 export default function ProjectSetup() {
   const PROJECT_ID = "1";
@@ -85,6 +114,7 @@ export default function ProjectSetup() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState<ProjectInfo | null>(null);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  
   // --- Project Creation & Loading State ---
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -116,7 +146,113 @@ export default function ProjectSetup() {
   });
   const [erpAdminUnlocked, setErpAdminUnlocked] = useState(false);
   const [unlockCode, setUnlockCode] = useState("");
+  const [tabValue, setTabValue] = useState("project");
 
+  // --- ASSETS STATE & HOOKS ---
+  const [assets, setAssets] = useState<AssetEquipment[]>([]);
+  const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<AssetEquipment | null>(null);
+
+
+  const [showGoldAssetModal, setShowGoldAssetModal] = useState(false);
+  const [goldAssetCodeInput, setGoldAssetCodeInput] = useState("");
+  const [goldAssetError, setGoldAssetError] = useState("");
+  const [assetModalUnlocked, setAssetModalUnlocked] = useState(false);
+  // Permission: Only allow editing if Gold code verified (or projectInfo exists, whatever you use)
+   
+  const userCanEditAssets = assetModalUnlocked;
+  // Firestore: Real-time sync for assets
+  useEffect(() => {
+    const coll = collection(db, "projects", PROJECT_ID, "assets");
+    const unsub = onSnapshot(coll, (snap) => {
+      setAssets(snap.docs.map((d) => ({ ...d.data(), id: d.id }) as AssetEquipment));
+    });
+    return unsub;
+  }, []);
+
+  // Asset form hook
+  const assetForm = useForm<z.infer<typeof assetSchema>>({
+    resolver: zodResolver(assetSchema),
+    defaultValues: {
+      name: "",
+      category: "",
+      modelSerial: "",
+      manufacturer: "",
+      year: "",
+      condition: "New",
+      assignedTo: "",
+      specs: "",
+      notes: "",
+    },
+  });
+
+  const saveAsset = async (data: z.infer<typeof assetSchema>) => {
+    try {
+      if (editingAsset?.id) {
+        // Versioning logic optional for v1
+        const assetRef = doc(db, "projects", PROJECT_ID, "assets", editingAsset.id);
+        await updateDoc(assetRef, {
+          ...editingAsset,
+          ...data,
+          updatedAt: new Date().toISOString(),
+        });
+        toast({ title: "Asset updated!" });
+      } else {
+        const newRef = doc(collection(db, "projects", PROJECT_ID, "assets"));
+        await setDoc(newRef, {
+          ...data,
+          id: newRef.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdBy: "GOLD", // or whatever ID/name you want
+        });
+        toast({ title: "Asset added!" });
+      }
+      setIsAssetModalOpen(false);
+      setEditingAsset(null);
+      assetForm.reset();
+    } catch {
+      toast({ title: "Error", description: "Could not save asset", variant: "destructive" });
+    }
+  };
+  const handleGoldAssetUnlock = () => {
+    if (goldAssetCodeInput === "000") {
+      setAssetModalUnlocked(true);
+      setShowGoldAssetModal(false);
+      setGoldAssetCodeInput("");
+      setGoldAssetError("");
+      setTimeout(() => setIsAssetModalOpen(true), 250);
+    } else {
+      setGoldAssetError("Incorrect code. Access denied.");
+    }
+  };
+
+  const handleEditAsset = (asset: AssetEquipment) => {
+    setEditingAsset(asset);
+    assetForm.reset({
+      name: asset.name,
+      category: asset.category,
+      modelSerial: asset.modelSerial,
+      manufacturer: asset.manufacturer,
+      year: asset.year,
+      condition: asset.condition,
+      assignedTo: asset.assignedTo || "",
+      specs: asset.specs || "",
+      notes: asset.notes || "",
+    });
+    setIsAssetModalOpen(true);
+  };
+
+  const handleDeleteAsset = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "projects", PROJECT_ID, "assets", id));
+      toast({ title: "Asset removed" });
+    } catch {
+      toast({ title: "Error", description: "Could not delete asset", variant: "destructive" });
+    }
+  };
+
+  
   // --- Firestore Live Subscriptions ---
   // Project Info
   // --- Firestore Live Subscription for Project Info ---
@@ -499,7 +635,9 @@ export default function ProjectSetup() {
           <Header user={{ role: "GOLD", name: "David Mooney", title: "General Manager", initials: "DM" }} project={projectInfo || undefined} />
           <Navigation />
           <main className="container mx-auto px-4 py-6">
-              <Tabs defaultValue="project" className="space-y-6">
+            <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-6">
+              {/* DESKTOP: Horizontal Tabs */}
+              <div className="hidden sm:flex">
                 <TabsList
                   className="flex overflow-x-auto whitespace-nowrap no-scrollbar rounded-xl border border-gray-200 bg-gray-50 p-1 gap-2 max-w-full"
                   style={{ WebkitOverflowScrolling: "touch" }}
@@ -519,9 +657,25 @@ export default function ProjectSetup() {
                   <TabsTrigger className="px-4 py-2 rounded-xl font-medium truncate" value="team">
                     Team Assignments
                   </TabsTrigger>
-                  {/* --- Add your other tabs here ... --- */}
+                  {/* --- Add other tabs here ... --- */}
                 </TabsList>
-                
+              </div>
+
+              {/* MOBILE: Dropdown Tabs */}
+              <div className="block sm:hidden mb-4">
+                <select
+                  value={tabValue}
+                  onChange={e => setTabValue(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 bg-white font-medium text-base focus:outline-none"
+                >
+                  <option value="project">Project Details</option>
+                  <option value="contacts">Emergency Contacts</option>
+                  <option value="erp">ERP Protocols</option>
+                  <option value="assets">Assets & Equipment</option>
+                  <option value="team">Team Assignments</option>
+                  {/* --- Add other options here ... --- */}
+                </select>
+              </div>
                 {/* --- PROJECT DETAILS --- */}
                 <TabsContent value="project">
             <Card className="hydro-card">
@@ -737,206 +891,230 @@ export default function ProjectSetup() {
                                 </Card>
                                 </TabsContent>
 
-                                {/* --- EMERGENCY CONTACTS TAB --- */}
-                                <TabsContent value="contacts">
-                                  <Card className="hydro-card">
-                                    <CardHeader>
-                                      <CardTitle className="flex items-center justify-between">
-                                        <div className="flex items-center">
-                                          <Phone className="w-5 h-5 mr-2 text-primary" />
-                                          Emergency Contacts
-                                        </div>
-                                        <Button
-                                          onClick={() => {
-                                            setEditingContact(null);
-                                            contactForm.reset({
-                                              contactType: "",
-                                              name: "",
-                                              phone: "",
-                                              email: "",
-                                              responseTime: "",
-                                            });
-                                            setIsContactModalOpen(true);
-                                          }}
-                                          className="hydro-button-primary"
-                                        >
-                                          <Plus className="w-4 h-4 mr-2" />
-                                          Add/Update Contact
-                                        </Button>
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="space-y-4">
-                                        {contacts.map((contact) => (
-                                          <div key={contact.id} className="p-4 border rounded-lg bg-white shadow-sm">
-                                            <div className="flex items-start justify-between">
-                                              <div className="flex items-start space-x-3">
-                                                <div className="text-2xl">{getContactIcon(contact.contactType)}</div>
-                                                <div>
-                                                  <h4 className="font-medium text-hydro-dark">
-                                                    {getContactTypeLabel(contact.contactType)}
-                                                  </h4>
-                                                  <p className="text-sm text-gray-600">{contact.name}</p>
-                                                  <div className="mt-2 space-y-1">
-                                                    <div
-                                                      className="flex items-center text-sm text-gray-600 cursor-pointer hover:text-green-600 transition-colors"
-                                                      onClick={() => window.open(`tel:${contact.phone}`, "_self")}
-                                                    >
-                                                      <Phone className="w-3 h-3 mr-2" />
-                                                      <span className="hover:underline font-mono">{contact.phone}</span>
-                                                    </div>
-                                                    {contact.email && (
-                                                      <div className="flex items-center text-sm text-gray-600">
-                                                        📧 {contact.email}
-                                                      </div>
-                                                    )}
-                                                    {contact.responseTime && (
-                                                      <div className="flex items-center text-sm text-green-600">
-                                                        ⏱️ Response time: {contact.responseTime}
-                                                      </div>
-                                                    )}
-                                                    {contact.lastVerified && (
-                                                      <div className="flex items-center text-sm text-gray-500">
-                                                        <CheckCircle className="w-3 h-3 mr-1" />
-                                                        Last verified: {contact.lastVerified}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                              <div className="flex space-x-2">
-                                                <Button
-                                                  size="sm"
-                                                  className="bg-green-600 hover:bg-green-700 text-white"
-                                                  onClick={() => window.open(`tel:${contact.phone}`, "_self")}
-                                                >
-                                                  <Phone className="w-3 h-3 mr-1" />
-                                                  Call
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  onClick={() => handleEditContact(contact)}
-                                                >
-                                                  <Edit className="w-3 h-3 mr-1" />
-                                                  Edit
-                                                </Button>
-                                                <Button
-                                                  size="sm"
-                                                  variant="outline"
-                                                  className="text-red-600 hover:text-red-700"
-                                                  onClick={() => handleDeleteContact(contact.id!)}
-                                                >
-                                                  <Trash2 className="w-3 h-3 mr-1" />
-                                                  Remove
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                      {/* Contact Modal */}
-                                      {isContactModalOpen && (
-                                        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                                          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-                                            <h3 className="text-xl font-bold text-hydro-dark mb-4">
-                                              {editingContact ? "Update Contact" : "Add Contact"}
-                                            </h3>
-                                            <Form {...contactForm}>
-                                              <form onSubmit={contactForm.handleSubmit(saveContact)} className="space-y-4">
-                                                <FormField
-                                                  control={contactForm.control}
-                                                  name="contactType"
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Contact Type</FormLabel>
-                                                      <FormControl>
-                                                        <select {...field} className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                                          <option value="">Select type...</option>
-                                                          <option value="HOSPITAL">Hospital</option>
-                                                          <option value="MEDEVAC">MEDEVAC Service</option>
-                                                          <option value="MARINE_RESCUE">Marine Rescue</option>
-                                                          <option value="POLICE">Police</option>
-                                                          <option value="COAST_GUARD">Coast Guard</option>
-                                                        </select>
-                                                      </FormControl>
-                                                      <FormMessage />
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                                <FormField
-                                                  control={contactForm.control}
-                                                  name="name"
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Organization Name</FormLabel>
-                                                      <FormControl>
-                                                        <Input placeholder="e.g., Warri Central Hospital" {...field} />
-                                                      </FormControl>
-                                                      <FormMessage />
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                                <FormField
-                                                  control={contactForm.control}
-                                                  name="phone"
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Phone Number</FormLabel>
-                                                      <FormControl>
-                                                        <Input placeholder="+234-XXX-XXX-XXXX" {...field} />
-                                                      </FormControl>
-                                                      <FormMessage />
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                                <FormField
-                                                  control={contactForm.control}
-                                                  name="email"
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Email (Optional)</FormLabel>
-                                                      <FormControl>
-                                                        <Input placeholder="contact@organization.com" {...field} />
-                                                      </FormControl>
-                                                      <FormMessage />
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                                <FormField
-                                                  control={contactForm.control}
-                                                  name="responseTime"
-                                                  render={({ field }) => (
-                                                    <FormItem>
-                                                      <FormLabel>Response Time (Optional)</FormLabel>
-                                                      <FormControl>
-                                                        <Input placeholder="e.g., 25 minutes" {...field} />
-                                                      </FormControl>
-                                                      <FormMessage />
-                                                    </FormItem>
-                                                  )}
-                                                />
-                                                <div className="flex space-x-3">
-                                                  <Button type="submit" className="flex-1 hydro-button-primary">
-                                                    {editingContact ? "Update Contact" : "Add Contact"}
-                                                  </Button>
-                                                  <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    className="flex-1"
-                                                    onClick={() => setIsContactModalOpen(false)}
-                                                  >
-                                                    Cancel
-                                                  </Button>
-                                                </div>
-                                              </form>
-                                            </Form>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </CardContent>
-                                  </Card>
-                                </TabsContent>
+              <TabsContent value="contacts">
+                <Card className="hydro-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-5 h-5 mr-2 text-primary" />
+                        <span className="text-lg sm:text-xl font-bold">Emergency Contacts</span>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setEditingContact(null);
+                          contactForm.reset({
+                            contactType: "",
+                            name: "",
+                            phone: "",
+                            email: "",
+                            responseTime: "",
+                          });
+                          setIsContactModalOpen(true);
+                        }}
+                        className="hydro-button-primary px-4 py-2 rounded-lg shadow"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add/Update Contact
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {contacts.length === 0 && (
+                        <div className="p-6 text-center text-gray-400 italic">
+                          No emergency contacts yet. Add your first one!
+                        </div>
+                      )}
+          {contacts.map((contact) => (
+            <div
+              key={contact.id}
+              className="p-4 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl mb-4 flex flex-col gap-2 transition-all duration-300"
+            >
+              <div className="flex items-start gap-3">
+                <div className="text-2xl flex-shrink-0">{getContactIcon(contact.contactType)}</div>
+                <div>
+                  <div className="font-bold text-lg">{contact.contactType}</div>
+                  <div className="text-gray-600 text-sm">{contact.name}</div>
+                  <div className="mt-1 space-y-1">
+                    <div
+                      className="flex items-center text-sm text-blue-700 cursor-pointer hover:underline"
+                      onClick={() => window.open(`tel:${contact.phone}`, "_self")}
+                    >
+                      <Phone className="w-4 h-4 mr-2" />
+                      <span className="font-mono">{contact.phone}</span>
+                    </div>
+                    {contact.email && (
+                      <div className="flex items-center text-sm text-gray-600">
+                        📧 {contact.email}
+                      </div>
+                    )}
+                    {contact.responseTime && (
+                      <div className="flex items-center text-sm text-green-600">
+                        ⏱️ {contact.responseTime}
+                      </div>
+                    )}
+                    {contact.lastVerified && (
+                      <div className="flex items-center text-sm text-gray-400">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Last verified: {contact.lastVerified}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* BUTTON GROUP: Stack on mobile, row on desktop */}
+              <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
+                <Button
+                  size="sm"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => window.open(`tel:${contact.phone}`, "_self")}
+                >
+                  <Phone className="w-4 h-4 mr-2" /> Call
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => handleEditContact(contact)}
+                >
+                  <Edit className="w-4 h-4 mr-2" /> Edit
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => handleDeleteContact(contact.id!)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+                     
+                    </div>
+                    {/* Contact Modal */}
+                    {isContactModalOpen && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md sm:max-w-lg p-6 sm:p-8 flex flex-col items-stretch relative">
+                          <h3 className="font-bold text-2xl mb-2 text-hydro-dark text-center">
+                            {editingContact ? "Update Contact" : "Add Contact"}
+                          </h3>
+                          <div className="mb-4 text-center text-gray-600">
+                            Enter key details for rapid response during emergencies.
+                          </div>
+                          <Form {...contactForm}>
+                            <form onSubmit={contactForm.handleSubmit(saveContact)} className="space-y-4">
+                              <FormField
+                                control={contactForm.control}
+                                name="contactType"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Contact Type</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        {...field}
+                                        placeholder="e.g., Hospital, Marine Rescue, Security, Fire Dept, Company Clinic, etc."
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-hydro-dark"
+                                        autoFocus
+                                        maxLength={48}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={contactForm.control}
+                                name="name"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Organization Name</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="e.g., Warri Central Hospital"
+                                        {...field}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={contactForm.control}
+                                name="phone"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Phone Number</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="+234-XXX-XXX-XXXX"
+                                        {...field}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={contactForm.control}
+                                name="email"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Email (Optional)</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="contact@organization.com"
+                                        {...field}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={contactForm.control}
+                                name="responseTime"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Response Time (Optional)</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        placeholder="e.g., 25 minutes"
+                                        {...field}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="flex gap-3 mt-4 justify-end">
+                                <Button
+                                  type="submit"
+                                  className="hydro-button-primary font-bold px-7"
+                                >
+                                  {editingContact ? "Update Contact" : "Add Contact"}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="px-7"
+                                  onClick={() => setIsContactModalOpen(false)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          </Form>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
                                 {/* --- ERP PROTOCOLS TAB --- */}
                                 <TabsContent value="erp">
@@ -1103,22 +1281,257 @@ export default function ProjectSetup() {
 
                                 {/* --- ASSETS & EQUIPMENT TAB --- */}
                                 <TabsContent value="assets">
-                                  <Card className="hydro-card">
-                                    <CardHeader>
-                                      <CardTitle className="flex items-center">
-                                        <FileText className="w-5 h-5 mr-2 text-primary" />
-                                        Assets & Equipment
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                      <div className="p-6 text-gray-500 italic text-center">
-                                        {/* --- Plug in your assets logic here, or extend from previous file! --- */}
-                                        (Assets management coming soon...)
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                </TabsContent>
+                <Card className="hydro-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 mr-2 text-primary" />
+                        <span className="text-lg sm:text-xl font-bold">Assets & Equipment</span>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          if (assetModalUnlocked) {
+                            setEditingAsset(null);
+                            assetForm.reset({
+                              name: "",
+                              category: "",
+                              modelSerial: "",
+                              manufacturer: "",
+                              year: "",
+                              condition: "New",
+                              assignedTo: "",
+                              specs: "",
+                              notes: "",
+                            });
+                            setIsAssetModalOpen(true);
+                          } else {
+                            setShowGoldAssetModal(true);
+                          }
+                        }}
+                        className="hydro-button-primary px-4 py-2 rounded-lg shadow"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Asset
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  {showGoldAssetModal && (
+                    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 flex flex-col items-center">
+                        <h3 className="font-bold text-xl mb-4 text-hydro-dark text-center">Gold Command Only</h3>
+                        <p className="text-center text-gray-700 mb-2 font-medium">
+                          Enter Gold Command Code to add assets & equipment.
+                        </p>
+                        <Input
+                          type="password"
+                          placeholder="Gold Code"
+                          value={goldAssetCodeInput}
+                          onChange={e => setGoldAssetCodeInput(e.target.value)}
+                          className="mb-2"
+                          autoFocus
+                          onKeyDown={e => {
+                            if (e.key === "Enter") handleGoldAssetUnlock();
+                          }}
+                        />
+                        {goldAssetError && <div className="text-red-600 mt-1">{goldAssetError}</div>}
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            className="w-32 bg-yellow-600 hover:bg-yellow-700 text-white"
+                            onClick={handleGoldAssetUnlock}
+                          >
+                            Confirm
+                          </Button>
+                          <Button variant="outline" onClick={() => { setShowGoldAssetModal(false); setGoldAssetCodeInput(""); setGoldAssetError(""); }}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                    <CardContent>
+                      <div className="space-y-4">
+                        {assets.length === 0 && (
+                          <div className="p-6 text-center text-gray-400 italic">
+                            No assets/equipment logged yet. Add your first!
+                          </div>
+                        )}
+                        {assets.map(asset => (
+                          <div
+                            key={asset.id}
+                            className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 rounded-2xl border bg-white/80 shadow transition-all duration-300 hover:shadow-xl gap-4"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-base text-hydro-dark truncate">{asset.name}</div>
+                              <div className="text-sm text-gray-700">{asset.category} | {asset.modelSerial}</div>
+                              <div className="text-xs text-gray-500">{asset.manufacturer} ({asset.year})</div>
+                              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[15px]">
+                                <span className={`font-semibold ${asset.condition === "Needs Repair" ? "text-red-600" : "text-green-700"}`}>{asset.condition}</span>
+                                {asset.assignedTo && (
+                                  <span className="text-gray-700">Assigned to: {asset.assignedTo}</span>
+                                )}
+                              </div>
+                              {asset.specs && (
+                                <div className="mt-2 text-xs text-gray-500 whitespace-pre-wrap">{asset.specs}</div>
+                              )}
+                              {asset.notes && (
+                                <div className="mt-2 text-xs text-gray-400">{asset.notes}</div>
+                              )}
+                            </div>
+                            {/* --- REPLACE THIS BUTTON SECTION --- */}
+                            {userCanEditAssets && (
+                              <div className="flex gap-2 mt-3 md:mt-0">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="font-semibold px-4"
+                                  onClick={() => handleEditAsset(asset)}
+                                >
+                                  <Edit className="w-3 h-3 mr-1" />
+                                  Edit
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  className="font-semibold px-4"
+                                  onClick={() => handleDeleteAsset(asset.id!)}
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Delete
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
 
+                    {/* Asset Modal */}
+                    {isAssetModalOpen && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4 transition-all duration-300">
+                          <div
+                            className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col items-stretch relative animate-fade-in mx-2 my-6 overflow-y-auto"
+                            style={{ maxHeight: '90vh' }}
+                          >
+                          <h3 className="font-bold text-2xl mb-2 text-hydro-dark dark:text-white text-center">
+                            {editingAsset ? "Update Asset/Equipment" : "Add Asset/Equipment"}
+                          </h3>
+                          <Form {...assetForm}>
+                            <form onSubmit={assetForm.handleSubmit(saveAsset)} className="space-y-4">
+                              <FormField control={assetForm.control} name="name" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Asset Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Dive Basket, Jack Sparrow" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <FormField control={assetForm.control} name="category" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Category</FormLabel>
+                                  <FormControl>
+                                    <select {...field} className="w-full border px-3 py-2 rounded-lg">
+                                      <option value="">Select category...</option>
+                                      <option>Vessel</option>
+                                      <option>Tool</option>
+                                      <option>Vehicle</option>
+                                      <option>Sensor</option>
+                                      <option>Compressor</option>
+                                      <option>Chamber</option>
+                                      <option>Deck Equipment</option>
+                                      <option>Other</option>
+                                    </select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <FormField control={assetForm.control} name="modelSerial" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Model/Serial #</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., 12345, HD-2025-X" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <FormField control={assetForm.control} name="manufacturer" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Manufacturer</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="e.g., Pommec, Stanley" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                                <FormField control={assetForm.control} name="year" render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Year</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="e.g., 2022" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )} />
+                              </div>
+                              <FormField control={assetForm.control} name="condition" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Condition</FormLabel>
+                                  <FormControl>
+                                    <select {...field} className="w-full border px-3 py-2 rounded-lg">
+                                      <option value="New">New</option>
+                                      <option value="Good">Good</option>
+                                      <option value="Fair">Fair</option>
+                                      <option value="Needs Repair">Needs Repair</option>
+                                    </select>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <FormField control={assetForm.control} name="assignedTo" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Assigned To / Location</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="e.g., Deck, Workshop, Vessel, Team" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <FormField control={assetForm.control} name="specs" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Specs</FormLabel>
+                                  <FormControl>
+                                    <Textarea placeholder="Technical specs, dimensions, features, etc." {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <FormField control={assetForm.control} name="notes" render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Notes (Optional)</FormLabel>
+                                  <FormControl>
+                                    <Textarea placeholder="Additional notes, inspection reminders, etc." {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              {/* Attachments: See note below */}
+                              <div className="flex gap-3 mt-4 justify-end">
+                                <Button type="submit" className="hydro-button-primary font-bold px-7">
+                                  {editingAsset ? "Update Asset" : "Add Asset"}
+                                </Button>
+                                <Button type="button" variant="outline" className="px-7" onClick={() => setIsAssetModalOpen(false)}>
+                                  Cancel
+                                </Button>
+                              </div>
+                            </form>
+                          </Form>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 {/* --- TEAM ASSIGNMENTS TAB --- */}
 <TabsContent value="team">
   <Card className="hydro-card">
@@ -1139,7 +1552,7 @@ export default function ProjectSetup() {
 
 {/* --- Add your other tabs here ... --- */}
               </Tabs>
-          </main>
+        </main>
         </div>
-      );
+     
     }
