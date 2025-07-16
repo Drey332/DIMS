@@ -696,12 +696,13 @@ export default function ProjectSetup() {
       </div>
     );
   }
-      return (
-        <div className="min-h-screen bg-hydro-light">
-          <Header user={{ role: "GOLD", name: "David Mooney", title: "General Manager", initials: "DM" }} project={projectInfo || undefined} />
-          <Navigation />
-          <main className="container mx-auto px-4 py-6">
-            <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-6">
+
+  return (
+    <div className="min-h-screen bg-hydro-light">
+      <Header user={{ role: "GOLD", name: "David Mooney", title: "General Manager", initials: "DM" }} project={projectInfo || undefined} />
+      <Navigation />
+      <main className="container mx-auto px-4 py-6">
+        <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-6">
              
           
               {/* DESKTOP: Horizontal Tabs */}
@@ -1383,6 +1384,9 @@ export default function ProjectSetup() {
                                           }
                                         }}
                                       />
+                                    </CardContent>
+                                  </Card>
+                                </TabsContent>
 
                                 {/* --- ASSETS & EQUIPMENT TAB --- */}
                                 <TabsContent value="assets">
@@ -1647,8 +1651,8 @@ export default function ProjectSetup() {
 </TabsContent>
 
 {/* --- Add your other tabs here ... --- */}
-              </Tabs>
-          </main>
-        </div>
-      );
-    }
+        </Tabs>
+      </main>
+    </div>
+  );
+}

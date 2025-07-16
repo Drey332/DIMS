@@ -24,8 +24,8 @@ import {
 import { AuditLog } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { AIChatAssistant } from "@/components/ai-chat-assistant";
-import { ComplianceDashboard } from "@/components/compliance-dashboard";
+// import { AIChatAssistant } from "@/components/ai-chat-assistant";
+// import { ComplianceDashboard } from "@/components/compliance-dashboard";
 
 export default function Reports() {
   const [filterType, setFilterType] = useState<string>("all");
@@ -392,13 +392,16 @@ export default function Reports() {
                 </p>
               </CardHeader>
               <CardContent>
-                <ComplianceDashboard projectId={1} />
+                {/* <ComplianceDashboard projectId={1} /> */}
+                <div className="p-6 text-center text-gray-500">
+                  Compliance Dashboard component coming soon...
+                </div>
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
-      <AIChatAssistant />
+      {/* <AIChatAssistant /> */}
     </div>
   );
 }
