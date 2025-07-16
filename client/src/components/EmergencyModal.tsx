@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
-
+import Fuse from "fuse.js";
 // Team member type from Firestore
 type TeamMember = {
   id: string;
@@ -334,12 +334,32 @@ export const emergencyKeywords = [
     }
   ]; // <--- CLOSE THE ARRAY AND STATEMENT HERE!
 
+// Flatten all keywords for fuzzy search with Fuse.js
+const fuseData = emergencyKeywords.flatMap(scenario =>
+  scenario.keywords.map(keyword => ({
+    keyword,
+    type: scenario.type,
+    notify: scenario.notify,
+    protocol: scenario.protocol
+  }))
+);
+
+// Fuse.js options (tweak threshold as needed)
+const fuseOptions = {
+  keys: ["keyword"],
+  threshold: 0.34, // Lower = stricter, higher = more fuzzy
+  includeScore: true,
+};
+const fuse = new Fuse(fuseData, fuseOptions);
+
+//To analyze the keyword
+
 
 function analyzeEmergency(description: string) {
   if (!description) return null;
   const desc = normalize(description);
 
-  // Try full phrase/keyword match first (most precise, least false positives)
+  // Try exact match first for speed/precision
   for (const scenario of emergencyKeywords) {
     for (const k of scenario.keywords) {
       if (desc.includes(normalize(k))) {
@@ -347,9 +367,21 @@ function analyzeEmergency(description: string) {
       }
     }
   }
+
+  // Fallback to Fuse.js fuzzy search for typos/misspellings
+  const results = fuse.search(desc);
+  if (results.length > 0) {
+    // Optionally: If desc is long, split and match the most likely keyword.
+    return {
+      type: results[0].item.type,
+      notify: results[0].item.notify,
+      protocol: results[0].item.protocol,
+      matchedKeyword: results[0].item.keyword, // for debugging
+      // score: results[0].score, // optional, remove if not needed
+    };
+  }
   return null;
 }
-
 
 // Observation form types
 interface ObservationForm {

@@ -4,24 +4,28 @@ import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
+// ===== AI ERP Advisor (JS, CJS) =====
+// TypeScript will whine, but this is industry-standard when mixing JS/TS
+// @ts-ignore
+import aiErpAdvisor from "./ai-erp-advisor.js";
 const app = express();
 const server = createServer(app);
 
-// Initialize Socket.IO with CORS support
+// ===== Real-time Collaboration (Socket.IO) =====
 const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+  },
 });
 
-// Attach io to app for access in routes
-app.set('io', io);
+app.set("io", io);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// ===== LOGGING MIDDLEWARE (API tracing, CEO-friendly visibility) =====
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -40,11 +44,7 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
+      if (logLine.length > 80) logLine = logLine.slice(0, 79) + "…";
       log(logLine);
     }
   });
@@ -52,71 +52,68 @@ app.use((req, res, next) => {
   next();
 });
 
-// Socket.IO connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+// ====== AI ERP ADVISOR ENDPOINT (Plug-and-Play for AI ERP Routing) ======
+app.use("/api/ai-erp-advisor", aiErpAdvisor);
 
-  // Handle project room joining
-  socket.on('join-project', (projectId) => {
-    socket.join(`project-${projectId}`);
-    console.log(`Socket ${socket.id} joined project ${projectId}`);
-  });
-
-  // Handle project room leaving
-  socket.on('leave-project', (projectId) => {
-    socket.leave(`project-${projectId}`);
-    console.log(`Socket ${socket.id} left project ${projectId}`);
-  });
-
-  // Handle team updates
-  socket.on('team-update', (data) => {
-    socket.to(`project-${data.projectId}`).emit('team-update', data);
-  });
-
-  // Handle incident updates
-  socket.on('incident-update', (data) => {
-    socket.to(`project-${data.projectId}`).emit('incident-update', data);
-  });
-
-  // Handle asset verification updates
-  socket.on('asset-update', (data) => {
-    socket.to(`project-${data.projectId}`).emit('asset-update', data);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
-
+// ====== Register App’s API and Page Routes ======
 (async () => {
-  const httpServer = await registerRoutes(app);
+  // Attach REST routes and all other project endpoints
+  await registerRoutes(app);
 
+  // ===== ERROR HANDLER (never crash the server, log all issues) =====
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     res.status(status).json({ message });
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // ====== Vite Setup (Frontend hot-reload in dev) =====
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
+  // ====== REALTIME SOCKET EVENTS ======
+  io.on("connection", (socket) => {
+    console.log("Client connected:", socket.id);
+
+    // Project-level rooms for live data updates
+    socket.on("join-project", (projectId) => {
+      socket.join(`project-${projectId}`);
+      console.log(`Socket ${socket.id} joined project ${projectId}`);
+    });
+    socket.on("leave-project", (projectId) => {
+      socket.leave(`project-${projectId}`);
+      console.log(`Socket ${socket.id} left project ${projectId}`);
+    });
+
+    socket.on("team-update", (data) => {
+      socket.to(`project-${data.projectId}`).emit("team-update", data);
+    });
+    socket.on("incident-update", (data) => {
+      socket.to(`project-${data.projectId}`).emit("incident-update", data);
+    });
+    socket.on("asset-update", (data) => {
+      socket.to(`project-${data.projectId}`).emit("asset-update", data);
+    });
+
+    socket.on("disconnect", () => {
+      console.log("Client disconnected:", socket.id);
+    });
   });
+
+  // ====== STARTUP ======
+  const port = 5000;
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`🚀 HydroSafe API/AI/Socket server running on port ${port}`);
+    }
+  );
 })();

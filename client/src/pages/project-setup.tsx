@@ -30,6 +30,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
+import { AIERPAdvisorModal } from "../components/AIERPAdvisorModal";
 
 // --- Types ---
 type EmergencyContact = {
@@ -61,6 +62,22 @@ type ProjectInfo = {
   location: string;
   status: string;
   description: string;
+};
+
+type AIAdvisorResponse = {
+  corrections?: Record<string, any>;
+  improvedKeywords?: string;
+  improvedProtocol?: string;
+  modelReference?: string;
+  missingSteps?: string;
+  industryNotes?: string;
+  fmecaTable?: {
+    mode: string;
+    effect: string;
+    control: string;
+    criticality: string;
+  }[];
+  error?: string;
 };
 
 // --- Form Validation Schema ---
@@ -147,7 +164,11 @@ export default function ProjectSetup() {
   const [erpAdminUnlocked, setErpAdminUnlocked] = useState(false);
   const [unlockCode, setUnlockCode] = useState("");
   const [tabValue, setTabValue] = useState("project");
-
+  const [aiAdvisorOpen, setAiAdvisorOpen] = useState(false); // Controls the AI modal
+  const [aiAdvisorData, setAiAdvisorData] = useState<AIAdvisorResponse | null>(null); // Stores AI suggestions
+  const [aiReviewLoading, setAiReviewLoading] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiOverrides, setAiOverrides] = useState<Record<string, string>>({});
   // --- ASSETS STATE & HOOKS ---
   const [assets, setAssets] = useState<AssetEquipment[]>([]);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
@@ -159,7 +180,7 @@ export default function ProjectSetup() {
   const [goldAssetError, setGoldAssetError] = useState("");
   const [assetModalUnlocked, setAssetModalUnlocked] = useState(false);
   // Permission: Only allow editing if Gold code verified (or projectInfo exists, whatever you use)
-   
+    // adjust if needed
   const userCanEditAssets = assetModalUnlocked;
   // Firestore: Real-time sync for assets
   useEffect(() => {
@@ -410,24 +431,69 @@ export default function ProjectSetup() {
     setErpForm({ keywords: "", type: "", notify: "", protocol: "" });
     setIsErpModalOpen(true);
   };
-  const handleSaveErp = async (e: React.FormEvent) => {
+// AI review of the ERP
+  const handleAiReview = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAiReviewLoading(true);
+    setAiAdvisorOpen(true);
+    setAiAdvisorData(null);
+
+    const erpDraft = { ...erpForm };
+    try {
+      const resp = await fetch("/api/ai-erp-advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ erpDraft }),
+      });
+      const aiData = await resp.json();
+      setAiAdvisorData(aiData);
+    } catch (err) {
+      setAiAdvisorData({ error: "AI review failed. Please try again." });
+    }
+    setAiReviewLoading(false);
+  };
+  const saveErpWithAi = async (aiData: any) => {
     try {
       if (editingErp?.id) {
         await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), {
-          ...erpForm, id: editingErp.id,
+          ...erpForm,   // PM's form data (can be replaced by aiData fields if you prefer)
+          ...aiData,    // AI reviewed/enhanced fields (e.g. improved keywords, protocol)
+          id: editingErp.id,
         });
-        toast({ title: "ERP Protocol updated" });
+        toast({ title: "ERP Protocol updated (AI reviewed)" });
       } else {
         const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
-        await setDoc(newRef, { ...erpForm, id: newRef.id });
-        toast({ title: "ERP Protocol added" });
+        await setDoc(newRef, { ...erpForm, ...aiData, id: newRef.id });
+        toast({ title: "ERP Protocol added (AI reviewed)" });
       }
       setIsErpModalOpen(false);
       setEditingErp(null);
       setErpForm({ keywords: "", type: "", notify: "", protocol: "" });
     } catch (err) {
       toast({ title: "Error", description: "Could not save ERP Protocol", variant: "destructive" });
+    }
+  };
+  const handleERPFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAiOverrides({}); 
+    setAiReviewLoading(true);
+    setAiAdvisorOpen(true);
+    setAiAdvisorData(null);
+
+    // Prepare the latest form values for AI
+    const erpDraft = { ...erpForm };
+    try {
+      const resp = await fetch("/api/ai-erp-advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ erpDraft }),
+      });
+      const aiData = await resp.json();
+      setAiAdvisorData(aiData);
+    } catch (err) {
+      setAiAdvisorData({ error: "AI analysis failed. Please try again." });
+    } finally {
+      setAiReviewLoading(false);
     }
   };
   const handleDeleteErp = async (id: string) => {
@@ -462,14 +528,14 @@ export default function ProjectSetup() {
   };
 
   // --- Main Render ---
-  if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-72">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-hydro-dark mb-3"></div>
-        <div className="font-medium text-hydro-dark">Loading project info...</div>
-      </div>
-    );
-  }
+      if (loading) {
+        return (
+          <div className="flex flex-col items-center justify-center h-72">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-hydro-dark mb-3"></div>
+            <div className="font-medium text-hydro-dark">Loading project info...</div>
+          </div>
+        );
+      }
 
   if (notFound) {
     return (
@@ -630,13 +696,14 @@ export default function ProjectSetup() {
       </div>
     );
   }
-
-  return (
+      return (
         <div className="min-h-screen bg-hydro-light">
           <Header user={{ role: "GOLD", name: "David Mooney", title: "General Manager", initials: "DM" }} project={projectInfo || undefined} />
           <Navigation />
           <main className="container mx-auto px-4 py-6">
             <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-6">
+             
+          
               {/* DESKTOP: Horizontal Tabs */}
               <div className="hidden sm:flex">
                 <TabsList
@@ -1209,13 +1276,14 @@ export default function ProjectSetup() {
                                             )}
                                           </div>
                                           {/* ERP Protocol Modal */}
+                                      
                                           {isErpModalOpen && (
                                             <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
                                               <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
                                                 <h3 className="text-xl font-bold text-hydro-dark mb-4">
                                                   {editingErp ? "Edit ERP Protocol" : "Add ERP Protocol"}
                                                 </h3>
-                                                <form onSubmit={handleSaveErp} className="space-y-4">
+                                                    <form onSubmit={handleERPFormSubmit} className="space-y-4">
                                                   <div>
                                                     <Label>Scenario/Type (e.g. Fire, Loss of Comms)</Label>
                                                     <Input
@@ -1233,6 +1301,7 @@ export default function ProjectSetup() {
                                                       placeholder="fire, firee, explosion, smoke, etc."
                                                       rows={2}
                                                       required
+                                                      
                                                     />
                                                   </div>
                                                   <div>
@@ -1276,9 +1345,44 @@ export default function ProjectSetup() {
                                           )}
                                         </div>
                                       )}
-                                    </CardContent>
-                                  </Card>
-                                </TabsContent>
+
+                                      {/* AI Check */}
+                                      <AIERPAdvisorModal
+                                        open={aiAdvisorOpen}
+                                        onClose={() => {
+                                          setAiAdvisorOpen(false);
+                                          setAiAdvisorData(null);
+                                          setAiOverrides({});
+                                          setAiSaving(false);
+                                        }}
+                                        loading={aiReviewLoading}
+                                        aiData={aiAdvisorData}
+                                        aiOverrides={aiOverrides}
+                                        setAiOverrides={setAiOverrides}
+                                        aiSaving={aiSaving}
+                                        onSave={async () => {
+                                          setAiSaving(true);
+                                          try {
+                                            let saveData = { ...aiAdvisorData };
+                                            if (aiAdvisorData?.corrections) {
+                                              saveData.corrections = {};
+                                              for (const field of Object.keys(aiAdvisorData.corrections)) {
+                                                saveData.corrections[field] =
+                                                  aiOverrides[field] ?? aiAdvisorData.corrections[field];
+                                              }
+                                            }
+                                            await saveErpWithAi(saveData);
+                                            setAiAdvisorOpen(false);
+                                            setIsErpModalOpen(false);
+                                            setAiAdvisorData(null);
+                                            setAiOverrides({});
+                                          } catch (err) {
+                                            // Optionally handle error
+                                          } finally {
+                                            setAiSaving(false);
+                                          }
+                                        }}
+                                      />
 
                                 {/* --- ASSETS & EQUIPMENT TAB --- */}
                                 <TabsContent value="assets">
@@ -1316,62 +1420,86 @@ export default function ProjectSetup() {
                       </Button>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                      <div className="space-y-4">
-                        {assets.length === 0 && (
-                          <div className="p-6 text-center text-gray-400 italic">
-                            No assets/equipment logged yet. Add your first!
-                          </div>
-                        )}
-                        {assets.map(asset => (
-                          <div
-                            key={asset.id}
-                            className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 rounded-2xl border bg-white/80 shadow transition-all duration-300 hover:shadow-xl gap-4"
+                  {showGoldAssetModal && (
+                    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+                      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 flex flex-col items-center">
+                        <h3 className="font-bold text-xl mb-4 text-hydro-dark text-center">Gold Command Only</h3>
+                        <p className="text-center text-gray-700 mb-2 font-medium">
+                          Enter Gold Command Code to add assets & equipment.
+                        </p>
+                        <Input
+                          type="password"
+                          placeholder="Gold Code"
+                          value={goldAssetCodeInput}
+                          onChange={e => setGoldAssetCodeInput(e.target.value)}
+                          className="mb-2"
+                          autoFocus
+                          onKeyDown={e => {
+                            if (e.key === "Enter") handleGoldAssetUnlock();
+                          }}
+                        />
+                        {goldAssetError && <div className="text-red-600 mt-1">{goldAssetError}</div>}
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            className="w-32 bg-yellow-600 hover:bg-yellow-700 text-white"
+                            onClick={handleGoldAssetUnlock}
                           >
-                            <div className="flex-1 min-w-0">
-                              <div className="font-bold text-base text-hydro-dark truncate">{asset.name}</div>
-                              <div className="text-sm text-gray-700">{asset.category} | {asset.modelSerial}</div>
-                              <div className="text-xs text-gray-500">{asset.manufacturer} ({asset.year})</div>
-                              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[15px]">
-                                <span className={`font-semibold ${asset.condition === "Needs Repair" ? "text-red-600" : "text-green-700"}`}>{asset.condition}</span>
-                                {asset.assignedTo && (
-                                  <span className="text-gray-700">Assigned to: {asset.assignedTo}</span>
-                                )}
-                              </div>
-                              {asset.specs && (
-                                <div className="mt-2 text-xs text-gray-500 whitespace-pre-wrap">{asset.specs}</div>
-                              )}
-                              {asset.notes && (
-                                <div className="mt-2 text-xs text-gray-400">{asset.notes}</div>
+                            Confirm
+                          </Button>
+                          <Button variant="outline" onClick={() => { setShowGoldAssetModal(false); setGoldAssetCodeInput(""); setGoldAssetError(""); }}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <CardContent>
+                    <div className="space-y-4">
+                      {assets.length === 0 && (
+                        <div className="p-6 text-center text-gray-400 italic">
+                          No assets/equipment logged yet. Add your first!
+                        </div>
+                      )}
+                      {assets.map(asset => (
+                        <div
+                          key={asset.id}
+                          className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 rounded-2xl border bg-white/80 shadow transition-all duration-300 hover:shadow-xl gap-4"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-base text-hydro-dark truncate">{asset.name}</div>
+                            <div className="text-sm text-gray-700">{asset.category} | {asset.modelSerial}</div>
+                            <div className="text-xs text-gray-500">{asset.manufacturer} ({asset.year})</div>
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[15px]">
+                              <span className={`font-semibold ${asset.condition === "Needs Repair" ? "text-red-600" : "text-green-700"}`}>{asset.condition}</span>
+                              {asset.assignedTo && (
+                                <span className="text-gray-700">Assigned to: {asset.assignedTo}</span>
                               )}
                             </div>
-                            {/* --- REPLACE THIS BUTTON SECTION --- */}
-                            {userCanEditAssets && (
-                              <div className="flex gap-2 mt-3 md:mt-0">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="font-semibold px-4"
-                                  onClick={() => handleEditAsset(asset)}
-                                >
-                                  <Edit className="w-3 h-3 mr-1" />
-                                  Edit
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  className="font-semibold px-4"
-                                  onClick={() => handleDeleteAsset(asset.id!)}
-                                >
-                                  <Trash2 className="w-3 h-3 mr-1" />
-                                  Delete
-                                </Button>
-                              </div>
+                            {asset.specs && (
+                              <div className="mt-2 text-xs text-gray-500 whitespace-pre-wrap">{asset.specs}</div>
+                            )}
+                            {asset.notes && (
+                              <div className="mt-2 text-xs text-gray-400">{asset.notes}</div>
                             )}
                           </div>
-                        ))}
-                      </div>
-                    </CardContent>
+                          {userCanEditAssets && (
+                            <div className="flex gap-2 mt-3 md:mt-0">
+                              <Button size="sm" variant="outline" className="font-semibold px-4"
+                                onClick={() => handleEditAsset(asset)}>
+                                <Edit className="w-3 h-3 mr-1" />
+                                Edit
+                              </Button>
+                              <Button size="sm" variant="destructive" className="font-semibold px-4"
+                                onClick={() => handleDeleteAsset(asset.id!)}>
+                                <Trash2 className="w-3 h-3 mr-1" />
+                                Remove
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+        
+                      ))}
+                    </div>
 
                     {/* Asset Modal */}
                     {isAssetModalOpen && (
@@ -1500,64 +1628,27 @@ export default function ProjectSetup() {
                   </CardContent>
                 </Card>
               </TabsContent>
-
-              {/* --- TEAM ASSIGNMENTS TAB --- */}
-              <TabsContent value="team">
-                <Card className="hydro-card">
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <FileText className="w-5 h-5 mr-2 text-primary" />
-                      Team Assignments
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="p-6 text-gray-500 italic text-center">
-                      {/* --- Plug in your team logic here, or extend from previous file! --- */}
-                      (Team assignments management coming soon...)
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+{/* --- TEAM ASSIGNMENTS TAB --- */}
+<TabsContent value="team">
+  <Card className="hydro-card">
+    <CardHeader>
+      <CardTitle className="flex items-center">
+        <FileText className="w-5 h-5 mr-2 text-primary" />
+        Team Assignments
+      </CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="p-6 text-gray-500 italic text-center">
+        {/* --- Plug in your team logic here, or extend from previous file! --- */}
+        (Team assignments management coming soon...)
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
 
 {/* --- Add your other tabs here ... --- */}
               </Tabs>
-
-              {/* Gold Asset Modal - placed outside Card structure */}
-              {showGoldAssetModal && (
-                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7 flex flex-col items-center">
-                    <h3 className="font-bold text-xl mb-4 text-hydro-dark text-center">Gold Command Only</h3>
-                    <p className="text-center text-gray-700 mb-2 font-medium">
-                      Enter Gold Command Code to add assets & equipment.
-                    </p>
-                    <Input
-                      type="password"
-                      placeholder="Gold Code"
-                      value={goldAssetCodeInput}
-                      onChange={e => setGoldAssetCodeInput(e.target.value)}
-                      className="mb-2"
-                      autoFocus
-                      onKeyDown={e => {
-                        if (e.key === "Enter") handleGoldAssetUnlock();
-                      }}
-                    />
-                    {goldAssetError && <div className="text-red-600 mt-1">{goldAssetError}</div>}
-                    <div className="flex gap-2 mt-3">
-                      <Button
-                        className="w-32 bg-yellow-600 hover:bg-yellow-700 text-white"
-                        onClick={handleGoldAssetUnlock}
-                      >
-                        Confirm
-                      </Button>
-                      <Button variant="outline" onClick={() => { setShowGoldAssetModal(false); setGoldAssetCodeInput(""); setGoldAssetError(""); }}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-        </main>
+          </main>
         </div>
       );
-    }
     }

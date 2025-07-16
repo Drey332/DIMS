@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { AIAuditReferee, type AuditResult } from "@/components/ai-audit-referee";
 import { cn } from "@/lib/utils";
 import { 
   Camera, 
@@ -51,7 +50,6 @@ export default function AssetVerification() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [verificationComment, setVerificationComment] = useState("");
-  const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
@@ -76,7 +74,7 @@ export default function AssetVerification() {
   }, [projects, activeProjectId]);
 
   // Fetch asset verifications from database
-  const { data: assets, isLoading, error, refetch } = useQuery({
+  const { data: assets, isLoading, error } = useQuery({
     queryKey: ['/api/asset-verifications', activeProjectId],
     queryFn: () => {
       if (!activeProjectId) return [];
@@ -145,7 +143,6 @@ export default function AssetVerification() {
       console.log("Cannot create asset - missing data:", { activeProjectId, currentUser: !!currentUser });
       return;
     }
-    
     const newAsset = {
       projectId: activeProjectId,
       assetName: "New Asset " + Date.now(),
@@ -155,16 +152,13 @@ export default function AssetVerification() {
       protocolReference: "IOGP Report 456 - KPI Framework",
       comments: "Asset created for verification"
     };
-    
-    console.log("Creating asset with data:", newAsset);
     createAssetMutation.mutate(newAsset);
   };
 
   const handleVerifyAsset = async () => {
     if (!selectedAsset || !currentUser) return;
-    
     setIsVerifying(true);
-    
+
     // Upload photo if provided
     let photoId = null;
     if (photoFile) {
@@ -172,7 +166,6 @@ export default function AssetVerification() {
       formData.append('file', photoFile);
       formData.append('projectId', activeProjectId?.toString() || '');
       formData.append('type', 'ASSET_VERIFICATION');
-      
       try {
         const uploadResponse = await fetch('/api/upload', {
           method: 'POST',
@@ -191,21 +184,11 @@ export default function AssetVerification() {
       nextCheckDue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
       comments: verificationComment,
       photoId: photoId,
-      complianceNotes: auditResult?.findings.join('; ') || '',
-      protocolReference: auditResult?.protocolReferences.join('; ') || selectedAsset.protocolReference
+      complianceNotes: "",
+      protocolReference: selectedAsset.protocolReference,
     };
 
     updateAssetMutation.mutate({ id: selectedAsset.id, data: updateData });
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'VERIFIED': return 'bg-green-500';
-      case 'PENDING': return 'bg-yellow-500';
-      case 'OVERDUE': return 'bg-red-500';
-      case 'FAILED': return 'bg-red-600';
-      default: return 'bg-gray-500';
-    }
   };
 
   const getStatusBadgeColor = (status: string) => {
@@ -276,7 +259,6 @@ export default function AssetVerification() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Asset Verification</h1>
             <p className="text-gray-600">Monitor and verify critical assets according to safety protocols</p>
           </div>
-          
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
             <div className="relative flex-1 lg:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -287,7 +269,6 @@ export default function AssetVerification() {
                 className="pl-10"
               />
             </div>
-            
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-40">
                 <Filter className="h-4 w-4 mr-2" />
@@ -301,7 +282,6 @@ export default function AssetVerification() {
                 <SelectItem value="FAILED">Failed</SelectItem>
               </SelectContent>
             </Select>
-            
             <Button onClick={handleCreateAsset} className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Add Asset
@@ -345,7 +325,6 @@ export default function AssetVerification() {
                     </Badge>
                   </div>
                 </CardHeader>
-                
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Calendar className="h-4 w-4" />
@@ -355,20 +334,17 @@ export default function AssetVerification() {
                         : "Not yet verified"}
                     </span>
                   </div>
-                  
                   {asset.nextCheckDue && (
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Clock className="h-4 w-4" />
                       <span>Due: {new Date(asset.nextCheckDue).toLocaleDateString()}</span>
                     </div>
                   )}
-                  
                   {asset.comments && (
                     <div className="text-sm text-gray-700">
                       <strong>Comments:</strong> {asset.comments}
                     </div>
                   )}
-                  
                   <div className="flex gap-2 pt-2">
                     <Button
                       variant="outline"
@@ -399,22 +375,7 @@ export default function AssetVerification() {
                   Verify Asset: {selectedAsset.assetName}
                 </CardTitle>
               </CardHeader>
-              
               <CardContent className="space-y-6">
-                {/* AI Audit Component */}
-                <AIAuditReferee
-                  action={{
-                    type: "ASSET_VERIFICATION",
-                    description: `Verifying asset: ${selectedAsset.assetName}`,
-                    evidence: verificationComment ? [verificationComment] : [],
-                    timestamp: new Date(),
-                    criticality: 'MEDIUM'
-                  }}
-                  projectId={selectedAsset.projectId}
-                  userId={currentUser?.id}
-                  onAuditComplete={setAuditResult}
-                />
-                
                 {/* Photo Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -439,7 +400,6 @@ export default function AssetVerification() {
                     </label>
                   </div>
                 </div>
-                
                 {/* Comments */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -452,7 +412,6 @@ export default function AssetVerification() {
                     rows={4}
                   />
                 </div>
-                
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4">
                   <Button
@@ -472,7 +431,6 @@ export default function AssetVerification() {
                       </>
                     )}
                   </Button>
-                  
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -480,7 +438,6 @@ export default function AssetVerification() {
                       setIsVerifying(false);
                       setPhotoFile(null);
                       setVerificationComment("");
-                      setAuditResult(null);
                     }}
                     disabled={isVerifying || updateAssetMutation.isPending}
                   >
@@ -491,7 +448,7 @@ export default function AssetVerification() {
             </Card>
           </div>
         )}
-        </div>
+      </div>
     </main>
   );
 }
