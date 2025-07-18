@@ -1,14 +1,18 @@
 import { Switch, Route, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { useEffect, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
-import { socket } from './socket.js';
-import { useEffect, useState } from 'react';
-import { useEnableOfflineSync } from "@shared/useOfflineSync";
+import { useEnableOfflineSync } from "shared/useOfflineSync";
+import { socket } from "./socket.js";
+
+// Firestore imports for ProTip
+import { db } from "@/firebase";
+import { doc, collection, onSnapshot } from "firebase/firestore";
 
 // Pages
 import Dashboard from "@/pages/dashboard";
@@ -109,6 +113,22 @@ function Router() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | undefined>(undefined);
 
+  // --- ProTip: Preload ALL essential project data once authenticated!
+  useEffect(() => {
+    if (isAuthenticated) {
+      // You can swap "1" for your dynamic project ID if needed
+      const projectId = "1";
+      const unsubs = [
+        onSnapshot(doc(db, "projects", projectId), () => {}),
+        onSnapshot(collection(db, "projects", projectId, "erpProtocols"), () => {}),
+        onSnapshot(collection(db, "projects", projectId, "assets"), () => {}),
+        onSnapshot(collection(db, "projects", projectId, "contacts"), () => {}),
+        // Add more here if you have more subcollections
+      ];
+      return () => unsubs.forEach((unsub) => unsub());
+    }
+  }, [isAuthenticated]);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
@@ -164,20 +184,19 @@ function Router() {
                 <Route path="/" component={Dashboard} />
                 <Route path="/dashboard" component={Dashboard} />
                 <Route path="/incidents" component={Incidents} />
-                <Route path="/team" component={() => <TeamManagement currentUser={userData} />} />
+                <Route path="/team">
+                  <TeamManagement currentUser={userData} />
+                </Route>
                 <Route path="/reports" component={Reports} />
                 <Route path="/reports/generate" component={Reports} />
                 <Route path="/reports/history" component={Reports} />
-                <Route
-                  path="/setup"
-                  component={() => (
-                    <ProjectSetup
-                      currentUser={userData}
-                      projectInfo={projectInfo}
-                      setProjectInfo={setProjectInfo}
-                    />
-                  )}
-                />
+                <Route path="/setup">
+                  <ProjectSetup
+                    currentUser={userData}
+                    projectInfo={projectInfo}
+                    setProjectInfo={setProjectInfo}
+                  />
+                </Route>
                 <Route path="/asset-verification" component={AssetVerification} />
                 <Route path="/assets" component={AssetVerification} />
                 <Route path="/assets/upload" component={AssetUpload} />
@@ -199,7 +218,6 @@ function Router() {
 function App() {
   // Enable offline Firestore support and handle errors robustly
   useEnableOfflineSync((error: any) => {
-    // Dispatch a custom event if offline sync fails
     window.dispatchEvent(
       new CustomEvent("hydrosafe:offline-fail", { detail: error?.message })
     );
