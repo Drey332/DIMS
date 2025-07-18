@@ -1,4 +1,3 @@
-// AIERPAdvisorModal.tsx
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,7 @@ export function AIERPAdvisorModal({
   aiOverrides,
   setAiOverrides,
   aiSaving,
-  onSave
+  onSave,
 }: {
   open: boolean;
   onClose: () => void;
@@ -23,6 +22,20 @@ export function AIERPAdvisorModal({
   onSave: () => Promise<void>;
 }) {
   if (!open) return null;
+
+  const noAISuggestions =
+    !loading &&
+    !aiData?.error &&
+    !(
+      aiData?.corrections ||
+      aiData?.improvedKeywords ||
+      aiData?.improvedProtocol ||
+      aiData?.modelReference ||
+      aiData?.missingSteps ||
+      aiData?.industryNotes ||
+      (Array.isArray(aiData?.fmecaTable) && aiData.fmecaTable.length > 0)
+    );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-6">
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col p-4 sm:p-8 animate-fade-in">
@@ -47,10 +60,10 @@ export function AIERPAdvisorModal({
           </div>
         ) : aiData?.error ? (
           <div className="text-red-600 text-lg text-center">{aiData.error}</div>
-        ) : aiData ? (
+        ) : (
           <div className="space-y-4">
-            {/* Corrections Section */}
-            {aiData.corrections && Object.keys(aiData.corrections).length > 0 && (
+            {/* AI Corrections */}
+            {aiData?.corrections && Object.keys(aiData.corrections).length > 0 && (
               <section className="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4">
                 <div className="font-bold text-yellow-900 mb-1">AI Corrections:</div>
                 <ul className="list-disc ml-5">
@@ -76,7 +89,7 @@ export function AIERPAdvisorModal({
             )}
 
             {/* Improved Keywords */}
-            {aiData.improvedKeywords && (
+            {aiData?.improvedKeywords && (
               <section className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4">
                 <div className="font-bold text-blue-900 mb-1">Improved Keywords:</div>
                 <div className="font-mono text-blue-700 text-sm">{aiData.improvedKeywords}</div>
@@ -84,7 +97,7 @@ export function AIERPAdvisorModal({
             )}
 
             {/* Improved Protocol */}
-            {aiData.improvedProtocol && (
+            {aiData?.improvedProtocol && (
               <section className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
                 <div className="font-bold text-green-900 mb-1">Improved Protocol:</div>
                 <div className="text-green-800 whitespace-pre-line text-sm">{aiData.improvedProtocol}</div>
@@ -92,7 +105,7 @@ export function AIERPAdvisorModal({
             )}
 
             {/* Model Reference */}
-            {aiData.modelReference && (
+            {aiData?.modelReference && (
               <section className="bg-gray-50 border-l-4 border-gray-400 rounded-lg p-4">
                 <div className="font-bold text-gray-900 mb-1">Model Reference:</div>
                 <div className="text-gray-800 text-sm">{aiData.modelReference}</div>
@@ -100,7 +113,7 @@ export function AIERPAdvisorModal({
             )}
 
             {/* Missing Steps */}
-            {aiData.missingSteps && (
+            {aiData?.missingSteps && (
               <section className="bg-yellow-100 border-l-4 border-yellow-600 rounded-lg p-4">
                 <div className="font-bold text-yellow-900 mb-1">Missing Steps:</div>
                 <div className="text-yellow-700 text-sm">{aiData.missingSteps}</div>
@@ -108,7 +121,7 @@ export function AIERPAdvisorModal({
             )}
 
             {/* Industry Notes */}
-            {aiData.industryNotes && (
+            {aiData?.industryNotes && (
               <section className="bg-indigo-50 border-l-4 border-indigo-400 rounded-lg p-4">
                 <div className="font-bold text-indigo-900 mb-1">Industry Notes:</div>
                 <div className="text-indigo-800 text-sm">{aiData.industryNotes}</div>
@@ -116,7 +129,7 @@ export function AIERPAdvisorModal({
             )}
 
             {/* FMECA Table */}
-            {Array.isArray(aiData.fmecaTable) && aiData.fmecaTable.length > 0 && (
+            {Array.isArray(aiData?.fmecaTable) && aiData.fmecaTable.length > 0 && (
               <section className="bg-white border border-gray-200 rounded-lg p-4">
                 <div className="font-bold text-gray-800 mb-1">FMECA Table:</div>
                 <div className="overflow-x-auto">
@@ -144,7 +157,14 @@ export function AIERPAdvisorModal({
               </section>
             )}
 
-            {/* Accept & Save / Cancel Buttons */}
+            {/* No Suggestions Message */}
+            {noAISuggestions && (
+              <div className="text-gray-500 text-center py-8">
+                The AI has no suggestions or improvements for your protocol.
+              </div>
+            )}
+
+            {/* Accept & Save / Cancel / Override Buttons */}
             <div className="flex flex-col sm:flex-row gap-3 justify-end mt-5">
               <Button
                 onClick={onSave}
@@ -154,9 +174,19 @@ export function AIERPAdvisorModal({
                 {aiSaving ? "Saving..." : "Accept & Save"}
               </Button>
               <Button variant="outline" onClick={onClose}>Cancel</Button>
+              <Button
+                variant="outline"
+                className="bg-gray-200 text-gray-800 font-bold"
+                onClick={() => {
+                  if (typeof window !== "undefined") window.alert("Keeping your original ERP (Override).");
+                  onClose();
+                }}
+              >
+                Override: Keep My ERP
+              </Button>
             </div>
           </div>
-        ) : null}
+        )}
       </div>
     </div>
   );

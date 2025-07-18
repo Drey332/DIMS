@@ -303,7 +303,7 @@ export function CommandDashboard() {
                           }}
                         >
                           <Lock className="w-3 h-3 mr-1" />
-                          Escalate
+                          Archive
                         </Button>
                       </div>
                     </div>
@@ -377,7 +377,7 @@ export function CommandDashboard() {
                               }}
                             >
                               <Lock className="w-3 h-3 mr-1" />
-                              Escalate
+                              Archive
                             </Button>
                           </div>
                         )}

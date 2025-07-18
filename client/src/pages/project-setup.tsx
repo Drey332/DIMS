@@ -1364,21 +1364,81 @@ export default function ProjectSetup() {
                                         onSave={async () => {
                                           setAiSaving(true);
                                           try {
-                                            let saveData = { ...aiAdvisorData };
-                                            if (aiAdvisorData?.corrections) {
-                                              saveData.corrections = {};
-                                              for (const field of Object.keys(aiAdvisorData.corrections)) {
-                                                saveData.corrections[field] =
-                                                  aiOverrides[field] ?? aiAdvisorData.corrections[field];
-                                              }
+                                            // Defensive: Only continue if aiData is present
+                                            if (!aiAdvisorData) {
+                                              toast({ title: "Error", description: "No AI suggestions to save." });
+                                              setAiSaving(false);
+                                              return;
                                             }
-                                            await saveErpWithAi(saveData);
+
+                                            // Grab current form values as fallback/defaults
+                                            const currentForm = { ...erpForm };
+
+                                            // Safely build final values for each field, prioritizing user overrides, then AI suggestions, then old form value
+                                            const finalType =
+                                              aiOverrides.type ??
+                                              aiAdvisorData.corrections?.type ??
+                                              currentForm.type;
+
+                                            const finalKeywords =
+                                              aiOverrides.improvedKeywords ??
+                                              aiOverrides.keywords ??
+                                              aiAdvisorData.improvedKeywords ??
+                                              aiAdvisorData.corrections?.keywords ??
+                                              currentForm.keywords;
+
+                                            const finalNotify =
+                                              aiOverrides.notify ??
+                                              aiAdvisorData.corrections?.notify ??
+                                              currentForm.notify;
+
+                                            const finalProtocol =
+                                              aiOverrides.improvedProtocol ??
+                                              aiOverrides.protocol ??
+                                              aiAdvisorData.improvedProtocol ??
+                                              aiAdvisorData.corrections?.protocol ??
+                                              currentForm.protocol;
+
+                                            // Compose the object to be saved
+                                            const saveObj: ERPProtocol = {
+                                              ...currentForm,
+                                              type: finalType,
+                                              keywords: finalKeywords,
+                                              notify: finalNotify,
+                                              protocol: finalProtocol,
+                                            };
+
+                                            // Save to Firestore
+                                            if (editingErp?.id) {
+                                              await updateDoc(
+                                                doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id),
+                                                {
+                                                  ...saveObj,
+                                                  id: editingErp.id,
+                                                }
+                                              );
+                                            } else {
+                                              const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
+                                              await setDoc(newRef, {
+                                                ...saveObj,
+                                                id: newRef.id,
+                                              });
+                                            }
+
+                                            toast({ title: "ERP Protocol updated (AI reviewed)" });
+
+                                            setErpForm({ keywords: "", type: "", notify: "", protocol: "" });
                                             setAiAdvisorOpen(false);
                                             setIsErpModalOpen(false);
                                             setAiAdvisorData(null);
                                             setAiOverrides({});
+                                            setEditingErp(null);
                                           } catch (err) {
-                                            // Optionally handle error
+                                            toast({
+                                              title: "Error",
+                                              description: "Could not save ERP Protocol",
+                                              variant: "destructive",
+                                            });
                                           } finally {
                                             setAiSaving(false);
                                           }
