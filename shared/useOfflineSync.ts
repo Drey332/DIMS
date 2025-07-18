@@ -1,6 +1,6 @@
 // shared/useOfflineSync.ts
 import { useEffect } from "react";
-import { db } from "../firebase";
+import { db } from "@/firebase";
 import { enableIndexedDbPersistence } from "firebase/firestore";
 
 export function useEnableOfflineSync(onError?: (err: any) => void) {

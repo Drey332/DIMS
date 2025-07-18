@@ -8,7 +8,7 @@ import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
 import { socket } from './socket.js';
 import { useEffect, useState } from 'react';
-import { useEnableOfflineSync } from "shared/useOfflineSync";
+import { useEnableOfflineSync } from "@shared/useOfflineSync";
 
 // Pages
 import Dashboard from "@/pages/dashboard";
