@@ -231,4 +231,45 @@
   .hydro-button-warning {
     @apply border-orange-600 text-orange-600 hover:bg-orange-50 font-medium rounded-lg px-3 py-1 transition-colors duration-200;
   }
+
+  /* Desktop-specific enhancements for better spacing and proportions */
+  @media (min-width: 1024px) {
+    .hydro-card {
+      @apply rounded-2xl shadow-md hover:shadow-lg;
+    }
+    
+    /* Enhanced button sizes for desktop */
+    .hydro-button-primary {
+      @apply px-8 py-3 text-lg;
+    }
+    
+    /* Better spacing for form elements on desktop */
+    .hydro-form-spacing {
+      @apply space-y-8;
+    }
+    
+    /* Enhanced modal sizes for desktop */
+    .hydro-modal-lg {
+      @apply max-w-4xl p-10;
+    }
+    
+    /* Better tab styling for desktop */
+    .hydro-tabs-enhanced {
+      @apply px-6 py-3 text-lg;
+    }
+
+    /* Enhanced card padding for desktop */
+    .hydro-card-content {
+      @apply p-8;
+    }
+
+    /* Better typography scaling */
+    .hydro-heading-lg {
+      @apply text-3xl;
+    }
+
+    .hydro-text-lg {
+      @apply text-lg;
+    }
+  }
 }

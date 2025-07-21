@@ -276,8 +276,16 @@ export default function ProjectSetup() {
       toast({ title: "Error", description: "Could not delete asset", variant: "destructive" });
     }
   };
-
-  
+// --- Reset ERP Modals ---
+  function resetErpModals() {
+    setIsErpModalOpen(false);
+    setEditingErp(null);
+    setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
+    setShowReviewChoice(false);
+    setAiAdvisorOpen(false);
+    setAiAdvisorData(null);
+    setAiOverrides({});
+  }
   // --- Firestore Live Subscriptions ---
   // Project Info
   // --- Firestore Live Subscription for Project Info ---
@@ -437,14 +445,22 @@ export default function ProjectSetup() {
         ...erpForm,
         notify: finalNotify,
       };
-      if (editingErp?.id) {
-        await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), {
-          ...saveObj, id: editingErp.id
-        });
+
+      if (editingErp) {
+        if (editingErp.id) {
+          await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), {
+            ...saveObj, id: editingErp.id
+          });
+        } else {
+          toast({ title: "Error", description: "Editing ERP is missing ID.", variant: "destructive" });
+          setAiSaving(false);
+          return;
+        }
       } else {
         const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
         await setDoc(newRef, { ...saveObj, id: newRef.id });
       }
+
       toast({ title: "ERP Protocol saved" });
       setIsErpModalOpen(false);
       setEditingErp(null);
@@ -530,27 +546,53 @@ export default function ProjectSetup() {
     setAiReviewLoading(false);
   };
   const saveErpWithAi = async (aiData: any) => {
-    
-    
+    setAiSaving(true);
     try {
-      if (editingErp?.id) {
-        await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), {
-          ...erpForm,   // PM's form data (can be replaced by aiData fields if you prefer)
-          ...aiData,    // AI reviewed/enhanced fields (e.g. improved keywords, protocol)
-           
-          id: editingErp.id,
-        });
-        toast({ title: "ERP Protocol updated (AI reviewed)" });
+      if (editingErp) {
+        if (editingErp.id) {
+          // Update existing ERP by id with AI-reviewed data
+          await updateDoc(
+            doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id),
+            {
+              ...erpForm,      // PM's form data (can be replaced by aiData fields if you prefer)
+              ...aiData,       // AI reviewed/enhanced fields
+              id: editingErp.id,
+            }
+          );
+          toast({ title: "ERP Protocol updated (AI reviewed)" });
+        } else {
+          // Defensive: Should never happen. Don't create a blank doc on edit!
+          toast({
+            title: "Error",
+            description: "Cannot update: selected ERP is missing an ID.",
+            variant: "destructive",
+          });
+          setAiSaving(false);
+          return;
+        }
       } else {
+        // Create new ERP with AI-reviewed data
         const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
-        await setDoc(newRef, { ...erpForm, ...aiData,id: newRef.id });
-        toast({ title: "ERP Protocol added (AI reviewed)" });
+        await setDoc(newRef, { ...erpForm, ...aiData, id: newRef.id });
+        toast({ title: "ERP Protocol created (AI reviewed)" });
       }
+
+      // Reset all state
       setIsErpModalOpen(false);
       setEditingErp(null);
       setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
+      setAiAdvisorOpen(false);
+      setAiAdvisorData(null);
+      setAiOverrides({});
+      setShowReviewChoice(false);
     } catch (err) {
-      toast({ title: "Error", description: "Could not save ERP Protocol", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Could not save ERP Protocol",
+        variant: "destructive",
+      });
+    } finally {
+      setAiSaving(false);
     }
   };
   // Handles BOTH create and edit
@@ -678,6 +720,7 @@ export default function ProjectSetup() {
                 onClick={() => {
                   setShowGoldModal(false);
                   setGoldCodeInput("");
+                  
                 }}
               >
                 Cancel
@@ -789,8 +832,8 @@ export default function ProjectSetup() {
     <div className="min-h-screen bg-hydro-light">
       <Header user={{ role: "GOLD", name: "David Mooney", title: "General Manager", initials: "DM" }} project={projectInfo || undefined} />
       <Navigation />
-      <main className="container mx-auto px-4 py-6">
-        <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-6">
+      <main className="container mx-auto max-w-6xl lg:max-w-7xl px-4 lg:px-8 py-6 lg:py-10">
+        <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-6 lg:space-y-8">
              
           
               {/* DESKTOP: Horizontal Tabs */}
@@ -842,8 +885,8 @@ export default function ProjectSetup() {
                   Project Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+              <CardContent className="space-y-6 lg:space-y-8 p-6 lg:p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 mb-2">
                   <div>
                     <Label className="font-bold">Project Number</Label>
                     <Input value={projectInfo?.number || ""} readOnly className="bg-gray-100 cursor-not-allowed" />
@@ -857,7 +900,7 @@ export default function ProjectSetup() {
                   <Label className="font-bold">Project Name</Label>
                   <Input value={projectInfo?.name || ""} readOnly className="bg-gray-100 cursor-not-allowed" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
                   <div>
                     <Label className="font-bold">Client</Label>
                     <Input value={projectInfo?.client || ""} readOnly className="bg-gray-100 cursor-not-allowed" />
@@ -917,13 +960,13 @@ export default function ProjectSetup() {
                 {/* Edit Project Modal */}
                 {editModalOpen && editForm && (
                   <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-8">
-                      <h3 className="text-2xl font-bold text-hydro-dark mb-6 flex items-center">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-lg lg:max-w-3xl w-full p-8 lg:p-10 max-h-[90vh] overflow-y-auto">
+                      <h3 className="text-2xl lg:text-3xl font-bold text-hydro-dark mb-6 lg:mb-8 flex items-center">
                         <FileText className="w-5 h-5 mr-2 text-primary" /> Edit Project Info
                       </h3>
                       <form
                         onSubmit={handleProjectSave}
-                        className="space-y-4"
+                        className="space-y-4 lg:space-y-6"
                       >
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
@@ -1152,15 +1195,15 @@ export default function ProjectSetup() {
                     {/* Contact Modal */}
                     {isContactModalOpen && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md sm:max-w-lg p-6 sm:p-8 flex flex-col items-stretch relative">
-                          <h3 className="font-bold text-2xl mb-2 text-hydro-dark text-center">
+                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md sm:max-w-lg lg:max-w-2xl p-6 sm:p-8 lg:p-10 flex flex-col items-stretch relative max-h-[90vh] overflow-y-auto">
+                          <h3 className="font-bold text-2xl lg:text-3xl mb-2 lg:mb-4 text-hydro-dark text-center">
                             {editingContact ? "Update Contact" : "Add Contact"}
                           </h3>
                           <div className="mb-4 text-center text-gray-600">
                             Enter key details for rapid response during emergencies.
                           </div>
                           <Form {...contactForm}>
-                            <form onSubmit={contactForm.handleSubmit(saveContact)} className="space-y-4">
+                            <form onSubmit={contactForm.handleSubmit(saveContact)} className="space-y-4 lg:space-y-6">
                               <FormField
                                 control={contactForm.control}
                                 name="contactType"
@@ -1274,18 +1317,16 @@ export default function ProjectSetup() {
               </TabsContent>
 
                                 {/* --- ERP PROTOCOLS TAB --- */}
-          <TabsContent value="erp">
-            <Card className="hydro-card">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Lock className="w-5 h-5 mr-2 text-yellow-600" />
-                  Emergency Response Protocols (ERP)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                
-                                      
-                                      
+                                <TabsContent value="erp">
+                                  <Card className="hydro-card">
+                                    <CardHeader>
+                                      <CardTitle className="flex items-center">
+                                        <Lock className="w-5 h-5 mr-2 text-yellow-600" />
+                                        
+                                        Emergency Response Protocols (ERP)
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
                                       {!erpAdminUnlocked ? (
                                         <div className="flex flex-col items-center my-8">
                                           <p className="mb-4 font-semibold text-hydro-dark text-center">
@@ -1368,168 +1409,249 @@ export default function ProjectSetup() {
                                             )}
                                           </div>
 
-                                          {showReviewChoice && (
-                                            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
-                                              <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
-                                                <h3 className="text-xl font-bold text-hydro-dark mb-4">Review With AI?</h3>
-                                                <p className="mb-4">Would you like to have this protocol AI-reviewed before saving?</p>
-                                                <div className="flex gap-4 justify-end">
-                                                  <Button
-                                                    onClick={async () => {
-                                                      setShowReviewChoice(false);
-                                                      setAiAdvisorOpen(true);
-                                                      setAiReviewLoading(true);
-                                                      setAiAdvisorData(null);
-                                                      // Do not clear ERP modal here!
-                                                      const parsedNotify = notifyRaw.split(",").map(r => r.trim().toUpperCase()).filter(Boolean);
-                                                      const erpDraft = { ...erpForm, notify: parsedNotify };
-                                                      try {
-                                                        const resp = await fetch("/api/ai-erp-advisor", {
-                                                          method: "POST",
-                                                          headers: { "Content-Type": "application/json" },
-                                                          body: JSON.stringify({ erpDraft }),
-                                                        });
-                                                        setAiAdvisorData(await resp.json());
-                                                      } catch {
-                                                        setAiAdvisorData({ error: "AI analysis failed. Please try again." });
-                                                      } finally {
-                                                        setAiReviewLoading(false);
-                                                      }
-                                                    }}
-                                                    className="bg-blue-600 text-white"
-                                                  >Yes, Review with AI</Button>
-                                                  <Button
-                                                    onClick={async () => {
-                                                      setShowReviewChoice(false);
-                                                      await saveERPDirectly(); // This MUST update the doc, not create
-                                                    }}
-                                                    className="bg-green-600 text-white"
-                                                  >
-                                                    No, Save Directly
-                                                  </Button>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          )}
-
-
+                                          
                                           
                                           {/* ERP Protocol Modal */}
                                       
-                {isErpModalOpen && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-                      <h3 className="text-xl font-bold text-hydro-dark mb-4">
-                        {editingErp ? "Edit ERP Protocol" : "Add ERP Protocol"}
-                      </h3>
-                      <form onSubmit={async e => {
-                        e.preventDefault();
-                        // If editing, trigger review choice overlay
-                        if (editingErp?.id) {
-                          setShowReviewChoice(true);
-                        } else {
-                          // Creating: jump straight to AI review
-                          setAiReviewLoading(true);
-                          setAiAdvisorOpen(true);
-                          setAiAdvisorData(null);
-                          const parsedNotify = notifyRaw.split(",").map(r => r.trim().toUpperCase()).filter(Boolean);
-                          const erpDraft = { ...erpForm, notify: parsedNotify };
-                          try {
-                            const resp = await fetch("/api/ai-erp-advisor", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ erpDraft }),
-                            });
-                            setAiAdvisorData(await resp.json());
-                          } catch {
-                            setAiAdvisorData({ error: "AI analysis failed. Please try again." });
-                          } finally {
-                            setAiReviewLoading(false);
-                          }
-                        }
-                      }} className="space-y-4">
-                        {/* ... your fields for type, notifyRaw, keywords, protocol ... */}
-                        <div className="flex space-x-3 mt-3">
-                          <Button type="submit" className="flex-1 hydro-button-primary">
-                            {editingErp ? "Save Changes" : "Add Protocol"}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => {
-                              setIsErpModalOpen(false);
-                              setEditingErp(null);
-                              setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
-                              setShowReviewChoice(false);
-                              setAiAdvisorOpen(false);
-                              setAiAdvisorData(null);
-                              setAiOverrides({});
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </form>
-                    </div>
-                  </div>
-                )}
+                                          {isErpModalOpen && (
+                                            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+                                              <div className="bg-white rounded-xl shadow-2xl max-w-md lg:max-w-2xl w-full p-6 lg:p-8 max-h-[90vh] overflow-y-auto">
+                                                <h3 className="text-xl lg:text-2xl font-bold text-hydro-dark mb-4 lg:mb-6">
+                                                  {editingErp ? "Edit ERP Protocol" : "Add ERP Protocol"}
+                                                </h3>
+                                                <form onSubmit={handleERPFormSubmit} className="space-y-4 lg:space-y-6">
+                                                  <div>
+                                                    <Label>Scenario/Type (e.g. Fire, Loss of Comms)</Label>
+                                                    <Input
+                                                      value={erpForm.type}
+                                                      onChange={e => setErpForm(f => ({ ...f, type: e.target.value }))}
+                                                      placeholder="e.g. Fire/Evacuation"
+                                                      required
+                                                    />
+                                                  </div>
+                                                  <div>
+                                                    <Label>Roles to Notify (comma-separated)</Label>
+                                                    <Input
+                                                      value={notifyRaw}
+                                                      onChange={e => setNotifyRaw(e.target.value)}
+                                                      placeholder="GOLD, SILVER, BRONZE"
+                                                      required
+                                                    />
+                                                  </div>
+                                                  <div>
+                                                    <Label>Keywords (comma-separated, incl. misspellings)</Label>
+                                                    <Textarea
+                                                      value={erpForm.keywords}
+                                                      onChange={e => setErpForm(f => ({ ...f, keywords: e.target.value }))}
+                                                      placeholder="fire, firee, explosion, smoke, etc."
+                                                      rows={2}
+                                                      required
+                                                    />
+                                                  </div>
+                                                  <div>
+                                                    <Label>Response Protocol (step by step, can be multi-line)</Label>
+                                                    <Textarea
+                                                      value={erpForm.protocol}
+                                                      onChange={e => setErpForm(f => ({ ...f, protocol: e.target.value }))}
+                                                      rows={4}
+                                                      required
+                                                    />
+                                                  </div>
+                                                  <div className="flex space-x-3 mt-3">
+                                                    <Button type="submit" className="flex-1 hydro-button-primary">
+                                                      {editingErp ? "Save Changes" : "Add Protocol"}
+                                                    </Button>
+                                                    <Button
+                                                      type="button"
+                                                      variant="outline"
+                                                      className="flex-1"
+                                                    onClick={resetErpModals}
+                                                    >
+                                                      Cancel
+                                                    </Button>
+                                                  </div>
+                                                </form>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                      
+                                      {showReviewChoice && (
+                                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2">
+                                          <div
+                                            className="
+                                              bg-white rounded-2xl shadow-2xl
+                                              w-full max-w-sm sm:max-w-md lg:max-w-lg
+                                              px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12
+                                              border border-hydro-dark/10
+                                              flex flex-col items-center
+                                              animate-fade-in
+                                              mx-auto
+                                            "
+                                            style={{ minWidth: 320, maxWidth: 480 }}
+                                          >
+                                            {/* Modern animated icon */}
+                                            <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mb-5">
+                                              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                                                <circle cx="12" cy="12" r="4" fill="currentColor" className="opacity-70" />
+                                              </svg>
+                                            </div>
+                                            <h3 className="text-2xl lg:text-3xl font-bold text-hydro-dark text-center mb-2 lg:mb-4">Review With AI?</h3>
+                                            <p className="text-base lg:text-lg text-gray-600 text-center mb-7 lg:mb-8 max-w-xs lg:max-w-sm">
+                                              Would you like to <span className="text-blue-700 font-semibold">AI-review</span> this protocol before saving?
+                                            </p>
+                                            <div className="flex flex-col sm:flex-row w-full justify-center gap-3 lg:gap-4">
+                                              <Button
+                                                className="w-full sm:w-auto px-4 sm:px-6 bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 rounded-xl shadow text-base flex items-center justify-center transition-all"
+                                                onClick={async () => {
+                                                  setShowReviewChoice(false);
+                                                  setAiAdvisorOpen(true);
+                                                  setAiReviewLoading(true);
+                                                  setAiAdvisorData(null);
+                                                  const parsedNotify = notifyRaw.split(",").map(r => r.trim().toUpperCase()).filter(Boolean);
+                                                  const erpDraft = { ...erpForm, notify: parsedNotify };
+                                                  try {
+                                                    const resp = await fetch("/api/ai-erp-advisor", {
+                                                      method: "POST",
+                                                      headers: { "Content-Type": "application/json" },
+                                                      body: JSON.stringify({ erpDraft }),
+                                                    });
+                                                    const aiData = await resp.json();
+                                                    setAiAdvisorData(aiData);
+                                                  } catch (err) {
+                                                    setAiAdvisorData({ error: "AI analysis failed. Please try again." });
+                                                  } finally {
+                                                    setAiReviewLoading(false);
+                                                  }
+                                                }}
+                                              >
+                                                <span className="mr-2">🤖</span>
+                                                Yes, Review with AI
+                                              </Button>
+                                              <Button
+                                                className="w-full sm:w-auto px-4 sm:px-6 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl shadow text-base flex items-center justify-center transition-all"
+                                                onClick={saveERPDirectly}
+                                              >
+                                                <span className="mr-2">✅</span>
+                                                No, Save Directly
+                                              </Button>
+                                              <Button
+                                                className="w-full sm:w-auto px-4 sm:px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded-xl border text-base flex items-center justify-center transition-all"
+                                                variant="outline"
+                                                onClick={resetErpModals}
+                                              >
+                                                Cancel
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                      {/* AI Check */}
+                                      <AIERPAdvisorModal
+                                        open={aiAdvisorOpen}
+                                        onClose={resetErpModals}
+                                        loading={aiReviewLoading}
+                                        aiData={aiAdvisorData}
+                                        aiOverrides={aiOverrides}
+                                        setAiOverrides={setAiOverrides}
+                                        aiSaving={aiSaving}
+                                        onSave={async () => {
+                                          setAiSaving(true);
+                                          try {
+                                            // Defensive: Only continue if aiData is present
+                                            if (!aiAdvisorData) {
+                                              toast({ title: "Error", description: "No AI suggestions to save." });
+                                              setAiSaving(false);
+                                              return;
+                                            }
 
-                {/* AI Check */}
-                <AIERPAdvisorModal
-                            open={aiAdvisorOpen}
-                            onClose={() => {
-                              setAiAdvisorOpen(false);
-                              setAiAdvisorData(null);
-                              setAiOverrides({});
-                              setAiSaving(false);
-                            }}
-                            loading={aiReviewLoading}
-                            aiData={aiAdvisorData}
-                            aiOverrides={aiOverrides}
-                            setAiOverrides={setAiOverrides}
-                            aiSaving={aiSaving}
-                            onSave={async () => {
-                              setAiSaving(true);
-                              try {
-                                if (!aiAdvisorData) return;
-                                // always update the doc if editing
-                                const parseNotify = (value: any): string[] => {
-                                  if (Array.isArray(value)) return value.map(x => x.trim().toUpperCase());
-                                  if (typeof value === "string") return value.split(",").map(x => x.trim().toUpperCase()).filter(Boolean);
-                                  return [];
-                                };
-                                const finalNotify = parseNotify(notifyRaw);
-                                const saveObj: ERPProtocol = {
-                                  ...erpForm,
-                                  notify: finalNotify,
-                                };
-                                if (editingErp?.id) {
-                                  await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), { ...saveObj, id: editingErp.id });
-                                } else {
-                                  const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
-                                  await setDoc(newRef, { ...saveObj, id: newRef.id });
-                                }
-                                toast({ title: "ERP Protocol updated (AI reviewed)" });
-                                setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
-                                setAiAdvisorOpen(false);
-                                setIsErpModalOpen(false);
-                                setAiAdvisorData(null);
-                                setAiOverrides({});
-                                setEditingErp(null);
-                              } catch (err) {
-                                toast({ title: "Error", description: "Could not save ERP Protocol", variant: "destructive" });
-                              } finally {
-                                setAiSaving(false);
-                              }
-                            }}
-                            onOverride={handleOverride}
-                          />
-                        </div>
-                      )}
-          </CardContent>
-        </Card>
-      </TabsContent>
+                                            // Grab current form values as fallback/defaults
+                                            const currentForm = { ...erpForm };
+
+                                            // Safely build final values for each field, prioritizing user overrides, then AI suggestions, then old form value
+                                            const finalType =
+                                              aiOverrides.type ??
+                                              aiAdvisorData.corrections?.type ??
+                                              currentForm.type;
+
+                                            const finalKeywords =
+                                              aiOverrides.improvedKeywords ??
+                                              aiOverrides.keywords ??
+                                              aiAdvisorData.improvedKeywords ??
+                                              aiAdvisorData.corrections?.keywords ??
+                                              currentForm.keywords;
+
+                                            const parseNotify = (value: any): string[] => {
+                                              if (Array.isArray(value)) return value.map(x => x.trim().toUpperCase());
+                                              if (typeof value === "string") return value.split(",").map(x => x.trim().toUpperCase()).filter(Boolean);
+                                              return [];
+                                            };
+
+                                            let finalNotify: string[] = [];
+                                            if (aiOverrides.notify) finalNotify = parseNotify(aiOverrides.notify);
+                                            else if (aiAdvisorData.corrections?.notify) finalNotify = parseNotify(aiAdvisorData.corrections.notify);
+                                            else if (currentForm.notify) finalNotify = parseNotify(currentForm.notify);
+                                            else finalNotify = [];
+
+                                            if (!finalNotify.length && notifyRaw) finalNotify = parseNotify(notifyRaw); // fallback to the current notifyRaw field
+                                            const finalProtocol =
+                                              aiOverrides.improvedProtocol ??
+                                              aiOverrides.protocol ??
+                                              aiAdvisorData.improvedProtocol ??
+                                              aiAdvisorData.corrections?.protocol ??
+                                              currentForm.protocol;
+
+                                            // Compose the object to be saved
+                                            const saveObj: ERPProtocol = {
+                                              ...currentForm,
+                                              type: finalType,
+                                              keywords: finalKeywords,
+                                              notify: finalNotify,
+                                              protocol: finalProtocol,
+                                            };
+
+                                            // Save to Firestore
+                                            if (editingErp?.id) {
+                                              await updateDoc(
+                                                doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id),
+                                                {
+                                                  ...saveObj,
+                                                  id: editingErp.id,
+                                                }
+                                              );
+                                            } else {
+                                              const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
+                                              await setDoc(newRef, {
+                                                ...saveObj,
+                                                id: newRef.id,
+                                              });
+                                            }
+
+                                            toast({ title: "ERP Protocol updated (AI reviewed)" });
+
+                                            setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
+                                            setAiAdvisorOpen(false);
+                                            setIsErpModalOpen(false);
+                                            setAiAdvisorData(null);
+                                            setAiOverrides({});
+                                            setEditingErp(null);
+                                          } catch (err) {
+                                            toast({
+                                              title: "Error",
+                                              description: "Could not save ERP Protocol",
+                                              variant: "destructive",
+                                            });
+                                          } finally {
+                                            setAiSaving(false);
+                                          }
+                                        }}
+                                        onOverride={handleOverride}
+                                      />
+                                    </CardContent>
+                                  </Card>
+                                </TabsContent>
 
                                 {/* --- ASSETS & EQUIPMENT TAB --- */}
                                 <TabsContent value="assets">
@@ -1652,14 +1774,14 @@ export default function ProjectSetup() {
                     {isAssetModalOpen && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-2 sm:p-4 transition-all duration-300">
                           <div
-                            className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col items-stretch relative animate-fade-in mx-2 my-6 overflow-y-auto"
+                            className="bg-white dark:bg-zinc-900 rounded-2xl shadow-xl w-full max-w-lg lg:max-w-3xl p-6 lg:p-10 flex flex-col items-stretch relative animate-fade-in mx-2 my-6 overflow-y-auto"
                             style={{ maxHeight: '90vh' }}
                           >
-                          <h3 className="font-bold text-2xl mb-2 text-hydro-dark dark:text-white text-center">
+                          <h3 className="font-bold text-2xl lg:text-3xl mb-2 lg:mb-4 text-hydro-dark dark:text-white text-center">
                             {editingAsset ? "Update Asset/Equipment" : "Add Asset/Equipment"}
                           </h3>
                           <Form {...assetForm}>
-                            <form onSubmit={assetForm.handleSubmit(saveAsset)} className="space-y-4">
+                            <form onSubmit={assetForm.handleSubmit(saveAsset)} className="space-y-4 lg:space-y-6">
                               <FormField control={assetForm.control} name="name" render={({ field }) => (
                                 <FormItem>
                                   <FormLabel>Asset Name</FormLabel>
