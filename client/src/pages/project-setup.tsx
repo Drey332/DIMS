@@ -49,7 +49,7 @@ type ERPProtocol = {
   id?: string;
   keywords: string;
   type: string;
-  notify: string;
+  notify: string[];
   protocol: string;
 };
 
@@ -158,9 +158,10 @@ export default function ProjectSetup() {
   const [erpForm, setErpForm] = useState<ERPProtocol>({
     keywords: "",
     type: "",
-    notify: "",
+    notify: [],
     protocol: "",
   });
+  const [notifyRaw, setNotifyRaw] = useState("");
   const [erpAdminUnlocked, setErpAdminUnlocked] = useState(false);
   const [unlockCode, setUnlockCode] = useState("");
   const [tabValue, setTabValue] = useState("project");
@@ -169,6 +170,9 @@ export default function ProjectSetup() {
   const [aiReviewLoading, setAiReviewLoading] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
   const [aiOverrides, setAiOverrides] = useState<Record<string, string>>({});
+
+  const [showReviewChoice, setShowReviewChoice] = useState(false);
+  const [erpSaveMode, setErpSaveMode] = useState<"create" | "edit" | null>(null);
   // --- ASSETS STATE & HOOKS ---
   const [assets, setAssets] = useState<AssetEquipment[]>([]);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
@@ -419,17 +423,90 @@ export default function ProjectSetup() {
       toast({ title: "Error", description: "Could not delete contact", variant: "destructive" });
     }
   };
+  // --- ERP SAVE DIRECTLY ---
+  const saveERPDirectly = async () => {
+    setAiSaving(true);
+    try {
+      const parseNotify = (value: any): string[] => {
+        if (Array.isArray(value)) return value.map(x => x.trim().toUpperCase());
+        if (typeof value === "string") return value.split(",").map(x => x.trim().toUpperCase()).filter(Boolean);
+        return [];
+      };
+      const finalNotify = parseNotify(notifyRaw);
+      const saveObj: ERPProtocol = {
+        ...erpForm,
+        notify: finalNotify,
+      };
+      if (editingErp?.id) {
+        await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), {
+          ...saveObj, id: editingErp.id
+        });
+      } else {
+        const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
+        await setDoc(newRef, { ...saveObj, id: newRef.id });
+      }
+      toast({ title: "ERP Protocol saved" });
+      setIsErpModalOpen(false);
+      setEditingErp(null);
+      setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
+      setShowReviewChoice(false);
+    } catch (err) {
+      toast({ title: "Error", description: "Could not save ERP Protocol", variant: "destructive" });
+    } finally {
+      setAiSaving(false);
+    }
+  };
+
+  // --- ERP OVERRIDE SAVE (ADD HERE) ---
+  const handleOverride = async () => {
+    setAiSaving(true);
+    try {
+      const parseNotify = (value: any): string[] => {
+        if (Array.isArray(value)) return value.map(x => x.trim().toUpperCase());
+        if (typeof value === "string") return value.split(",").map(x => x.trim().toUpperCase()).filter(Boolean);
+        return [];
+      };
+      const finalNotify = parseNotify(notifyRaw);
+      const saveObj: ERPProtocol = {
+        ...erpForm,
+        notify: finalNotify,
+      };
+      if (editingErp?.id) {
+        await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), {
+          ...saveObj, id: editingErp.id
+        });
+      } else {
+        const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
+        await setDoc(newRef, { ...saveObj, id: newRef.id });
+      }
+      toast({ title: "ERP Protocol saved (Override/no AI applied)" });
+      setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
+      setAiAdvisorOpen(false);
+      setIsErpModalOpen(false);
+      setAiAdvisorData(null);
+      setAiOverrides({});
+      setEditingErp(null);
+    } catch (err) {
+      toast({ title: "Error", description: "Could not save ERP Protocol", variant: "destructive" });
+    } finally {
+      setAiSaving(false);
+    }
+  };
+
 
   // --- ERP CRUD ---
   const handleEditErp = (protocol: ERPProtocol) => {
     setEditingErp(protocol);
     setErpForm(protocol);
     setIsErpModalOpen(true);
+    setNotifyRaw(Array.isArray(protocol.notify) ? protocol.notify.join(", ") : "");
+    setAiAdvisorData(null); // <-- make sure this is always reset!
   };
   const handleNewErp = () => {
     setEditingErp(null);
-    setErpForm({ keywords: "", type: "", notify: "", protocol: "" });
+    setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
     setIsErpModalOpen(true);
+    setNotifyRaw("");
   };
 // AI review of the ERP
   const handleAiReview = async (e: React.FormEvent) => {
@@ -453,47 +530,58 @@ export default function ProjectSetup() {
     setAiReviewLoading(false);
   };
   const saveErpWithAi = async (aiData: any) => {
+    
+    
     try {
       if (editingErp?.id) {
         await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), {
           ...erpForm,   // PM's form data (can be replaced by aiData fields if you prefer)
           ...aiData,    // AI reviewed/enhanced fields (e.g. improved keywords, protocol)
+           
           id: editingErp.id,
         });
         toast({ title: "ERP Protocol updated (AI reviewed)" });
       } else {
         const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
-        await setDoc(newRef, { ...erpForm, ...aiData, id: newRef.id });
+        await setDoc(newRef, { ...erpForm, ...aiData,id: newRef.id });
         toast({ title: "ERP Protocol added (AI reviewed)" });
       }
       setIsErpModalOpen(false);
       setEditingErp(null);
-      setErpForm({ keywords: "", type: "", notify: "", protocol: "" });
+      setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
     } catch (err) {
       toast({ title: "Error", description: "Could not save ERP Protocol", variant: "destructive" });
     }
   };
-  const handleERPFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAiOverrides({}); 
-    setAiReviewLoading(true);
-    setAiAdvisorOpen(true);
-    setAiAdvisorData(null);
+  // Handles BOTH create and edit
+        const handleERPFormSubmit = async (e: React.FormEvent) => {
+          e.preventDefault();
+          if (editingErp?.id) {
+            // This is an EDIT
+            setShowReviewChoice(true); // Show the review choice
+            setErpSaveMode("edit");
+    } else {
+      // This is a CREATE - always do AI review by default
+      setAiReviewLoading(true);
+      setAiAdvisorOpen(true);
+      setAiAdvisorData(null);
 
-    // Prepare the latest form values for AI
-    const erpDraft = { ...erpForm };
-    try {
-      const resp = await fetch("/api/ai-erp-advisor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ erpDraft }),
-      });
-      const aiData = await resp.json();
-      setAiAdvisorData(aiData);
-    } catch (err) {
-      setAiAdvisorData({ error: "AI analysis failed. Please try again." });
-    } finally {
-      setAiReviewLoading(false);
+      const parsedNotify = notifyRaw.split(",").map(r => r.trim().toUpperCase()).filter(Boolean);
+      const erpDraft = { ...erpForm, notify: parsedNotify };
+      try {
+        const resp = await fetch("/api/ai-erp-advisor", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ erpDraft }),
+        });
+        const aiData = await resp.json();
+        setAiAdvisorData(aiData);
+      } catch (err) {
+        setAiAdvisorData({ error: "AI analysis failed. Please try again." });
+      } finally {
+        setAiReviewLoading(false);
+      }
+      setErpSaveMode("create");
     }
   };
   const handleDeleteErp = async (id: string) => {
@@ -1186,15 +1274,18 @@ export default function ProjectSetup() {
               </TabsContent>
 
                                 {/* --- ERP PROTOCOLS TAB --- */}
-                                <TabsContent value="erp">
-                                  <Card className="hydro-card">
-                                    <CardHeader>
-                                      <CardTitle className="flex items-center">
-                                        <Lock className="w-5 h-5 mr-2 text-yellow-600" />
-                                        Emergency Response Protocols (ERP)
-                                      </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
+          <TabsContent value="erp">
+            <Card className="hydro-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Lock className="w-5 h-5 mr-2 text-yellow-600" />
+                  Emergency Response Protocols (ERP)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                
+                                      
+                                      
                                       {!erpAdminUnlocked ? (
                                         <div className="flex flex-col items-center my-8">
                                           <p className="mb-4 font-semibold text-hydro-dark text-center">
@@ -1276,177 +1367,169 @@ export default function ProjectSetup() {
                                               </div>
                                             )}
                                           </div>
-                                          {/* ERP Protocol Modal */}
-                                      
-                                          {isErpModalOpen && (
-                                            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-                                              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-                                                <h3 className="text-xl font-bold text-hydro-dark mb-4">
-                                                  {editingErp ? "Edit ERP Protocol" : "Add ERP Protocol"}
-                                                </h3>
-                                                    <form onSubmit={handleERPFormSubmit} className="space-y-4">
-                                                  <div>
-                                                    <Label>Scenario/Type (e.g. Fire, Loss of Comms)</Label>
-                                                    <Input
-                                                      value={erpForm.type}
-                                                      onChange={e => setErpForm(f => ({ ...f, type: e.target.value }))}
-                                                      placeholder="e.g. Fire/Evacuation"
-                                                      required
-                                                    />
-                                                  </div>
-                                                  <div>
-                                                    <Label>Keywords (comma-separated, incl. misspellings)</Label>
-                                                    <Textarea
-                                                      value={erpForm.keywords}
-                                                      onChange={e => setErpForm(f => ({ ...f, keywords: e.target.value }))}
-                                                      placeholder="fire, firee, explosion, smoke, etc."
-                                                      rows={2}
-                                                      required
-                                                      
-                                                    />
-                                                  </div>
-                                                  <div>
-                                                    <Label>Roles to Notify (comma-separated)</Label>
-                                                    <Input
-                                                      value={erpForm.notify}
-                                                      onChange={e => setErpForm(f => ({ ...f, notify: e.target.value }))}
-                                                      placeholder="GOLD, SILVER, BRONZE"
-                                                      required
-                                                    />
-                                                  </div>
-                                                  <div>
-                                                    <Label>Response Protocol (step by step, can be multi-line)</Label>
-                                                    <Textarea
-                                                      value={erpForm.protocol}
-                                                      onChange={e => setErpForm(f => ({ ...f, protocol: e.target.value }))}
-                                                      rows={4}
-                                                      required
-                                                    />
-                                                  </div>
-                                                  <div className="flex space-x-3 mt-3">
-                                                    <Button type="submit" className="flex-1 hydro-button-primary">
-                                                      {editingErp ? "Save Changes" : "Add Protocol"}
-                                                    </Button>
-                                                    <Button
-                                                      type="button"
-                                                      variant="outline"
-                                                      className="flex-1"
-                                                      onClick={() => {
-                                                        setIsErpModalOpen(false);
-                                                        setEditingErp(null);
-                                                        setErpForm({ keywords: "", type: "", notify: "", protocol: "" });
-                                                      }}
-                                                    >
-                                                      Cancel
-                                                    </Button>
-                                                  </div>
-                                                </form>
+
+                                          {showReviewChoice && (
+                                            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+                                              <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
+                                                <h3 className="text-xl font-bold text-hydro-dark mb-4">Review With AI?</h3>
+                                                <p className="mb-4">Would you like to have this protocol AI-reviewed before saving?</p>
+                                                <div className="flex gap-4 justify-end">
+                                                  <Button
+                                                    onClick={async () => {
+                                                      setShowReviewChoice(false);
+                                                      setAiAdvisorOpen(true);
+                                                      setAiReviewLoading(true);
+                                                      setAiAdvisorData(null);
+                                                      // Do not clear ERP modal here!
+                                                      const parsedNotify = notifyRaw.split(",").map(r => r.trim().toUpperCase()).filter(Boolean);
+                                                      const erpDraft = { ...erpForm, notify: parsedNotify };
+                                                      try {
+                                                        const resp = await fetch("/api/ai-erp-advisor", {
+                                                          method: "POST",
+                                                          headers: { "Content-Type": "application/json" },
+                                                          body: JSON.stringify({ erpDraft }),
+                                                        });
+                                                        setAiAdvisorData(await resp.json());
+                                                      } catch {
+                                                        setAiAdvisorData({ error: "AI analysis failed. Please try again." });
+                                                      } finally {
+                                                        setAiReviewLoading(false);
+                                                      }
+                                                    }}
+                                                    className="bg-blue-600 text-white"
+                                                  >Yes, Review with AI</Button>
+                                                  <Button
+                                                    onClick={async () => {
+                                                      setShowReviewChoice(false);
+                                                      await saveERPDirectly(); // This MUST update the doc, not create
+                                                    }}
+                                                    className="bg-green-600 text-white"
+                                                  >
+                                                    No, Save Directly
+                                                  </Button>
+                                                </div>
                                               </div>
                                             </div>
                                           )}
-                                        </div>
-                                      )}
 
-                                      {/* AI Check */}
-                                      <AIERPAdvisorModal
-                                        open={aiAdvisorOpen}
-                                        onClose={() => {
-                                          setAiAdvisorOpen(false);
-                                          setAiAdvisorData(null);
-                                          setAiOverrides({});
-                                          setAiSaving(false);
-                                        }}
-                                        loading={aiReviewLoading}
-                                        aiData={aiAdvisorData}
-                                        aiOverrides={aiOverrides}
-                                        setAiOverrides={setAiOverrides}
-                                        aiSaving={aiSaving}
-                                        onSave={async () => {
-                                          setAiSaving(true);
-                                          try {
-                                            // Defensive: Only continue if aiData is present
-                                            if (!aiAdvisorData) {
-                                              toast({ title: "Error", description: "No AI suggestions to save." });
-                                              setAiSaving(false);
-                                              return;
-                                            }
 
-                                            // Grab current form values as fallback/defaults
-                                            const currentForm = { ...erpForm };
+                                          
+                                          {/* ERP Protocol Modal */}
+                                      
+                {isErpModalOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                      <h3 className="text-xl font-bold text-hydro-dark mb-4">
+                        {editingErp ? "Edit ERP Protocol" : "Add ERP Protocol"}
+                      </h3>
+                      <form onSubmit={async e => {
+                        e.preventDefault();
+                        // If editing, trigger review choice overlay
+                        if (editingErp?.id) {
+                          setShowReviewChoice(true);
+                        } else {
+                          // Creating: jump straight to AI review
+                          setAiReviewLoading(true);
+                          setAiAdvisorOpen(true);
+                          setAiAdvisorData(null);
+                          const parsedNotify = notifyRaw.split(",").map(r => r.trim().toUpperCase()).filter(Boolean);
+                          const erpDraft = { ...erpForm, notify: parsedNotify };
+                          try {
+                            const resp = await fetch("/api/ai-erp-advisor", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ erpDraft }),
+                            });
+                            setAiAdvisorData(await resp.json());
+                          } catch {
+                            setAiAdvisorData({ error: "AI analysis failed. Please try again." });
+                          } finally {
+                            setAiReviewLoading(false);
+                          }
+                        }
+                      }} className="space-y-4">
+                        {/* ... your fields for type, notifyRaw, keywords, protocol ... */}
+                        <div className="flex space-x-3 mt-3">
+                          <Button type="submit" className="flex-1 hydro-button-primary">
+                            {editingErp ? "Save Changes" : "Add Protocol"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => {
+                              setIsErpModalOpen(false);
+                              setEditingErp(null);
+                              setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
+                              setShowReviewChoice(false);
+                              setAiAdvisorOpen(false);
+                              setAiAdvisorData(null);
+                              setAiOverrides({});
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
 
-                                            // Safely build final values for each field, prioritizing user overrides, then AI suggestions, then old form value
-                                            const finalType =
-                                              aiOverrides.type ??
-                                              aiAdvisorData.corrections?.type ??
-                                              currentForm.type;
-
-                                            const finalKeywords =
-                                              aiOverrides.improvedKeywords ??
-                                              aiOverrides.keywords ??
-                                              aiAdvisorData.improvedKeywords ??
-                                              aiAdvisorData.corrections?.keywords ??
-                                              currentForm.keywords;
-
-                                            const finalNotify =
-                                              aiOverrides.notify ??
-                                              aiAdvisorData.corrections?.notify ??
-                                              currentForm.notify;
-
-                                            const finalProtocol =
-                                              aiOverrides.improvedProtocol ??
-                                              aiOverrides.protocol ??
-                                              aiAdvisorData.improvedProtocol ??
-                                              aiAdvisorData.corrections?.protocol ??
-                                              currentForm.protocol;
-
-                                            // Compose the object to be saved
-                                            const saveObj: ERPProtocol = {
-                                              ...currentForm,
-                                              type: finalType,
-                                              keywords: finalKeywords,
-                                              notify: finalNotify,
-                                              protocol: finalProtocol,
-                                            };
-
-                                            // Save to Firestore
-                                            if (editingErp?.id) {
-                                              await updateDoc(
-                                                doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id),
-                                                {
-                                                  ...saveObj,
-                                                  id: editingErp.id,
-                                                }
-                                              );
-                                            } else {
-                                              const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
-                                              await setDoc(newRef, {
-                                                ...saveObj,
-                                                id: newRef.id,
-                                              });
-                                            }
-
-                                            toast({ title: "ERP Protocol updated (AI reviewed)" });
-
-                                            setErpForm({ keywords: "", type: "", notify: "", protocol: "" });
-                                            setAiAdvisorOpen(false);
-                                            setIsErpModalOpen(false);
-                                            setAiAdvisorData(null);
-                                            setAiOverrides({});
-                                            setEditingErp(null);
-                                          } catch (err) {
-                                            toast({
-                                              title: "Error",
-                                              description: "Could not save ERP Protocol",
-                                              variant: "destructive",
-                                            });
-                                          } finally {
-                                            setAiSaving(false);
-                                          }
-                                        }}
-                                      />
-                                    </CardContent>
-                                  </Card>
-                                </TabsContent>
+                {/* AI Check */}
+                <AIERPAdvisorModal
+                            open={aiAdvisorOpen}
+                            onClose={() => {
+                              setAiAdvisorOpen(false);
+                              setAiAdvisorData(null);
+                              setAiOverrides({});
+                              setAiSaving(false);
+                            }}
+                            loading={aiReviewLoading}
+                            aiData={aiAdvisorData}
+                            aiOverrides={aiOverrides}
+                            setAiOverrides={setAiOverrides}
+                            aiSaving={aiSaving}
+                            onSave={async () => {
+                              setAiSaving(true);
+                              try {
+                                if (!aiAdvisorData) return;
+                                // always update the doc if editing
+                                const parseNotify = (value: any): string[] => {
+                                  if (Array.isArray(value)) return value.map(x => x.trim().toUpperCase());
+                                  if (typeof value === "string") return value.split(",").map(x => x.trim().toUpperCase()).filter(Boolean);
+                                  return [];
+                                };
+                                const finalNotify = parseNotify(notifyRaw);
+                                const saveObj: ERPProtocol = {
+                                  ...erpForm,
+                                  notify: finalNotify,
+                                };
+                                if (editingErp?.id) {
+                                  await updateDoc(doc(db, "projects", PROJECT_ID, "erpProtocols", editingErp.id), { ...saveObj, id: editingErp.id });
+                                } else {
+                                  const newRef = doc(collection(db, "projects", PROJECT_ID, "erpProtocols"));
+                                  await setDoc(newRef, { ...saveObj, id: newRef.id });
+                                }
+                                toast({ title: "ERP Protocol updated (AI reviewed)" });
+                                setErpForm({ keywords: "", type: "", notify: [], protocol: "" });
+                                setAiAdvisorOpen(false);
+                                setIsErpModalOpen(false);
+                                setAiAdvisorData(null);
+                                setAiOverrides({});
+                                setEditingErp(null);
+                              } catch (err) {
+                                toast({ title: "Error", description: "Could not save ERP Protocol", variant: "destructive" });
+                              } finally {
+                                setAiSaving(false);
+                              }
+                            }}
+                            onOverride={handleOverride}
+                          />
+                        </div>
+                      )}
+          </CardContent>
+        </Card>
+      </TabsContent>
 
                                 {/* --- ASSETS & EQUIPMENT TAB --- */}
                                 <TabsContent value="assets">

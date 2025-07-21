@@ -2,16 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function AIERPAdvisorModal({
-  open,
-  onClose,
-  loading,
-  aiData,
-  aiOverrides,
-  setAiOverrides,
-  aiSaving,
-  onSave,
-}: {
+type AIERPAdvisorModalProps = {
   open: boolean;
   onClose: () => void;
   loading: boolean;
@@ -20,7 +11,21 @@ export function AIERPAdvisorModal({
   setAiOverrides: (v: Record<string, string>) => void;
   aiSaving: boolean;
   onSave: () => Promise<void>;
-}) {
+  onOverride: () => Promise<void>; // <-- add this line
+};
+
+
+  export function AIERPAdvisorModal({
+    open,
+    onClose,
+    loading,
+    aiData,
+    aiOverrides,
+    setAiOverrides,
+    aiSaving,
+    onSave,
+    onOverride,
+  }: AIERPAdvisorModalProps) {
   if (!open) return null;
 
   const noAISuggestions =
@@ -47,7 +52,6 @@ export function AIERPAdvisorModal({
         >
           ×
         </button>
-
         <h3 className="text-xl sm:text-2xl font-bold mb-4 text-hydro-dark text-center">
           AI ERP Advisor Results
         </h3>
@@ -177,12 +181,10 @@ export function AIERPAdvisorModal({
               <Button
                 variant="outline"
                 className="bg-gray-200 text-gray-800 font-bold"
-                onClick={() => {
-                  if (typeof window !== "undefined") window.alert("Keeping your original ERP (Override).");
-                  onClose();
-                }}
+                disabled={aiSaving}
+                onClick={onOverride}
               >
-                Override: Keep My ERP
+                {aiSaving ? "Saving..." : "Override: Keep My ERP"}
               </Button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 // Firebase configuration for HydroSafe OAuth authentication
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore"; // <-- add enableIndexedDbPersistence
 
 const firebaseConfig = {
   apiKey: "AIzaSyCO3AhGO9e7r83Eq-E6GPJrzqhSOAvkE2k",
@@ -23,3 +23,17 @@ export const googleProvider = new GoogleAuthProvider();
 // Configure Google provider for enhanced user info
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
+
+// === ENABLE OFFLINE PERSISTENCE IMMEDIATELY ===
+if (typeof window !== "undefined") {
+  enableIndexedDbPersistence(db).catch((err) => {
+    // Optional: You can dispatch a custom event or handle error here
+    if (err.code === 'failed-precondition') {
+      // Multiple tabs open, can't enable offline
+      console.warn("Offline sync not enabled (multiple tabs open)");
+    } else if (err.code === 'unimplemented') {
+      // Browser not supported
+      console.warn("Offline sync unsupported in this browser");
+    }
+  });
+}

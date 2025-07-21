@@ -7,10 +7,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
-import { useEnableOfflineSync } from "@shared/useOfflineSync";
+import { useEnableOfflineSync } from "@shared/useOfflineSync"; // <-- just event/banner logic now!
 import { socket } from "./socket.js";
 
-// Firestore imports for ProTip
 import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
 
@@ -48,7 +47,7 @@ type UserData = {
   role: string;
 };
 
-// --- Enhanced Offline + Storage Banner ---
+// --- Offline + Storage Banner ---
 function ConnectionBanner() {
   const [offline, setOffline] = useState(!navigator.onLine);
   const [storageError, setStorageError] = useState<string | null>(null);
@@ -58,7 +57,6 @@ function ConnectionBanner() {
     window.addEventListener("online", onStatusChange);
     window.addEventListener("offline", onStatusChange);
 
-    // Listen for IndexedDB/firestore offline failures
     window.addEventListener("hydrosafe:offline-fail", (e: any) => {
       setStorageError(e.detail || "Offline sync is not available in this browser. Try Chrome, Edge, or Safari.");
     });
@@ -88,7 +86,7 @@ function ConnectionBanner() {
   return null;
 }
 
-// --- Robust Error Fallback for UI errors ---
+// --- Error Boundary Fallback ---
 function FatalErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-red-50">
@@ -113,22 +111,24 @@ function Router() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | undefined>(undefined);
 
-  // --- ProTip: Preload ALL essential project data once authenticated!
+  // === PROTIP: Preload ALL critical project data on login! ===
   useEffect(() => {
     if (isAuthenticated) {
-      // You can swap "1" for your dynamic project ID if needed
+      // Use your current projectId (replace "1" with a variable if dynamic)
       const projectId = "1";
       const unsubs = [
         onSnapshot(doc(db, "projects", projectId), () => {}),
         onSnapshot(collection(db, "projects", projectId, "erpProtocols"), () => {}),
         onSnapshot(collection(db, "projects", projectId, "assets"), () => {}),
         onSnapshot(collection(db, "projects", projectId, "contacts"), () => {}),
-        // Add more here if you have more subcollections
+        // Add more subcollections if needed
       ];
-      return () => unsubs.forEach((unsub) => unsub());
+      // Clean up listeners on logout
+      return () => unsubs.forEach(unsub => unsub());
     }
   }, [isAuthenticated]);
 
+  // Auth, user, socket setup
   useEffect(() => {
     const token = localStorage.getItem('token');
     const user = localStorage.getItem('user');
@@ -216,12 +216,7 @@ function Router() {
 
 // --- Main App Component ---
 function App() {
-  // Enable offline Firestore support and handle errors robustly
-  useEnableOfflineSync((error: any) => {
-    window.dispatchEvent(
-      new CustomEvent("hydrosafe:offline-fail", { detail: error?.message })
-    );
-  });
+  useEnableOfflineSync(); // now just for listening, not enabling
 
   return (
     <ErrorBoundary FallbackComponent={FatalErrorFallback}>
