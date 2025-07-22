@@ -8,8 +8,8 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
 import { useEnableOfflineSync } from "@shared/useOfflineSync";
-import EmergencyModal from "@/components/EmergencyModal";
-import { socket } from "./socket.js";
+import EmergencyMusterModal from "@/components/EmergencyMusterModal";
+import { socket } from "./socket";
 
 import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
@@ -43,9 +43,23 @@ type ProjectInfo = {
 };
 
 type UserData = {
-  id: string;
-  name: string;
+  id: number;
+  username: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  email: string;
   role: string;
+  phone: string | null;
+  title: string | null;
+  isActive: boolean | null;
+  isGoldCodeHolder: boolean | null;
+  lastSeen: Date | null;
+  lastActivity: Date | null;
+  isOnline: boolean | null;
+  activityStatus: string | null;
+  sessionId: string | null;
+  createdAt: Date | null;
 };
 
 // --- Offline + Storage Banner ---
@@ -168,7 +182,7 @@ function Router() {
       <ConnectionBanner />
       {/* Emergency Modal: only for authenticated users and not on login/register */}
       {isAuthenticated && userData && (
-        <EmergencyModal open={false} onClose={() => {}} teamMembers={[]} />
+        <EmergencyMusterModal user={userData} />
       )}
       {isAuthenticated && (
         <>
@@ -192,13 +206,7 @@ function Router() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/reports/generate" component={Reports} />
                 <Route path="/reports/history" component={Reports} />
-                <Route path="/setup">
-                  <ProjectSetup
-                    currentUser={userData}
-                    projectInfo={projectInfo}
-                    setProjectInfo={setProjectInfo}
-                  />
-                </Route>
+                <Route path="/setup" component={ProjectSetup} />
                 <Route path="/asset-verification" component={AssetVerification} />
                 <Route path="/assets" component={AssetVerification} />
                 <Route path="/assets/upload" component={AssetUpload} />
@@ -221,7 +229,7 @@ function App() {
   useEnableOfflineSync(); // now just for listening, not enabling
 
   return (
-    <ErrorBoundary FallbackComponent={FatalErrorFallback}>
+    <ErrorBoundary fallback={<FatalErrorFallback error={new Error("Unknown error")} resetErrorBoundary={() => window.location.reload()} />}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
