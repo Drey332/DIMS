@@ -8,7 +8,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
 import { useEnableOfflineSync } from "@shared/useOfflineSync";
-import EmergencyMusterModal from "@/components/EmergencyMusterModal";
+import EmergencyModal from "@/components/EmergencyModal";
 import { socket } from "./socket.js";
 
 import { db } from "@/firebase";
@@ -168,7 +168,7 @@ function Router() {
       <ConnectionBanner />
       {/* Emergency Modal: only for authenticated users and not on login/register */}
       {isAuthenticated && userData && (
-        <EmergencyMusterModal user={userData} />
+        <EmergencyModal open={false} onClose={() => {}} teamMembers={[]} />
       )}
       {isAuthenticated && (
         <>
