@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { db } from "./src/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useActiveEmergency } from "./src/hooks/useActiveEmergency";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -15,9 +15,9 @@ type User = {
   phone?: string;
 };
 
-// --------- Modal Component ----------
 const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
-  const emergency = useActiveEmergency();
+  const { emergency, loading, error } = useActiveEmergency();
+
   const [action, setAction] = useState<"none" | "ack" | "sos">("none");
   const [ackTime, setAckTime] = useState<Date | null>(null);
   const [lat, setLat] = useState<number | null>(null);
@@ -37,9 +37,9 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
     return () => clearInterval(int);
   }, [emergency?.startTime]);
 
-  // Sound, vibrate, focus lock
+  // Sound, vibrate, focus lock (only while modal open)
   useEffect(() => {
-    if (!emergency || action !== "none") return;
+    if (!emergency || loading || error || action !== "none") return;
     document.body.style.overflow = "hidden";
     navigator.vibrate?.([900, 300, 900, 300, 1000]);
     audioRef.current?.play();
@@ -52,7 +52,7 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
       if (audioRef.current) audioRef.current.currentTime = 0;
       window.removeEventListener("keydown", blockTab, true);
     };
-  }, [emergency, action]);
+  }, [emergency, loading, error, action]);
 
   // Try to get muster point location from emergency (if set)
   const musterPoint =
@@ -90,9 +90,7 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
     } else {
       setLocStatus("Device does not support location");
     }
-
     if (!emergency) return;
-    
     await setDoc(
       doc(db, "emergencies", emergency.id, "musters", user.id),
       {
@@ -108,11 +106,6 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
       { merge: true }
     );
     setAckTime(new Date());
-
-    // (Client-side only!) "Nudge" to server: Optional, e.g. call a custom endpoint to ensure push/SMS Cloud Function is scheduled
-    // fetch("/api/nudge-push", { method: "POST", body: JSON.stringify({ userId: user.id, emergencyId: emergency.id }) })
-
-    // -- Actual push/SMS notification to offline users is handled in your Firebase Cloud Function (see previous answer) --
   };
 
   const handleAcknowledge = async () => {
@@ -129,11 +122,14 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
     audioRef.current?.pause();
   };
 
+  // ---------- UI/UX: Render ----------
+
+  if (loading) return null; // Or a loading spinner
+  if (error) return null; // Or show <div>{error.message}</div>
   if (!emergency) return null;
 
   return (
     <AnimatePresence>
-      {/* EMERGENCY MUSTER MODAL */}
       {action === "none" && (
         <motion.div
           key="emergency-muster-modal"
@@ -184,6 +180,7 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
               onClick={handleAcknowledge}
               className="bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-400 text-white font-bold text-lg px-8 py-4 rounded-xl shadow-xl transition-all mb-3 w-full"
               aria-label="Acknowledge and Check In"
+              disabled={loading || !!error}
             >
               ✅ Acknowledge & Check In
             </button>
@@ -191,6 +188,7 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
               onClick={handleSOS}
               className="bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-400 text-white font-bold px-8 py-3 rounded-xl shadow-xl transition-all w-full"
               aria-label="Request Help"
+              disabled={loading || !!error}
             >
               🆘 Request Help / SOS
             </button>
@@ -202,7 +200,6 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
         </motion.div>
       )}
 
-      {/* ACKNOWLEDGED - Show Map + Location */}
       {action === "ack" && (
         <motion.div
           key="mustered"
@@ -248,7 +245,6 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
                   <Marker position={[lat, lng]} />
-                  {/* Muster point marker, if defined */}
                   {musterPoint && (
                     <Marker position={[musterPoint.lat, musterPoint.lng]} />
                   )}
@@ -267,7 +263,6 @@ const EmergencyMusterModal: React.FC<{ user: User }> = ({ user }) => {
         </motion.div>
       )}
 
-      {/* SOS - Confirmation */}
       {action === "sos" && (
         <motion.div
           key="sos"
