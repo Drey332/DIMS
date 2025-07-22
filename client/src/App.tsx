@@ -170,7 +170,7 @@ function Router() {
       <ConnectionBanner />
       {/* Emergency Modal: only for authenticated users and not on login/register */}
       {isAuthenticated && userData && (
-        <EmergencyModal open={false} onClose={() => {}} teamMembers={[]} currentUser={userData} />
+        <EmergencyModal open={false} onClose={() => {}} teamMembers={[]} />
       )}
       {isAuthenticated && (
         <>
@@ -195,13 +195,7 @@ function Router() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/reports/generate" component={Reports} />
                 <Route path="/reports/history" component={Reports} />
-                <Route path="/setup">
-                  <ProjectSetup
-                    currentUser={userData}
-                    projectInfo={projectInfo}
-                    setProjectInfo={setProjectInfo}
-                  />
-                </Route>
+                <Route path="/setup" component={ProjectSetup} />
                 <Route path="/asset-verification" component={AssetVerification} />
                 <Route path="/assets" component={AssetVerification} />
                 <Route path="/assets/upload" component={AssetUpload} />
@@ -224,7 +218,7 @@ function App() {
   useEnableOfflineSync(); // now just for listening, not enabling
 
   return (
-    <ErrorBoundary FallbackComponent={FatalErrorFallback}>
+    <ErrorBoundary fallback={<FatalErrorFallback error={new Error('App crashed')} resetErrorBoundary={() => window.location.reload()} />}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />

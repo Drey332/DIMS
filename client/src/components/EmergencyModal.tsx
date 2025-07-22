@@ -524,32 +524,31 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
             ) : null}
             <div style={{ display: "flex", gap: 14, marginTop: 9, justifyContent: "flex-end" }}>
               <button type="submit" style={{ background: "#d80000", color: "#fff", borderRadius: 6, padding: "10px 22px", fontWeight: 600, border: "none", fontSize: 15, cursor: "pointer" }}>Submit Emergency</button>
-              <button type="button" onClick={onClose} style={{ background: "#aaa
-                                                              <button
-                                                                type="button"
-                                                                onClick={onClose}
-                                                                style={{
-                                                                  background: "#aaa",
-                                                                  color: "#fff",
-                                                                  borderRadius: 6,
-                                                                  padding: "10px 22px",
-                                                                  fontWeight: 500,
-                                                                  border: "none",
-                                                                  fontSize: 15,
-                                                                  cursor: "pointer",
-                                                                }}
-                                                              >
-                                                                Cancel
-                                                              </button>
-                                                              </div>
-                                                              </form>
-                                                              )}
-                                                              {/* Observation Card Tab */}
-                                                              {activeTab === "observation" && (
-                                                              <form
-                                                              onSubmit={handleObsSubmit}
-                                                              style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}
-                                                              >
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: "#aaa",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "10px 22px",
+                  fontWeight: 500,
+                  border: "none",
+                  fontSize: 15,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+        {/* Observation Card Tab */}
+        {activeTab === "observation" && (
+          <form
+            onSubmit={handleObsSubmit}
+            style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}
+          >
                                                               <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#036" }}>
                                                               Hazard Observation Card
                                                               </h2>
