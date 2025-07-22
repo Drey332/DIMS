@@ -1482,29 +1482,49 @@ export default function ProjectSetup() {
                                           <div
                                             className="
                                               bg-white rounded-2xl shadow-2xl
-                                              w-full max-w-sm sm:max-w-md lg:max-w-lg
-                                              px-6 py-8 sm:px-10 sm:py-10 lg:px-12 lg:py-12
+                                              w-full max-w-sm sm:max-w-md lg:max-w-xl xl:max-w-2xl
+                                              px-6 py-8 sm:px-10 sm:py-10 lg:px-16 lg:py-14
                                               border border-hydro-dark/10
                                               flex flex-col items-center
                                               animate-fade-in
                                               mx-auto
+                                              transition-all
                                             "
-                                            style={{ minWidth: 320, maxWidth: 480 }}
+                                            style={{ minWidth: 320 }}
                                           >
-                                            {/* Modern animated icon */}
+                                            {/* Animated/modern icon */}
                                             <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mb-5">
                                               <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                                                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" fill="none" />
                                                 <circle cx="12" cy="12" r="4" fill="currentColor" className="opacity-70" />
                                               </svg>
                                             </div>
-                                            <h3 className="text-2xl lg:text-3xl font-bold text-hydro-dark text-center mb-2 lg:mb-4">Review With AI?</h3>
-                                            <p className="text-base lg:text-lg text-gray-600 text-center mb-7 lg:mb-8 max-w-xs lg:max-w-sm">
+                                            <h3 className="text-2xl lg:text-3xl font-bold text-hydro-dark text-center mb-2 lg:mb-4">
+                                              Review With AI?
+                                            </h3>
+                                            <p className="text-base lg:text-lg text-gray-600 text-center mb-7 lg:mb-8 max-w-xs lg:max-w-md xl:max-w-lg">
                                               Would you like to <span className="text-blue-700 font-semibold">AI-review</span> this protocol before saving?
                                             </p>
-                                            <div className="flex flex-col sm:flex-row w-full justify-center gap-3 lg:gap-4">
+
+                                            {/* Button Group */}
+                                            <div
+                                              className="
+                                                flex flex-col sm:flex-row w-full justify-center items-center
+                                                gap-2 sm:gap-4
+                                                mt-1
+                                                max-w-2xl mx-auto
+                                              "
+                                            >
+                                              {/* YES button */}
                                               <Button
-                                                className="w-full sm:w-auto px-4 sm:px-6 bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 rounded-xl shadow text-base flex items-center justify-center transition-all"
+                                                className="
+                                                  w-full sm:w-auto min-w-[135px] max-w-xs
+                                                  px-4 sm:px-5
+                                                  bg-blue-700 hover:bg-blue-800 text-white font-bold
+                                                  py-2 rounded-xl shadow text-base
+                                                  flex items-center justify-center transition-all
+                                                "
+                                                style={{ fontWeight: 600 }}
                                                 onClick={async () => {
                                                   setShowReviewChoice(false);
                                                   setAiAdvisorOpen(true);
@@ -1527,19 +1547,35 @@ export default function ProjectSetup() {
                                                   }
                                                 }}
                                               >
-                                                <span className="mr-2">🤖</span>
+                                                <span className="mr-2 text-lg">🤖</span>
                                                 Yes, Review with AI
                                               </Button>
+                                              {/* NO button */}
                                               <Button
-                                                className="w-full sm:w-auto px-4 sm:px-6 bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-xl shadow text-base flex items-center justify-center transition-all"
+                                                className="
+                                                  w-full sm:w-auto min-w-[135px] max-w-xs
+                                                  px-4 sm:px-5
+                                                  bg-green-600 hover:bg-green-700 text-white font-bold
+                                                  py-2 rounded-xl shadow text-base
+                                                  flex items-center justify-center transition-all
+                                                "
+                                                style={{ fontWeight: 600 }}
                                                 onClick={saveERPDirectly}
                                               >
-                                                <span className="mr-2">✅</span>
+                                                <span className="mr-2 text-lg">✅</span>
                                                 No, Save Directly
                                               </Button>
+                                              {/* CANCEL button */}
                                               <Button
-                                                className="w-full sm:w-auto px-4 sm:px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 rounded-xl border text-base flex items-center justify-center transition-all"
+                                                className="
+                                                  w-full sm:w-auto min-w-[110px] max-w-xs
+                                                  px-4 sm:px-5
+                                                  bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold
+                                                  py-2 rounded-xl border text-base
+                                                  flex items-center justify-center transition-all
+                                                "
                                                 variant="outline"
+                                                style={{ fontWeight: 500 }}
                                                 onClick={resetErpModals}
                                               >
                                                 Cancel

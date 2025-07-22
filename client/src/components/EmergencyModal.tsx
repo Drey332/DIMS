@@ -5,7 +5,7 @@ import { db } from "../firebase";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import Fuse from "fuse.js";
 
-// -------------------- Types --------------------
+// ---------- Types ----------
 
 type TeamMember = {
   id: string;
@@ -18,9 +18,9 @@ type TeamMember = {
 
 type ERPProtocol = {
   id?: string;
-  keywords: string; // comma separated string
+  keywords: string;
   type: string;
-  notify: string[] | string; // roles as array or string
+  notify: string[] | string;
   protocol: string;
 };
 
@@ -28,7 +28,7 @@ type EmergencyModalProps = {
   open: boolean;
   onClose: () => void;
   teamMembers: TeamMember[];
-  projectId?: string; // Defaults to "1"
+  projectId?: string;
 };
 
 interface ObservationForm {
@@ -74,7 +74,7 @@ const incidentTypes = [
   "Near-miss",
 ];
 
-// Helper to normalize text for fuzzy matching
+// --- Helper ---
 function normalize(str: string) {
   return str
     .toLowerCase()
@@ -84,7 +84,7 @@ function normalize(str: string) {
     .trim();
 }
 
-// -------------------- Main Component --------------------
+// ---------- Main Component ----------
 
 const EmergencyModal: React.FC<EmergencyModalProps> = ({
   open,
@@ -92,11 +92,11 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   teamMembers,
   projectId = "1",
 }) => {
-  // -- Dynamic ERP state
+  // Dynamic ERP state
   const [erpProtocols, setErpProtocols] = useState<ERPProtocol[]>([]);
   const [fuse, setFuse] = useState<any>(null);
 
-  // -- UI State
+  // UI State
   const [activeTab, setActiveTab] = useState<"emergency" | "observation">("emergency");
   const [emergencyDesc, setEmergencyDesc] = useState("");
   const [match, setMatch] = useState<ERPProtocol & { matchedKeyword?: string } | null>(null);
@@ -403,18 +403,53 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                 }}>
                   Next Steps:
                 </div>
-                <div style={{
-                  color: "#c00",
-                  fontWeight: 500,
-                  fontSize: 15.5,
-                  background: "#fff",
-                  borderRadius: 5,
-                  padding: 8,
-                  lineHeight: 1.6,
-                  letterSpacing: 0.1
-                }}>
-                  {match.protocol}
-                </div>
+                {/* --------- CTO-grade protocol steps below --------- */}
+                <ol style={{ margin: 0, padding: 0, listStyle: "none", marginTop: 6 }}>
+                  {(match.protocol || "")
+                    .split(/\s*\d+\.\s+/)
+                    .filter(Boolean)
+                    .map((step, idx) => (
+                      <li
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 14,
+                          background: "#fff",
+                          borderLeft: "5px solid #d80000",
+                          boxShadow: "0 2px 9px 0 rgba(218,55,55,0.08)",
+                          borderRadius: 10,
+                          marginBottom: 12,
+                          padding: "12px 15px",
+                        }}
+                      >
+                        <span style={{
+                          minWidth: 33,
+                          minHeight: 33,
+                          background: "#d80000",
+                          color: "#fff",
+                          fontWeight: 800,
+                          borderRadius: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 17,
+                          boxShadow: "0 2px 8px 0 #d8000020",
+                          marginTop: 2,
+                        }}>
+                          {idx + 1}
+                        </span>
+                        <span style={{
+                          fontSize: 15.5,
+                          color: "#21244a",
+                          fontWeight: 600,
+                          lineHeight: 1.62,
+                        }}>
+                          {step.trim()}
+                        </span>
+                      </li>
+                    ))}
+                </ol>
               </div>
             ) : emergencyDesc.length > 5 ? (
               <div style={{
@@ -475,156 +510,156 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                 value={form.vessel}
                 onChange={handleObsChange}
                 style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>System:</label>
-              <input
+                />
+                </div>
+                <div style={fieldStyle}>
+                <label style={labelStyle}>System:</label>
+                <input
                 type="text"
                 name="system"
                 value={form.system}
                 onChange={handleObsChange}
                 style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Client:</label>
-              <input
+                />
+                </div>
+                <div style={fieldStyle}>
+                <label style={labelStyle}>Client:</label>
+                <input
                 type="text"
                 name="client"
                 value={form.client}
                 onChange={handleObsChange}
                 style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Observation:</label>
-              <textarea
+                />
+                </div>
+                <div style={fieldStyle}>
+                <label style={labelStyle}>Observation:</label>
+                <textarea
                 name="observation"
                 value={form.observation}
                 onChange={handleObsChange}
                 required
                 style={textareaStyle}
-              />
-              </div>
-              <div style={fieldStyle}>
+                />
+                </div>
+                <div style={fieldStyle}>
                 <label style={labelStyle}>Recommendation from your Observation:</label>
                 <textarea
-                  name="recommendation"
-                  value={form.recommendation}
-                  onChange={handleObsChange}
-                  style={textareaStyle}
+                name="recommendation"
+                value={form.recommendation}
+                onChange={handleObsChange}
+                style={textareaStyle}
                 />
-              </div>
-              <div style={{ ...fieldStyle, flexDirection: "row", alignItems: "center", gap: 17 }}>
+                </div>
+                <div style={{ ...fieldStyle, flexDirection: "row", alignItems: "center", gap: 17 }}>
                 <span style={labelStyle}>Closed Out?</span>
                 <label style={{ fontWeight: 400, fontSize: 14 }}>
-                  <input
-                    type="radio"
-                    name="closedOut"
-                    value="Yes"
-                    checked={form.closedOut === "Yes"}
-                    onChange={handleObsChange}
-                  /> Yes
+                <input
+                  type="radio"
+                  name="closedOut"
+                  value="Yes"
+                  checked={form.closedOut === "Yes"}
+                  onChange={handleObsChange}
+                /> Yes
                 </label>
                 <label style={{ fontWeight: 400, fontSize: 14 }}>
-                  <input
-                    type="radio"
-                    name="closedOut"
-                    value="No"
-                    checked={form.closedOut === "No"}
-                    onChange={handleObsChange}
-                  /> No
+                <input
+                  type="radio"
+                  name="closedOut"
+                  value="No"
+                  checked={form.closedOut === "No"}
+                  onChange={handleObsChange}
+                /> No
                 </label>
-              </div>
-              <div style={fieldStyle}>
+                </div>
+                <div style={fieldStyle}>
                 <label style={labelStyle}>Name (Optional):</label>
                 <input
-                  type="text"
-                  name="name"
-                  value={form.name}
-                  onChange={handleObsChange}
-                  style={inputStyle}
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleObsChange}
+                style={inputStyle}
                 />
-              </div>
-              <div style={fieldStyle}>
+                </div>
+                <div style={fieldStyle}>
                 <label style={labelStyle}>Sign:</label>
                 <input
-                  type="text"
-                  name="sign"
-                  value={form.sign}
-                  onChange={handleObsChange}
-                  style={inputStyle}
+                type="text"
+                name="sign"
+                value={form.sign}
+                onChange={handleObsChange}
+                style={inputStyle}
                 />
-              </div>
-              <div style={fieldStyle}>
+                </div>
+                <div style={fieldStyle}>
                 <label style={labelStyle}>Date:</label>
                 <input
-                  type="date"
-                  name="date"
-                  value={form.date}
-                  onChange={handleObsChange}
-                  style={inputStyle}
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleObsChange}
+                style={inputStyle}
                 />
-              </div>
-              <div style={fieldStyle}>
+                </div>
+                <div style={fieldStyle}>
                 <label style={labelStyle}>Attach Photo/Video:</label>
                 <input
-                  type="file"
-                  accept="image/*,video/*"
-                  name="photo"
-                  onChange={handleObsChange}
+                type="file"
+                accept="image/*,video/*"
+                name="photo"
+                onChange={handleObsChange}
                 />
-              </div>
-              <div style={{ ...fieldStyle, flexDirection: "row", alignItems: "center", gap: 9 }}>
+                </div>
+                <div style={{ ...fieldStyle, flexDirection: "row", alignItems: "center", gap: 9 }}>
                 <input
-                  type="checkbox"
-                  name="stopWork"
-                  checked={form.stopWork}
-                  onChange={handleObsChange}
+                type="checkbox"
+                name="stopWork"
+                checked={form.stopWork}
+                onChange={handleObsChange}
                 />
                 <span style={{ fontWeight: 500, color: "#b30000" }}>
-                  I am exercising STOP WORK AUTHORITY for this incident.
+                I am exercising STOP WORK AUTHORITY for this incident.
                 </span>
-              </div>
-              <div style={{ marginTop: 19, display: "flex", justifyContent: "flex-end", gap: 13 }}>
+                </div>
+                <div style={{ marginTop: 19, display: "flex", justifyContent: "flex-end", gap: 13 }}>
                 <button
-                  type="submit"
-                  style={{
-                    background: "#0074b8",
-                    color: "#fff",
-                    padding: "10px 22px",
-                    borderRadius: 6,
-                    fontWeight: 600,
-                    border: "none",
-                    fontSize: 15,
-                    cursor: "pointer"
-                  }}
+                type="submit"
+                style={{
+                  background: "#0074b8",
+                  color: "#fff",
+                  padding: "10px 22px",
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  border: "none",
+                  fontSize: 15,
+                  cursor: "pointer"
+                }}
                 >
-                  Submit Observation
+                Submit Observation
                 </button>
                 <button
-                  type="button"
-                  onClick={onClose}
-                  style={{
-                    background: "#aaa",
-                    color: "#fff",
-                    borderRadius: 6,
-                    padding: "10px 22px",
-                    fontWeight: 500,
-                    border: "none",
-                    fontSize: 15,
-                    cursor: "pointer"
-                  }}
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: "#aaa",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "10px 22px",
+                  fontWeight: 500,
+                  border: "none",
+                  fontSize: 15,
+                  cursor: "pointer"
+                }}
                 >
-                  Cancel
+                Cancel
                 </button>
-              </div>
-              </form>
-              )}
-              </div>
-              </div>
-              );
-              };
+                </div>
+                </form>
+                )}
+                </div>
+                </div>
+                );
+                };
 
-              export default EmergencyModal;
+                export default EmergencyModal;
