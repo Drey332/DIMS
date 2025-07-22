@@ -1,12 +1,12 @@
-// EmergencyModal.tsx — Dynamic ERP, Full Observation Card Support, Emergency Alert (Vibration, Siren, Notification)
+// EmergencyModal.tsx — Dynamic ERP, Full Observation Card Support, Muster Alert
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import { db } from "../firebase";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import Fuse from "fuse.js";
+import EmergencyAlarmModal from "@/components/EmergencyAlarmModal"; // <-- Import your Tony Stark alarm modal
 
 // ---------- Types ----------
-
 type TeamMember = {
   id: string;
   firstName: string;
@@ -15,7 +15,6 @@ type TeamMember = {
   title?: string;
   phone?: string;
 };
-
 type ERPProtocol = {
   id?: string;
   keywords: string;
@@ -23,7 +22,6 @@ type ERPProtocol = {
   notify: string[] | string;
   protocol: string;
 };
-
 type EmergencyModalProps = {
   open: boolean;
   onClose: () => void;
@@ -47,7 +45,6 @@ interface ObservationForm {
   stopWork: boolean;
   photo: File | null;
 }
-
 const defaultForm: ObservationForm = {
   type: [],
   location: "",
@@ -64,7 +61,6 @@ const defaultForm: ObservationForm = {
   stopWork: false,
   photo: null,
 };
-
 const incidentTypes = [
   "Unsafe Act",
   "Unsafe Condition",
@@ -83,14 +79,12 @@ function normalize(str: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
-
-// --- Notification Helper ---
 function showEmergencyNotification(title: string, body: string) {
   if (!("Notification" in window)) return;
   if (Notification.permission === "granted") {
     new Notification(title, { body, icon: "/alert-icon.png" });
   } else if (Notification.permission !== "denied") {
-    Notification.requestPermission().then(permission => {
+    Notification.requestPermission().then((permission) => {
       if (permission === "granted") {
         new Notification(title, { body, icon: "/alert-icon.png" });
       }
@@ -99,7 +93,6 @@ function showEmergencyNotification(title: string, body: string) {
 }
 
 // ---------- Main Component ----------
-
 const EmergencyModal: React.FC<EmergencyModalProps> = ({
   open,
   onClose,
@@ -116,19 +109,18 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   const [match, setMatch] = useState<ERPProtocol & { matchedKeyword?: string } | null>(null);
   const [form, setForm] = useState<ObservationForm>(defaultForm);
 
-  // Siren audio ref for alert
-  const audioRef = useRef<HTMLAudioElement>(null);
+  // --- Emergency alarm modal state
+  const [alarmOpen, setAlarmOpen] = useState(false);
 
   // Fetch ERPs from Firestore when modal opens
-  useEffect(() => {
+  React.useEffect(() => {
     if (!open) return;
-    getDocs(collection(db, "projects", projectId, "erpProtocols")).then(snapshot => {
-      const erps = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as ERPProtocol));
+    getDocs(collection(db, "projects", projectId, "erpProtocols")).then((snapshot) => {
+      const erps = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id } as ERPProtocol));
       setErpProtocols(erps);
-
       // Prepare data for Fuse.js
-      const fuseData = erps.flatMap(scenario =>
-        (scenario.keywords || "").split(",").map(k => ({
+      const fuseData = erps.flatMap((scenario) =>
+        (scenario.keywords || "").split(",").map((k) => ({
           keyword: normalize(k),
           ...scenario,
         }))
@@ -138,13 +130,12 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   }, [open, projectId]);
 
   // Emergency keyword matching logic (runs when user types)
-  useEffect(() => {
+  React.useEffect(() => {
     if (!emergencyDesc || !fuse) {
       setMatch(null);
       return;
     }
     const desc = normalize(emergencyDesc);
-
     // Try exact match first
     for (const scenario of erpProtocols) {
       const keys = (scenario.keywords || "").split(",").map(normalize);
@@ -167,54 +158,26 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }, [emergencyDesc, fuse, erpProtocols]);
 
-  // --- Emergency Alert: Vibration + Siren + Notification when modal opens ---
-  useEffect(() => {
-    if (!open || activeTab !== "emergency") return;
-
-    // Vibrate
-    if ("vibrate" in navigator) {
-      navigator.vibrate([1200, 400, 1200, 400, 1500]);
-    }
-
-    // Siren
-    audioRef.current?.play();
-
-    // Notification
-    showEmergencyNotification(
-      "🚨 EMERGENCY: Protocol Required",
-      "A new emergency was reported. Follow the on-screen protocol."
-    );
-
-    // Focus lock (optional, for keyboard)
-    document.body.style.overflow = "hidden";
-    const blockTab = (e: KeyboardEvent) => e.preventDefault();
-    window.addEventListener("keydown", blockTab, true);
-
-    // Cleanup on modal close
-    return () => {
-      document.body.style.overflow = "";
-      navigator.vibrate?.(0);
-      audioRef.current?.pause();
-      if (audioRef.current) audioRef.current.currentTime = 0;
-      window.removeEventListener("keydown", blockTab, true);
-    };
-  }, [open, activeTab]);
+  // --- Reset alarm when modal closes
+  React.useEffect(() => {
+    if (!open) setAlarmOpen(false);
+  }, [open]);
 
   // Emergency Submit Handler (Firestore)
   async function handleEmergencySubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
       let notifiedContacts: any[] = [];
-      // Bulletproof: Always get roles as array
       const notifyRoles = Array.isArray(match?.notify)
         ? match?.notify
         : match?.notify
         ? [match?.notify]
         : [];
       if (match) {
-        notifiedContacts = notifyRoles.flatMap(role =>
-          (teamMembers ?? []).filter(tm => tm.role.trim().toUpperCase() === role.trim().toUpperCase())
-            .map(tm => ({
+        notifiedContacts = notifyRoles.flatMap((role) =>
+          (teamMembers ?? [])
+            .filter((tm) => tm.role.trim().toUpperCase() === role.trim().toUpperCase())
+            .map((tm) => ({
               roleKey: role,
               name: tm.firstName + " " + tm.lastName,
               phone: tm.phone,
@@ -233,16 +196,13 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         createdAt: new Date().toISOString(),
       });
 
-      // Optional: In-app notification for user
+      // --- Now trigger alarm/acknowledge UI
+      setAlarmOpen(true);
       showEmergencyNotification(
-        "🚨 Emergency Submitted",
-        "Your emergency was logged and command has been notified."
+        "🚨 Muster Protocol Activated",
+        "A muster alarm was triggered. Please acknowledge presence ASAP."
       );
-
-      alert("Emergency report submitted!");
-      setEmergencyDesc("");
-      setMatch(null);
-      onClose();
+      // Don’t reset the form/close modal until alarm is acknowledged
     } catch (error) {
       alert("Critical error occurred. Please check the console for more information.");
       // eslint-disable-next-line no-console
@@ -250,20 +210,20 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }
 
-  // Observation form handlers (unchanged)
+  // --- Observation form handlers ---
   function handleObsChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value, type, checked, files } = e.target as any;
     if (type === "checkbox" && name === "type") {
-      setForm(f => ({
+      setForm((f) => ({
         ...f,
         type: checked ? [...f.type, value] : f.type.filter((t: string) => t !== value),
       }));
     } else if (type === "checkbox") {
-      setForm(f => ({ ...f, [name]: checked }));
+      setForm((f) => ({ ...f, [name]: checked }));
     } else if (type === "file") {
-      setForm(f => ({ ...f, photo: files[0] }));
+      setForm((f) => ({ ...f, photo: files[0] }));
     } else {
-      setForm(f => ({ ...f, [name]: value }));
+      setForm((f) => ({ ...f, [name]: value }));
     }
   }
   async function handleObsSubmit(e: React.FormEvent) {
@@ -284,7 +244,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }
 
-  // Field/UI styles
+  // --- UI Styles ---
   const fieldStyle: React.CSSProperties = {
     display: "flex",
     flexDirection: "column",
@@ -311,8 +271,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   };
 
   if (!open) return null;
-
-  // Always ensure roles is an array for mapping, even if Firestore data is messy.
   const notifyRoles =
     Array.isArray(match?.notify)
       ? match.notify
@@ -323,114 +281,186 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   return (
     <div
       style={{
-        position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
-        background: "rgba(0,0,0,0.36)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200
-      }}>
-      {/* --- Siren Audio (hidden) --- */}
-      <audio ref={audioRef} src="/siren.mp3" loop />
-      <div style={{
-        background: "#fff",
-        borderRadius: 18,
-        width: "98vw",
-        maxWidth: 480,
-        boxShadow: "0 8px 40px rgba(0,0,0,0.14)",
-        overflowY: "auto",
-        maxHeight: "96vh",
-        minHeight: 0,
-      }}>
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        background: "rgba(0,0,0,0.36)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1200,
+      }}
+    >
+      {/* --- Tony Stark Emergency Alarm Modal (strobe/siren/vibration/ack) --- */}
+      <EmergencyAlarmModal
+        open={alarmOpen}
+        onAcknowledge={() => setAlarmOpen(false)}
+        message="🚨 EMERGENCY: Muster required. Confirm your safety now!"
+      />
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 18,
+          width: "98vw",
+          maxWidth: 480,
+          boxShadow: "0 8px 40px rgba(0,0,0,0.14)",
+          overflowY: "auto",
+          maxHeight: "96vh",
+          minHeight: 0,
+          filter: alarmOpen ? "blur(1.5px)" : undefined, // blur content if alarm is up
+          pointerEvents: alarmOpen ? "none" : undefined,
+        }}
+      >
         {/* Tab Switch */}
         <div style={{ display: "flex", borderBottom: "1px solid #e3e3e3" }}>
           <button
             style={{
-              flex: 1, padding: "14px 0", border: "none", background: activeTab === "emergency" ? "#f7dada" : "#fafafa", color: activeTab === "emergency" ? "#b30000" : "#222", fontWeight: 600, fontSize: 17, cursor: "pointer"
+              flex: 1,
+              padding: "14px 0",
+              border: "none",
+              background: activeTab === "emergency" ? "#f7dada" : "#fafafa",
+              color: activeTab === "emergency" ? "#b30000" : "#222",
+              fontWeight: 600,
+              fontSize: 17,
+              cursor: alarmOpen ? "not-allowed" : "pointer",
             }}
-            onClick={() => setActiveTab("emergency")}
-          >Emergency</button>
+            onClick={() => !alarmOpen && setActiveTab("emergency")}
+            disabled={alarmOpen}
+          >
+            Emergency
+          </button>
           <button
             style={{
-              flex: 1, padding: "14px 0", border: "none", background: activeTab === "observation" ? "#e8f6ff" : "#fafafa", color: activeTab === "observation" ? "#036" : "#222", fontWeight: 600, fontSize: 17, cursor: "pointer"
+              flex: 1,
+              padding: "14px 0",
+              border: "none",
+              background: activeTab === "observation" ? "#e8f6ff" : "#fafafa",
+              color: activeTab === "observation" ? "#036" : "#222",
+              fontWeight: 600,
+              fontSize: 17,
+              cursor: alarmOpen ? "not-allowed" : "pointer",
             }}
-            onClick={() => setActiveTab("observation")}
-          >Observation Card</button>
+            onClick={() => !alarmOpen && setActiveTab("observation")}
+            disabled={alarmOpen}
+          >
+            Observation Card
+          </button>
         </div>
         {/* Emergency Tab */}
         {activeTab === "emergency" && (
-          <form onSubmit={handleEmergencySubmit} style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}>
-            <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#b30000" }}>Emergency Incident Report</h2>
+          <form
+            onSubmit={handleEmergencySubmit}
+            style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}
+          >
+            <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#b30000" }}>
+              Emergency Incident Report
+            </h2>
             <div style={fieldStyle}>
               <label style={labelStyle}>Describe the Emergency:</label>
               <textarea
                 name="emergencyDesc"
                 value={emergencyDesc}
-                onChange={e => setEmergencyDesc(e.target.value)}
+                onChange={(e) => setEmergencyDesc(e.target.value)}
                 required
                 placeholder="e.g. Diver unconscious, fire, loss of comms, etc."
                 style={textareaStyle}
+                disabled={alarmOpen}
               />
             </div>
             {match ? (
-              <div style={{
-                border: "2px solid #f55",
-                padding: 16,
-                borderRadius: 10,
-                background: "#fff4f0",
-                marginBottom: 18
-              }}>
-                <div style={{
-                  fontWeight: 700,
-                  color: "#b30000",
-                  fontSize: 18,
-                  marginBottom: 10
-                }}>
-                  ERP Protocol Identified: <span style={{ color: "#e00" }}>{match.type}</span>
+              <div
+                style={{
+                  border: "2px solid #f55",
+                  padding: 16,
+                  borderRadius: 10,
+                  background: "#fff4f0",
+                  marginBottom: 18,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    color: "#b30000",
+                    fontSize: 18,
+                    marginBottom: 10,
+                  }}
+                >
+                  ERP Protocol Identified:{" "}
+                  <span style={{ color: "#e00" }}>{match.type}</span>
                 </div>
-                <div style={{
-                  fontWeight: 600,
-                  marginBottom: 8,
-                  color: "#222",
-                  fontSize: 16
-                }}>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    marginBottom: 8,
+                    color: "#222",
+                    fontSize: 16,
+                  }}
+                >
                   Notify the following Command Team Members:
                 </div>
-                <div style={{
-                  marginBottom: 12,
-                  padding: "8px 0 7px 0",
-                  borderRadius: 7,
-                  background: "#fff"
-                }}>
-                  {notifyRoles.map(role => {
-                    const contacts = (teamMembers ?? []).filter(tm => tm.role === role);
+                <div
+                  style={{
+                    marginBottom: 12,
+                    padding: "8px 0 7px 0",
+                    borderRadius: 7,
+                    background: "#fff",
+                  }}
+                >
+                  {notifyRoles.map((role) => {
+                    const contacts = (teamMembers ?? []).filter((tm) => tm.role === role);
                     if (!contacts.length) {
                       return (
-                        <div key={role} style={{
-                          fontWeight: 700,
-                          color: "#d80000",
-                          fontSize: 15
-                        }}>{role}: No contact found</div>
+                        <div
+                          key={role}
+                          style={{
+                            fontWeight: 700,
+                            color: "#d80000",
+                            fontSize: 15,
+                          }}
+                        >
+                          {role}: No contact found
+                        </div>
                       );
                     }
-                    return contacts.map(contact => (
-                      <div key={role + contact.id} style={{
-                        display: "flex",
-                        flexDirection: "row",
-                        alignItems: "center",
-                        marginBottom: 6,
-                        gap: 12
-                      }}>
-                        <span style={{
-                          fontWeight: 700,
-                          color: role === "GOLD" ? "#d8a100" : "#485057",
-                          minWidth: 75
-                        }}>{role}:</span>
-                        <span style={{
-                          fontWeight: 600,
-                          color: "#15264e",
-                          fontSize: 15
-                        }}>{contact.firstName} {contact.lastName}</span>
-                        <span style={{
-                          color: "#6c7885",
-                          fontSize: 13
-                        }}>{contact.title}</span>
+                    return contacts.map((contact) => (
+                      <div
+                        key={role + contact.id}
+                        style={{
+                          display: "flex",
+                          flexDirection: "row",
+                          alignItems: "center",
+                          marginBottom: 6,
+                          gap: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            color: role === "GOLD" ? "#d8a100" : "#485057",
+                            minWidth: 75,
+                          }}
+                        >
+                          {role}:
+                        </span>
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            color: "#15264e",
+                            fontSize: 15,
+                          }}
+                        >
+                          {contact.firstName} {contact.lastName}
+                        </span>
+                        <span
+                          style={{
+                            color: "#6c7885",
+                            fontSize: 13,
+                          }}
+                        >
+                          {contact.title}
+                        </span>
                         {contact.phone && (
                           <a
                             href={`tel:${contact.phone}`}
@@ -442,7 +472,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                               fontWeight: 700,
                               fontSize: 15,
                               textDecoration: "none",
-                              marginLeft: 7
+                              marginLeft: 7,
                             }}
                             title={`Call ${contact.firstName} ${contact.lastName}`}
                           >
@@ -453,16 +483,17 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                     ));
                   })}
                 </div>
-                <div style={{
-                  fontWeight: 600,
-                  marginTop: 12,
-                  marginBottom: 5,
-                  color: "#222",
-                  fontSize: 15
-                }}>
+                <div
+                  style={{
+                    fontWeight: 600,
+                    marginTop: 12,
+                    marginBottom: 5,
+                    color: "#222",
+                    fontSize: 15,
+                  }}
+                >
                   Next Steps:
                 </div>
-                {/* --------- CTO-grade protocol steps below --------- */}
                 <ol style={{ margin: 0, padding: 0, listStyle: "none", marginTop: 6 }}>
                   {(match.protocol || "")
                     .split(/\s*\d+\.\s+/)
@@ -482,28 +513,32 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                           padding: "12px 15px",
                         }}
                       >
-                        <span style={{
-                          minWidth: 33,
-                          minHeight: 33,
-                          background: "#d80000",
-                          color: "#fff",
-                          fontWeight: 800,
-                          borderRadius: "100%",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 17,
-                          boxShadow: "0 2px 8px 0 #d8000020",
-                          marginTop: 2,
-                        }}>
+                        <span
+                          style={{
+                            minWidth: 33,
+                            minHeight: 33,
+                            background: "#d80000",
+                            color: "#fff",
+                            fontWeight: 800,
+                            borderRadius: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 17,
+                            boxShadow: "0 2px 8px 0 #d8000020",
+                            marginTop: 2,
+                          }}
+                        >
                           {idx + 1}
                         </span>
-                        <span style={{
-                          fontSize: 15.5,
-                          color: "#21244a",
-                          fontWeight: 600,
-                          lineHeight: 1.62,
-                        }}>
+                        <span
+                          style={{
+                            fontSize: 15.5,
+                            color: "#21244a",
+                            fontWeight: 600,
+                            lineHeight: 1.62,
+                          }}
+                        >
                           {step.trim()}
                         </span>
                       </li>
@@ -511,23 +546,50 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                 </ol>
               </div>
             ) : emergencyDesc.length > 5 ? (
-              <div style={{
-                border: "1px solid #aaa",
-                padding: 8,
-                borderRadius: 8,
-                background: "#f9ecec",
-                color: "#b30000",
-                marginBottom: 13
-              }}>
+              <div
+                style={{
+                  border: "1px solid #aaa",
+                  padding: 8,
+                  borderRadius: 8,
+                  background: "#f9ecec",
+                  color: "#b30000",
+                  marginBottom: 13,
+                }}
+              >
                 <b>No protocol matched.</b> Please double-check, or notify GOLD/SILVER for manual escalation.
               </div>
             ) : null}
-            <div style={{ display: "flex", gap: 14, marginTop: 9, justifyContent: "flex-end" }}>
-              <button type="submit" style={{ background: "#d80000", color: "#fff", borderRadius: 6, padding: "10px 22px", fontWeight: 600, border: "none", fontSize: 15, cursor: "pointer" }}>Submit Emergency</button>
+            <div
+              style={{
+                display: "flex",
+                gap: 14,
+                marginTop: 9,
+                justifyContent: "flex-end",
+              }}
+            >
               <button
-                type="button"
-                onClick={onClose}
+                type="submit"
                 style={{
+                  background: "#d80000",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "10px 22px",
+                  fontWeight: 600,
+                  border: "none",
+                  fontSize: 15,
+                  cursor: alarmOpen ? "not-allowed" : "pointer",
+                  }}
+                  disabled={alarmOpen}
+                  >
+                  Submit Emergency
+                  </button>
+                  <button
+                  type="button"
+                  onClick={() => {
+                  onClose();
+                  setAlarmOpen(false);
+                  }}
+                  style={{
                   background: "#aaa",
                   color: "#fff",
                   borderRadius: 6,
@@ -536,242 +598,246 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                   border: "none",
                   fontSize: 15,
                   cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        )}
-        {/* Observation Card Tab */}
-        {activeTab === "observation" && (
-          <form
-            onSubmit={handleObsSubmit}
-            style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}
-          >
-                                                              <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#036" }}>
-                                                              Hazard Observation Card
-                                                              </h2>
-                                                              <div style={{ marginBottom: 13 }}>
-                                                              <div style={labelStyle}>Type of Observation:</div>
-                                                              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                                                                {incidentTypes.map((type) => (
-                                                                  <label
-                                                                    key={type}
-                                                                    style={{
-                                                                      display: "flex",
-                                                                      alignItems: "center",
-                                                                      fontSize: 14,
-                                                                      marginRight: 13,
-                                                                    }}
-                                                                  >
-                                                                    <input
-                                                                      type="checkbox"
-                                                                      name="type"
-                                                                      value={type}
-                                                                      checked={form.type.includes(type)}
-                                                                      onChange={handleObsChange}
-                                                                      style={{ marginRight: 5 }}
-                                                                    />
-                                                                    {type}
-                                                                  </label>
-                                                                ))}
-                                                              </div>
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>Location:</label>
-                                                              <input
-                                                                type="text"
-                                                                name="location"
-                                                                value={form.location}
-                                                                onChange={handleObsChange}
-                                                                required
-                                                                style={inputStyle}
-                                                              />
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>Vessel:</label>
-                                                              <input
-                                                                type="text"
-                                                                name="vessel"
-                                                                value={form.vessel}
-                                                                onChange={handleObsChange}
-                                                                style={inputStyle}
-                                                              />
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>System:</label>
-                                                              <input
-                                                                type="text"
-                                                                name="system"
-                                                                value={form.system}
-                                                                onChange={handleObsChange}
-                                                                style={inputStyle}
-                                                              />
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>Client:</label>
-                                                              <input
-                                                                type="text"
-                                                                name="client"
-                                                                value={form.client}
-                                                                onChange={handleObsChange}
-                                                                style={inputStyle}
-                                                              />
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>Observation:</label>
-                                                              <textarea
-                                                                name="observation"
-                                                                value={form.observation}
-                                                                onChange={handleObsChange}
-                                                                required
-                                                                style={textareaStyle}
-                                                              />
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>
-                                                                Recommendation from your Observation:
-                                                              </label>
-                                                              <textarea
-                                                                name="recommendation"
-                                                                value={form.recommendation}
-                                                                onChange={handleObsChange}
-                                                                style={textareaStyle}
-                                                              />
-                                                              </div>
-                                                              <div
-                                                              style={{
-                                                                ...fieldStyle,
-                                                                flexDirection: "row",
-                                                                alignItems: "center",
-                                                                gap: 17,
-                                                              }}
-                                                              >
-                                                              <span style={labelStyle}>Closed Out?</span>
-                                                              <label style={{ fontWeight: 400, fontSize: 14 }}>
-                                                                <input
-                                                                  type="radio"
-                                                                  name="closedOut"
-                                                                  value="Yes"
-                                                                  checked={form.closedOut === "Yes"}
-                                                                  onChange={handleObsChange}
-                                                                />{" "}
-                                                                Yes
-                                                              </label>
-                                                              <label style={{ fontWeight: 400, fontSize: 14 }}>
-                                                                <input
-                                                                  type="radio"
-                                                                  name="closedOut"
-                                                                  value="No"
-                                                                  checked={form.closedOut === "No"}
-                                                                  onChange={handleObsChange}
-                                                                />{" "}
-                                                                No
-                                                              </label>
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>Name (Optional):</label>
-                                                              <input
-                                                                type="text"
-                                                                name="name"
-                                                                value={form.name}
-                                                                onChange={handleObsChange}
-                                                                style={inputStyle}
-                                                              />
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>Sign:</label>
-                                                              <input
-                                                                type="text"
-                                                                name="sign"
-                                                                value={form.sign}
-                                                                onChange={handleObsChange}
-                                                                style={inputStyle}
-                                                              />
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>Date:</label>
-                                                              <input
-                                                                type="date"
-                                                                name="date"
-                                                                value={form.date}
-                                                                onChange={handleObsChange}
-                                                                style={inputStyle}
-                                                              />
-                                                              </div>
-                                                              <div style={fieldStyle}>
-                                                              <label style={labelStyle}>Attach Photo/Video:</label>
-                                                              <input
-                                                                type="file"
-                                                                accept="image/*,video/*"
-                                                                name="photo"
-                                                                onChange={handleObsChange}
-                                                              />
-                                                              </div>
-                                                              <div
-                                                              style={{
-                                                                ...fieldStyle,
-                                                                flexDirection: "row",
-                                                                alignItems: "center",
-                                                                gap: 9,
-                                                              }}
-                                                              >
-                                                              <input
-                                                                type="checkbox"
-                                                                name="stopWork"
-                                                                checked={form.stopWork}
-                                                                onChange={handleObsChange}
-                                                              />
-                                                              <span style={{ fontWeight: 500, color: "#b30000" }}>
-                                                                I am exercising STOP WORK AUTHORITY for this incident.
-                                                              </span>
-                                                              </div>
-                                                              <div
-                                                              style={{
-                                                                marginTop: 19,
-                                                                display: "flex",
-                                                                justifyContent: "flex-end",
-                                                                gap: 13,
-                                                              }}
-                                                              >
-                                                              <button
-                                                                type="submit"
-                                                                style={{
-                                                                  background: "#0074b8",
-                                                                  color: "#fff",
-                                                                  padding: "10px 22px",
-                                                                  borderRadius: 6,
-                                                                  fontWeight: 600,
-                                                                  border: "none",
-                                                                  fontSize: 15,
-                                                                  cursor: "pointer",
-                                                                }}
-                                                              >
-                                                                Submit Observation
-                                                              </button>
-                                                              <button
-                                                                type="button"
-                                                                onClick={onClose}
-                                                                style={{
-                                                                  background: "#aaa",
-                                                                  color: "#fff",
-                                                                  borderRadius: 6,
-                                                                  padding: "10px 22px",
-                                                                  fontWeight: 500,
-                                                                  border: "none",
-                                                                  fontSize: 15,
-                                                                  cursor: "pointer",
-                                                                }}
-                                                              >
-                                                                Cancel
-                                                              </button>
-                                                              </div>
-                                                              </form>
-                                                              )}
-                                                              </div>
-                                                              </div>
-                                                              );
-                                                              };
+                  }}
+                  disabled={alarmOpen}
+                  >
+                  Cancel
+                  </button>
+                  </div>
+                  </form>
+                  )}
+                  {/* ----------- Observation Card Tab ----------- */}
+                  {activeTab === "observation" && (
+                  <form
+                  onSubmit={handleObsSubmit}
+                  style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}
+                  >
+                  <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#036" }}>
+                  Hazard Observation Card
+                  </h2>
+                  <div style={{ marginBottom: 13 }}>
+                  <div style={labelStyle}>Type of Observation:</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  {incidentTypes.map((type) => (
+                  <label
+                    key={type}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      fontSize: 14,
+                      marginRight: 13,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      name="type"
+                      value={type}
+                      checked={form.type.includes(type)}
+                      onChange={handleObsChange}
+                      style={{ marginRight: 5 }}
+                    />
+                    {type}
+                  </label>
+                  ))}
+                  </div>
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Location:</label>
+                  <input
+                  type="text"
+                  name="location"
+                  value={form.location}
+                  onChange={handleObsChange}
+                  required
+                  style={inputStyle}
+                  />
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Vessel:</label>
+                  <input
+                  type="text"
+                  name="vessel"
+                  value={form.vessel}
+                  onChange={handleObsChange}
+                  style={inputStyle}
+                  />
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>System:</label>
+                  <input
+                  type="text"
+                  name="system"
+                  value={form.system}
+                  onChange={handleObsChange}
+                  style={inputStyle}
+                  />
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Client:</label>
+                  <input
+                  type="text"
+                  name="client"
+                  value={form.client}
+                  onChange={handleObsChange}
+                  style={inputStyle}
+                  />
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Observation:</label>
+                  <textarea
+                  name="observation"
+                  value={form.observation}
+                  onChange={handleObsChange}
+                  required
+                  style={textareaStyle}
+                  />
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Recommendation from your Observation:</label>
+                  <textarea
+                  name="recommendation"
+                  value={form.recommendation}
+                  onChange={handleObsChange}
+                  style={textareaStyle}
+                  />
+                  </div>
+                  <div
+                  style={{
+                  ...fieldStyle,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 17,
+                  }}
+                  >
+                  <span style={labelStyle}>Closed Out?</span>
+                  <label style={{ fontWeight: 400, fontSize: 14 }}>
+                  <input
+                  type="radio"
+                  name="closedOut"
+                  value="Yes"
+                  checked={form.closedOut === "Yes"}
+                  onChange={handleObsChange}
+                  />{" "}
+                  Yes
+                  </label>
+                  <label style={{ fontWeight: 400, fontSize: 14 }}>
+                  <input
+                  type="radio"
+                  name="closedOut"
+                  value="No"
+                  checked={form.closedOut === "No"}
+                  onChange={handleObsChange}
+                  />{" "}
+                  No
+                  </label>
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Name (Optional):</label>
+                  <input
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleObsChange}
+                  style={inputStyle}
+                  />
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Sign:</label>
+                  <input
+                  type="text"
+                  name="sign"
+                  value={form.sign}
+                  onChange={handleObsChange}
+                  style={inputStyle}
+                  />
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Date:</label>
+                  <input
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={handleObsChange}
+                  style={inputStyle}
+                  />
+                  </div>
+                  <div style={fieldStyle}>
+                  <label style={labelStyle}>Attach Photo/Video:</label>
+                  <input
+                  type="file"
+                  accept="image/*,video/*"
+                  name="photo"
+                  onChange={handleObsChange}
+                  />
+                  </div>
+                  <div
+                  style={{
+                  ...fieldStyle,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 9,
+                  }}
+                  >
+                  <input
+                  type="checkbox"
+                  name="stopWork"
+                  checked={form.stopWork}
+                  onChange={handleObsChange}
+                  />
+                  <span style={{ fontWeight: 500, color: "#b30000" }}>
+                  I am exercising STOP WORK AUTHORITY for this incident.
+                  </span>
+                  </div>
+                  <div
+                  style={{
+                  marginTop: 19,
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: 13,
+                  }}
+                  >
+                  <button
+                  type="submit"
+                  style={{
+                  background: "#0074b8",
+                  color: "#fff",
+                  padding: "10px 22px",
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  border: "none",
+                  fontSize: 15,
+                  cursor: "pointer",
+                  }}
+                  disabled={alarmOpen}
+                  >
+                  Submit Observation
+                  </button>
+                  <button
+                  type="button"
+                  onClick={() => {
+                  onClose();
+                  setAlarmOpen(false);
+                  }}
+                  style={{
+                  background: "#aaa",
+                  color: "#fff",
+                  borderRadius: 6,
+                  padding: "10px 22px",
+                  fontWeight: 500,
+                  border: "none",
+                  fontSize: 15,
+                  cursor: "pointer",
+                  }}
+                  disabled={alarmOpen}
+                  >
+                  Cancel
+                  </button>
+                  </div>
+                  </form>
+                  )}
+                  </div>
+                  </div>
+                  );
+                  };
 
-                                                              export default EmergencyModal;
+                  export default EmergencyModal;
