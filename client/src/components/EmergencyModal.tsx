@@ -1,6 +1,6 @@
-// EmergencyModal.tsx — Dynamic ERP, Full Observation Card Support
+// EmergencyModal.tsx — Dynamic ERP, Full Observation Card Support, Emergency Alert (Vibration, Siren, Notification)
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { db } from "../firebase";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import Fuse from "fuse.js";
@@ -84,6 +84,20 @@ function normalize(str: string) {
     .trim();
 }
 
+// --- Notification Helper ---
+function showEmergencyNotification(title: string, body: string) {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "granted") {
+    new Notification(title, { body, icon: "/alert-icon.png" });
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        new Notification(title, { body, icon: "/alert-icon.png" });
+      }
+    });
+  }
+}
+
 // ---------- Main Component ----------
 
 const EmergencyModal: React.FC<EmergencyModalProps> = ({
@@ -101,6 +115,9 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   const [emergencyDesc, setEmergencyDesc] = useState("");
   const [match, setMatch] = useState<ERPProtocol & { matchedKeyword?: string } | null>(null);
   const [form, setForm] = useState<ObservationForm>(defaultForm);
+
+  // Siren audio ref for alert
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Fetch ERPs from Firestore when modal opens
   useEffect(() => {
@@ -150,6 +167,39 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }, [emergencyDesc, fuse, erpProtocols]);
 
+  // --- Emergency Alert: Vibration + Siren + Notification when modal opens ---
+  useEffect(() => {
+    if (!open || activeTab !== "emergency") return;
+
+    // Vibrate
+    if ("vibrate" in navigator) {
+      navigator.vibrate([1200, 400, 1200, 400, 1500]);
+    }
+
+    // Siren
+    audioRef.current?.play();
+
+    // Notification
+    showEmergencyNotification(
+      "🚨 EMERGENCY: Protocol Required",
+      "A new emergency was reported. Follow the on-screen protocol."
+    );
+
+    // Focus lock (optional, for keyboard)
+    document.body.style.overflow = "hidden";
+    const blockTab = (e: KeyboardEvent) => e.preventDefault();
+    window.addEventListener("keydown", blockTab, true);
+
+    // Cleanup on modal close
+    return () => {
+      document.body.style.overflow = "";
+      navigator.vibrate?.(0);
+      audioRef.current?.pause();
+      if (audioRef.current) audioRef.current.currentTime = 0;
+      window.removeEventListener("keydown", blockTab, true);
+    };
+  }, [open, activeTab]);
+
   // Emergency Submit Handler (Firestore)
   async function handleEmergencySubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -182,6 +232,13 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         notifiedContacts,
         createdAt: new Date().toISOString(),
       });
+
+      // Optional: In-app notification for user
+      showEmergencyNotification(
+        "🚨 Emergency Submitted",
+        "Your emergency was logged and command has been notified."
+      );
+
       alert("Emergency report submitted!");
       setEmergencyDesc("");
       setMatch(null);
@@ -269,6 +326,8 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
         background: "rgba(0,0,0,0.36)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200
       }}>
+      {/* --- Siren Audio (hidden) --- */}
+      <audio ref={audioRef} src="/siren.mp3" loop />
       <div style={{
         background: "#fff",
         borderRadius: 18,
@@ -465,201 +524,255 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
             ) : null}
             <div style={{ display: "flex", gap: 14, marginTop: 9, justifyContent: "flex-end" }}>
               <button type="submit" style={{ background: "#d80000", color: "#fff", borderRadius: 6, padding: "10px 22px", fontWeight: 600, border: "none", fontSize: 15, cursor: "pointer" }}>Submit Emergency</button>
-              <button type="button" onClick={onClose} style={{ background: "#aaa", color: "#fff", borderRadius: 6, padding: "10px 22px", fontWeight: 500, border: "none", fontSize: 15, cursor: "pointer" }}>Cancel</button>
-            </div>
-          </form>
-        )}
-        {/* Observation Card Tab */}
-        {activeTab === "observation" && (
-          <form onSubmit={handleObsSubmit} style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}>
-            <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#036" }}>Hazard Observation Card</h2>
-            <div style={{ marginBottom: 13 }}>
-              <div style={labelStyle}>Type of Observation:</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                {incidentTypes.map(type => (
-                  <label key={type} style={{ display: "flex", alignItems: "center", fontSize: 14, marginRight: 13 }}>
-                    <input
-                      type="checkbox"
-                      name="type"
-                      value={type}
-                      checked={form.type.includes(type)}
-                      onChange={handleObsChange}
-                      style={{ marginRight: 5 }}
-                    />
-                    {type}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Location:</label>
-              <input
-                type="text"
-                name="location"
-                value={form.location}
-                onChange={handleObsChange}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div style={fieldStyle}>
-              <label style={labelStyle}>Vessel:</label>
-              <input
-                type="text"
-                name="vessel"
-                value={form.vessel}
-                onChange={handleObsChange}
-                style={inputStyle}
-                />
-                </div>
-                <div style={fieldStyle}>
-                <label style={labelStyle}>System:</label>
-                <input
-                type="text"
-                name="system"
-                value={form.system}
-                onChange={handleObsChange}
-                style={inputStyle}
-                />
-                </div>
-                <div style={fieldStyle}>
-                <label style={labelStyle}>Client:</label>
-                <input
-                type="text"
-                name="client"
-                value={form.client}
-                onChange={handleObsChange}
-                style={inputStyle}
-                />
-                </div>
-                <div style={fieldStyle}>
-                <label style={labelStyle}>Observation:</label>
-                <textarea
-                name="observation"
-                value={form.observation}
-                onChange={handleObsChange}
-                required
-                style={textareaStyle}
-                />
-                </div>
-                <div style={fieldStyle}>
-                <label style={labelStyle}>Recommendation from your Observation:</label>
-                <textarea
-                name="recommendation"
-                value={form.recommendation}
-                onChange={handleObsChange}
-                style={textareaStyle}
-                />
-                </div>
-                <div style={{ ...fieldStyle, flexDirection: "row", alignItems: "center", gap: 17 }}>
-                <span style={labelStyle}>Closed Out?</span>
-                <label style={{ fontWeight: 400, fontSize: 14 }}>
-                <input
-                  type="radio"
-                  name="closedOut"
-                  value="Yes"
-                  checked={form.closedOut === "Yes"}
-                  onChange={handleObsChange}
-                /> Yes
-                </label>
-                <label style={{ fontWeight: 400, fontSize: 14 }}>
-                <input
-                  type="radio"
-                  name="closedOut"
-                  value="No"
-                  checked={form.closedOut === "No"}
-                  onChange={handleObsChange}
-                /> No
-                </label>
-                </div>
-                <div style={fieldStyle}>
-                <label style={labelStyle}>Name (Optional):</label>
-                <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleObsChange}
-                style={inputStyle}
-                />
-                </div>
-                <div style={fieldStyle}>
-                <label style={labelStyle}>Sign:</label>
-                <input
-                type="text"
-                name="sign"
-                value={form.sign}
-                onChange={handleObsChange}
-                style={inputStyle}
-                />
-                </div>
-                <div style={fieldStyle}>
-                <label style={labelStyle}>Date:</label>
-                <input
-                type="date"
-                name="date"
-                value={form.date}
-                onChange={handleObsChange}
-                style={inputStyle}
-                />
-                </div>
-                <div style={fieldStyle}>
-                <label style={labelStyle}>Attach Photo/Video:</label>
-                <input
-                type="file"
-                accept="image/*,video/*"
-                name="photo"
-                onChange={handleObsChange}
-                />
-                </div>
-                <div style={{ ...fieldStyle, flexDirection: "row", alignItems: "center", gap: 9 }}>
-                <input
-                type="checkbox"
-                name="stopWork"
-                checked={form.stopWork}
-                onChange={handleObsChange}
-                />
-                <span style={{ fontWeight: 500, color: "#b30000" }}>
-                I am exercising STOP WORK AUTHORITY for this incident.
-                </span>
-                </div>
-                <div style={{ marginTop: 19, display: "flex", justifyContent: "flex-end", gap: 13 }}>
-                <button
-                type="submit"
-                style={{
-                  background: "#0074b8",
-                  color: "#fff",
-                  padding: "10px 22px",
-                  borderRadius: 6,
-                  fontWeight: 600,
-                  border: "none",
-                  fontSize: 15,
-                  cursor: "pointer"
-                }}
-                >
-                Submit Observation
-                </button>
-                <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  background: "#aaa",
-                  color: "#fff",
-                  borderRadius: 6,
-                  padding: "10px 22px",
-                  fontWeight: 500,
-                  border: "none",
-                  fontSize: 15,
-                  cursor: "pointer"
-                }}
-                >
-                Cancel
-                </button>
-                </div>
-                </form>
-                )}
-                </div>
-                </div>
-                );
-                };
+              <button type="button" onClick={onClose} style={{ background: "#aaa
+                                                              <button
+                                                                type="button"
+                                                                onClick={onClose}
+                                                                style={{
+                                                                  background: "#aaa",
+                                                                  color: "#fff",
+                                                                  borderRadius: 6,
+                                                                  padding: "10px 22px",
+                                                                  fontWeight: 500,
+                                                                  border: "none",
+                                                                  fontSize: 15,
+                                                                  cursor: "pointer",
+                                                                }}
+                                                              >
+                                                                Cancel
+                                                              </button>
+                                                              </div>
+                                                              </form>
+                                                              )}
+                                                              {/* Observation Card Tab */}
+                                                              {activeTab === "observation" && (
+                                                              <form
+                                                              onSubmit={handleObsSubmit}
+                                                              style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}
+                                                              >
+                                                              <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#036" }}>
+                                                              Hazard Observation Card
+                                                              </h2>
+                                                              <div style={{ marginBottom: 13 }}>
+                                                              <div style={labelStyle}>Type of Observation:</div>
+                                                              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                                                                {incidentTypes.map((type) => (
+                                                                  <label
+                                                                    key={type}
+                                                                    style={{
+                                                                      display: "flex",
+                                                                      alignItems: "center",
+                                                                      fontSize: 14,
+                                                                      marginRight: 13,
+                                                                    }}
+                                                                  >
+                                                                    <input
+                                                                      type="checkbox"
+                                                                      name="type"
+                                                                      value={type}
+                                                                      checked={form.type.includes(type)}
+                                                                      onChange={handleObsChange}
+                                                                      style={{ marginRight: 5 }}
+                                                                    />
+                                                                    {type}
+                                                                  </label>
+                                                                ))}
+                                                              </div>
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>Location:</label>
+                                                              <input
+                                                                type="text"
+                                                                name="location"
+                                                                value={form.location}
+                                                                onChange={handleObsChange}
+                                                                required
+                                                                style={inputStyle}
+                                                              />
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>Vessel:</label>
+                                                              <input
+                                                                type="text"
+                                                                name="vessel"
+                                                                value={form.vessel}
+                                                                onChange={handleObsChange}
+                                                                style={inputStyle}
+                                                              />
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>System:</label>
+                                                              <input
+                                                                type="text"
+                                                                name="system"
+                                                                value={form.system}
+                                                                onChange={handleObsChange}
+                                                                style={inputStyle}
+                                                              />
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>Client:</label>
+                                                              <input
+                                                                type="text"
+                                                                name="client"
+                                                                value={form.client}
+                                                                onChange={handleObsChange}
+                                                                style={inputStyle}
+                                                              />
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>Observation:</label>
+                                                              <textarea
+                                                                name="observation"
+                                                                value={form.observation}
+                                                                onChange={handleObsChange}
+                                                                required
+                                                                style={textareaStyle}
+                                                              />
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>
+                                                                Recommendation from your Observation:
+                                                              </label>
+                                                              <textarea
+                                                                name="recommendation"
+                                                                value={form.recommendation}
+                                                                onChange={handleObsChange}
+                                                                style={textareaStyle}
+                                                              />
+                                                              </div>
+                                                              <div
+                                                              style={{
+                                                                ...fieldStyle,
+                                                                flexDirection: "row",
+                                                                alignItems: "center",
+                                                                gap: 17,
+                                                              }}
+                                                              >
+                                                              <span style={labelStyle}>Closed Out?</span>
+                                                              <label style={{ fontWeight: 400, fontSize: 14 }}>
+                                                                <input
+                                                                  type="radio"
+                                                                  name="closedOut"
+                                                                  value="Yes"
+                                                                  checked={form.closedOut === "Yes"}
+                                                                  onChange={handleObsChange}
+                                                                />{" "}
+                                                                Yes
+                                                              </label>
+                                                              <label style={{ fontWeight: 400, fontSize: 14 }}>
+                                                                <input
+                                                                  type="radio"
+                                                                  name="closedOut"
+                                                                  value="No"
+                                                                  checked={form.closedOut === "No"}
+                                                                  onChange={handleObsChange}
+                                                                />{" "}
+                                                                No
+                                                              </label>
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>Name (Optional):</label>
+                                                              <input
+                                                                type="text"
+                                                                name="name"
+                                                                value={form.name}
+                                                                onChange={handleObsChange}
+                                                                style={inputStyle}
+                                                              />
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>Sign:</label>
+                                                              <input
+                                                                type="text"
+                                                                name="sign"
+                                                                value={form.sign}
+                                                                onChange={handleObsChange}
+                                                                style={inputStyle}
+                                                              />
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>Date:</label>
+                                                              <input
+                                                                type="date"
+                                                                name="date"
+                                                                value={form.date}
+                                                                onChange={handleObsChange}
+                                                                style={inputStyle}
+                                                              />
+                                                              </div>
+                                                              <div style={fieldStyle}>
+                                                              <label style={labelStyle}>Attach Photo/Video:</label>
+                                                              <input
+                                                                type="file"
+                                                                accept="image/*,video/*"
+                                                                name="photo"
+                                                                onChange={handleObsChange}
+                                                              />
+                                                              </div>
+                                                              <div
+                                                              style={{
+                                                                ...fieldStyle,
+                                                                flexDirection: "row",
+                                                                alignItems: "center",
+                                                                gap: 9,
+                                                              }}
+                                                              >
+                                                              <input
+                                                                type="checkbox"
+                                                                name="stopWork"
+                                                                checked={form.stopWork}
+                                                                onChange={handleObsChange}
+                                                              />
+                                                              <span style={{ fontWeight: 500, color: "#b30000" }}>
+                                                                I am exercising STOP WORK AUTHORITY for this incident.
+                                                              </span>
+                                                              </div>
+                                                              <div
+                                                              style={{
+                                                                marginTop: 19,
+                                                                display: "flex",
+                                                                justifyContent: "flex-end",
+                                                                gap: 13,
+                                                              }}
+                                                              >
+                                                              <button
+                                                                type="submit"
+                                                                style={{
+                                                                  background: "#0074b8",
+                                                                  color: "#fff",
+                                                                  padding: "10px 22px",
+                                                                  borderRadius: 6,
+                                                                  fontWeight: 600,
+                                                                  border: "none",
+                                                                  fontSize: 15,
+                                                                  cursor: "pointer",
+                                                                }}
+                                                              >
+                                                                Submit Observation
+                                                              </button>
+                                                              <button
+                                                                type="button"
+                                                                onClick={onClose}
+                                                                style={{
+                                                                  background: "#aaa",
+                                                                  color: "#fff",
+                                                                  borderRadius: 6,
+                                                                  padding: "10px 22px",
+                                                                  fontWeight: 500,
+                                                                  border: "none",
+                                                                  fontSize: 15,
+                                                                  cursor: "pointer",
+                                                                }}
+                                                              >
+                                                                Cancel
+                                                              </button>
+                                                              </div>
+                                                              </form>
+                                                              )}
+                                                              </div>
+                                                              </div>
+                                                              );
+                                                              };
 
-                export default EmergencyModal;
+                                                              export default EmergencyModal;

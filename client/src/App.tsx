@@ -8,8 +8,8 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
 import { useEnableOfflineSync } from "@shared/useOfflineSync";
-import EmergencyMusterModal from "@/components/EmergencyMusterModal";
-import { socket } from "./socket";
+import EmergencyModal from "@/components/EmergencyModal";
+import { socket } from "./socket.js";
 
 import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
@@ -43,23 +43,9 @@ type ProjectInfo = {
 };
 
 type UserData = {
-  id: number;
-  username: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  email: string;
+  id: string;
+  name: string;
   role: string;
-  phone: string | null;
-  title: string | null;
-  isActive: boolean | null;
-  isGoldCodeHolder: boolean | null;
-  lastSeen: Date | null;
-  lastActivity: Date | null;
-  isOnline: boolean | null;
-  activityStatus: string | null;
-  sessionId: string | null;
-  createdAt: Date | null;
 };
 
 // --- Offline + Storage Banner ---
@@ -131,7 +117,9 @@ function Router() {
     if (isAuthenticated) {
       const projectId = "1";
       const unsubs = [
-        onSnapshot(doc(db, "projects", projectId), () => {}),
+        onSnapshot(doc(db, "projects", projectId), (docSnap) => {
+          setProjectInfo(docSnap.data() as ProjectInfo);
+        }),
         onSnapshot(collection(db, "projects", projectId, "erpProtocols"), () => {}),
         onSnapshot(collection(db, "projects", projectId, "assets"), () => {}),
         onSnapshot(collection(db, "projects", projectId, "contacts"), () => {}),
@@ -182,11 +170,12 @@ function Router() {
       <ConnectionBanner />
       {/* Emergency Modal: only for authenticated users and not on login/register */}
       {isAuthenticated && userData && (
-        <EmergencyMusterModal user={userData} />
+        <EmergencyModal open={false} onClose={() => {}} teamMembers={[]} currentUser={userData} />
       )}
       {isAuthenticated && (
         <>
           <PersistentNav />
+          {/* --- PROJECT HEADER (shows everywhere for logged-in users) --- */}
           <ProjectHeader project={projectInfo} />
         </>
       )}
@@ -206,7 +195,13 @@ function Router() {
                 <Route path="/reports" component={Reports} />
                 <Route path="/reports/generate" component={Reports} />
                 <Route path="/reports/history" component={Reports} />
-                <Route path="/setup" component={ProjectSetup} />
+                <Route path="/setup">
+                  <ProjectSetup
+                    currentUser={userData}
+                    projectInfo={projectInfo}
+                    setProjectInfo={setProjectInfo}
+                  />
+                </Route>
                 <Route path="/asset-verification" component={AssetVerification} />
                 <Route path="/assets" component={AssetVerification} />
                 <Route path="/assets/upload" component={AssetUpload} />
@@ -229,7 +224,7 @@ function App() {
   useEnableOfflineSync(); // now just for listening, not enabling
 
   return (
-    <ErrorBoundary fallback={<FatalErrorFallback error={new Error("Unknown error")} resetErrorBoundary={() => window.location.reload()} />}>
+    <ErrorBoundary FallbackComponent={FatalErrorFallback}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
