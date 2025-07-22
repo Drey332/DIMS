@@ -7,13 +7,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
-import { useEnableOfflineSync } from "@shared/useOfflineSync"; // <-- just event/banner logic now!
+import { useEnableOfflineSync } from "@shared/useOfflineSync";
+import EmergencyMusterModal from "@/components/EmergencyMusterModal";
 import { socket } from "./socket.js";
 
 import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
 
-// Pages
+// Pages...
 import Dashboard from "@/pages/dashboard";
 import Incidents from "@/pages/incidents";
 import TeamManagement from "@/pages/team-management";
@@ -111,19 +112,16 @@ function Router() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | undefined>(undefined);
 
-  // === PROTIP: Preload ALL critical project data on login! ===
+  // Preload ALL critical project data on login
   useEffect(() => {
     if (isAuthenticated) {
-      // Use your current projectId (replace "1" with a variable if dynamic)
       const projectId = "1";
       const unsubs = [
         onSnapshot(doc(db, "projects", projectId), () => {}),
         onSnapshot(collection(db, "projects", projectId, "erpProtocols"), () => {}),
         onSnapshot(collection(db, "projects", projectId, "assets"), () => {}),
         onSnapshot(collection(db, "projects", projectId, "contacts"), () => {}),
-        // Add more subcollections if needed
       ];
-      // Clean up listeners on logout
       return () => unsubs.forEach(unsub => unsub());
     }
   }, [isAuthenticated]);
@@ -168,6 +166,10 @@ function Router() {
   return (
     <>
       <ConnectionBanner />
+      {/* Emergency Modal: only for authenticated users and not on login/register */}
+      {isAuthenticated && userData && (
+        <EmergencyMusterModal user={userData} />
+      )}
       {isAuthenticated && (
         <>
           <PersistentNav />
