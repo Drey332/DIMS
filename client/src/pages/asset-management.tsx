@@ -1,454 +1,262 @@
-import React, { useEffect, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { cn } from "@/lib/utils";
-import { 
-  Camera, 
-  Upload, 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle,
-  Package,
-  FileImage,
-  Calendar,
-  Search,
-  Plus,
-  Download,
-  Eye,
-  Bell,
-  Filter,
-  RefreshCw
-} from "lucide-react";
+ import React, { useEffect, useState } from "react";
+ import {
+   collection,
+   query,
+   onSnapshot,
+   DocumentData,
+ } from "firebase/firestore";
+ import { db } from "@/firebase";
+ import {
+   Card, CardContent, CardHeader, CardTitle,
+   Button, Input, Textarea, Badge,
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+ } from "@/components/ui";
+ import {
+   CheckCircle, Calendar, Clock, Eye, Search, Plus, Package, Filter, Edit, Trash2, QrCode
+ } from "lucide-react";
+ import QRCode from "qrcode.react"; // npm i qrcode.react
+ import { cn } from "@/lib/utils";
 
-interface AssetVerification {
-  id: number;
-  projectId: number;
-  assetName: string;
-  assetType: string;
-  status: 'VERIFIED' | 'PENDING' | 'OVERDUE' | 'FAILED';
-  lastChecked?: string;
-  nextCheckDue?: string;
-  verifiedBy?: number;
-  photoId?: number;
-  comments?: string;
-  complianceNotes?: string;
-  protocolReference?: string;
-  checklistData?: any;
-  createdAt: string;
-  updatedAt: string;
-}
+ interface Asset {
+   id: string;
+   name: string;
+   category: string;
+   modelSerial: string;
+   manufacturer: string;
+   year: string;
+   condition: string;
+   assignedTo: string;
+   specs?: string;
+   notes?: string;
+   createdAt?: string;
+   updatedAt?: string;
+ }
 
-export default function AssetManagement() {
-  const [selectedAsset, setSelectedAsset] = useState<AssetVerification | null>(null);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [verificationComment, setVerificationComment] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
-  const { toast } = useToast();
+ export default function AssetManagement() {
+   // State
+   const [assets, setAssets] = useState<Asset[]>([]);
+   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+   const [searchTerm, setSearchTerm] = useState("");
+   const [statusFilter, setStatusFilter] = useState("ALL");
+   const [showQR, setShowQR] = useState<{ open: boolean; asset: Asset | null }>({ open: false, asset: null });
 
-  // Get current user and projects from API
-  const { data: currentUser } = useQuery({
-    queryKey: ['/api/user/profile'],
-    queryFn: () => fetch('/api/user/profile').then(res => res.json())
-  });
+   // TODO: Replace with dynamic project selection if needed
+   const projectId = "hydrosafe-5d245"; // Use your actual project ID logic here
 
-  const { data: projects } = useQuery({
-    queryKey: ['/api/user/projects'],
-    queryFn: () => fetch('/api/user/projects').then(res => res.json())
-  });
+   // Fetch assets in real-time from Firestore
+   useEffect(() => {
+     const q = query(collection(db, "projects", projectId, "assetsAndEquipment"));
+     const unsub = onSnapshot(q, (snap) => {
+       setAssets(
+         snap.docs.map(
+           (doc) => ({ id: doc.id, ...doc.data() } as Asset)
+         )
+       );
+     });
+     return unsub;
+   }, [projectId]);
 
-  // Set the first project as active by default
-  useEffect(() => {
-    if (projects && projects.length > 0 && !activeProjectId) {
-      setActiveProjectId(projects[0].id);
-    }
-  }, [projects, activeProjectId]);
+   // Filtering
+   const filteredAssets = assets.filter((asset) => {
+     const match = (
+       asset.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       asset.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+       asset.modelSerial?.toLowerCase().includes(searchTerm.toLowerCase())
+     );
+     const statusMatch =
+       statusFilter === "ALL" ||
+       asset.condition?.toUpperCase() === statusFilter;
+     return match && statusMatch;
+   });
 
-  // Fetch asset verifications from database
-  const { data: assets, isLoading, error } = useQuery({
-    queryKey: ['/api/asset-verifications', activeProjectId],
-    queryFn: () => {
-      if (!activeProjectId) return [];
-      return fetch(`/api/asset-verifications/${activeProjectId}`)
-        .then(res => {
-          if (!res.ok) throw new Error(`API error: ${res.status}`);
-          return res.json();
-        });
-    },
-    enabled: !!activeProjectId
-  });
+   // --- Status/Condition styling ---
+   const getStatusBadge = (condition: string) => {
+     switch (condition) {
+       case "Needs Repair":
+         return "bg-red-100 text-red-700 border-red-300";
+       case "Fair":
+         return "bg-yellow-100 text-yellow-700 border-yellow-300";
+       case "Good":
+         return "bg-green-100 text-green-700 border-green-300";
+       case "New":
+         return "bg-blue-100 text-blue-700 border-blue-300";
+       default:
+         return "bg-gray-100 text-gray-700 border-gray-200";
+     }
+   };
 
-  // Create new asset verification
-  const createAssetMutation = useMutation({
-    mutationFn: (assetData: any) => apiRequest('/api/asset-verifications', 'POST', assetData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/asset-verifications'] });
-      toast({
-        title: "Asset Created",
-        description: "New asset verification entry created successfully",
-      });
-    },
-    onError: (error: any) => {
-      console.error("Asset creation error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create asset verification",
-        variant: "destructive",
-      });
-    }
-  });
+   // --- UI ---
+   return (
+     <main>
+       <div className="container mx-auto px-4 py-8">
+         {/* HEADER */}
+         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+           <div>
+             <h1 className="text-4xl font-extrabold text-[#045cff] mb-2 tracking-tight flex items-center gap-2">
+               <Package className="inline-block w-8 h-8 mb-1 text-[#045cff]" />
+               Asset Management
+             </h1>
+             <p className="text-gray-500 text-lg">
+               Monitor, manage, and future-proof all critical assets.
+             </p>
+           </div>
+           <div className="flex gap-3">
+             <Input
+               className="rounded-lg border-2 border-[#045cff] focus:border-blue-700 shadow-sm px-4 py-2 text-lg"
+               placeholder="Search by name, serial, or category..."
+               value={searchTerm}
+               onChange={e => setSearchTerm(e.target.value)}
+             />
+             <Select value={statusFilter} onValueChange={setStatusFilter}>
+               <SelectTrigger className="rounded-lg border-[#045cff] w-40 text-base">
+                 <Filter className="w-5 h-5 mr-1" />
+                 <SelectValue />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="ALL">All Status</SelectItem>
+                 <SelectItem value="New">New</SelectItem>
+                 <SelectItem value="Good">Good</SelectItem>
+                 <SelectItem value="Fair">Fair</SelectItem>
+                 <SelectItem value="Needs Repair">Needs Repair</SelectItem>
+               </SelectContent>
+             </Select>
+             {/* --- Add Asset Button (stubbed) --- */}
+             <Button className="bg-[#045cff] hover:bg-blue-700 text-white rounded-lg px-5 py-2 font-bold shadow transition">
+               <Plus className="w-5 h-5 mr-2" />
+               Add Asset
+             </Button>
+           </div>
+         </div>
 
-  // Update asset verification
-  const updateAssetMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiRequest(`/api/asset-verifications/${id}`, 'PUT', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/asset-verifications'] });
-      setSelectedAsset(null);
-      setIsVerifying(false);
-      setPhotoFile(null);
-      setVerificationComment("");
-      toast({
-        title: "Asset Updated",
-        description: "Asset verification completed successfully",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update asset verification",
-        variant: "destructive",
-      });
-    }
-  });
+         {/* GRID */}
+         {filteredAssets.length === 0 ? (
+           <Card className="mt-10 shadow-md border-blue-100">
+             <CardContent className="flex flex-col items-center justify-center py-20">
+               <Package className="h-16 w-16 text-blue-200 mb-6" />
+               <h3 className="text-2xl font-bold text-blue-800 mb-2">No assets found</h3>
+               <p className="text-gray-500 text-center mb-4">
+                 Start by adding assets and equipment. All your critical gear in one place.
+               </p>
+             </CardContent>
+           </Card>
+         ) : (
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+             {filteredAssets.map(asset => (
+               <Card
+                 key={asset.id}
+                 className={cn(
+                   "rounded-2xl p-0 overflow-hidden shadow-xl transition-transform hover:scale-105 group",
+                   "bg-gradient-to-tr from-[#f8faff] via-white to-[#e8f2fd]"
+                 )}
+               >
+                 <CardHeader className="pb-3 bg-[#045cff]/5">
+                   <div className="flex items-center justify-between">
+                     <CardTitle className="font-extrabold text-[#102347] text-xl">
+                       {asset.name}
+                     </CardTitle>
+                     <Badge className={cn("px-3 py-1 text-base font-semibold border", getStatusBadge(asset.condition))}>
+                       {asset.condition}
+                     </Badge>
+                   </div>
+                   <div className="text-gray-600 text-sm mt-2">
+                     <span className="font-bold">{asset.category}</span>
+                     {asset.modelSerial && (
+                       <> • <span className="font-mono">{asset.modelSerial}</span></>
+                     )}
+                   </div>
+                   <div className="flex flex-wrap gap-2 mt-2">
+                     <span className="text-gray-600">{asset.manufacturer} ({asset.year})</span>
+                     {asset.assignedTo && (
+                       <span className="ml-2 text-blue-800 font-semibold">
+                         Assigned: {asset.assignedTo}
+                       </span>
+                     )}
+                   </div>
+                 </CardHeader>
+                 <CardContent>
+                   <div className="flex gap-3 mb-2">
+                     {/* QR Code Button */}
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       className="rounded-lg font-bold"
+                       onClick={() => setShowQR({ open: true, asset })}
+                     >
+                       <QrCode className="w-5 h-5 mr-1" /> QR
+                     </Button>
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       className="rounded-lg font-bold"
+                       onClick={() => setSelectedAsset(asset)}
+                     >
+                       <Eye className="w-5 h-5 mr-1" /> View
+                     </Button>
+                     {/* Add AI, Edit, etc, buttons as needed */}
+                   </div>
+                   {asset.specs && (
+                     <div className="text-xs text-gray-700 mt-2 whitespace-pre-wrap">
+                       <b>Specs:</b> {asset.specs}
+                     </div>
+                   )}
+                   {asset.notes && (
+                     <div className="text-xs text-gray-500 mt-1">
+                       <b>Notes:</b> {asset.notes}
+                     </div>
+                   )}
+                 </CardContent>
+               </Card>
+             ))}
+           </div>
+         )}
 
-  const filteredAssets = (assets || []).filter((asset: AssetVerification) => {
-    const matchesSearch = asset.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.assetType.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "ALL" || asset.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+         {/* --- QR Modal --- */}
+         {showQR.open && showQR.asset && (
+           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+             <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+               <h2 className="text-xl font-bold mb-3">
+                 QR Code for: {showQR.asset.name}
+               </h2>
+               <QRCode value={showQR.asset.id} size={220} />
+               <Button
+                 className="mt-6 bg-[#045cff] text-white px-7"
+                 onClick={() => setShowQR({ open: false, asset: null })}
+               >
+                 Close
+               </Button>
+             </div>
+           </div>
+         )}
 
-  const handleCreateAsset = () => {
-    if (!activeProjectId || !currentUser) {
-      console.log("Cannot create asset - missing data:", { activeProjectId, currentUser: !!currentUser });
-      return;
-    }
-    const newAsset = {
-      projectId: activeProjectId,
-      assetName: "New Asset " + Date.now(),
-      assetType: "EQUIPMENT",
-      status: "PENDING",
-      nextCheckDue: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      protocolReference: "IOGP Report 456 - KPI Framework",
-      comments: "Asset created for verification"
-    };
-    createAssetMutation.mutate(newAsset);
-  };
-
-  const handleVerifyAsset = async () => {
-    if (!selectedAsset || !currentUser) return;
-    setIsVerifying(true);
-
-    // Upload photo if provided
-    let photoId = null;
-    if (photoFile) {
-      const formData = new FormData();
-      formData.append('file', photoFile);
-      formData.append('projectId', activeProjectId?.toString() || '');
-      formData.append('type', 'ASSET_VERIFICATION');
-      try {
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-        const uploadResult = await uploadResponse.json();
-        photoId = uploadResult.id;
-      } catch (error) {
-        console.error('Photo upload failed:', error);
-      }
-    }
-
-    const updateData = {
-      status: 'VERIFIED',
-      lastChecked: new Date().toISOString(),
-      nextCheckDue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-      comments: verificationComment,
-      photoId: photoId,
-      complianceNotes: "",
-      protocolReference: selectedAsset.protocolReference,
-    };
-
-    updateAssetMutation.mutate({ id: selectedAsset.id, data: updateData });
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'VERIFIED': return 'bg-green-100 text-green-800 border-green-200';
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'OVERDUE': return 'bg-red-100 text-red-800 border-red-200';
-      case 'FAILED': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <main>
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <RefreshCw className="h-8 w-8 animate-spin" />
-            <span className="ml-2">Loading assets...</span>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  if (error) {
-    return (
-      <main>
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64 text-red-600">
-            <AlertTriangle className="h-8 w-8 mr-2" />
-            <span>Asset Error: {error.message || "Unknown error loading assets"}</span>
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  return (
-    <main>
-      <div className="container mx-auto px-4 py-8">
-        {/* Project Selection */}
-        {projects && projects.length > 1 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle>Select Project</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select value={activeProjectId?.toString()} onValueChange={(value) => setActiveProjectId(parseInt(value))}>
-                <SelectTrigger className="w-full max-w-md">
-                  <SelectValue placeholder="Select a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project: any) => (
-                    <SelectItem key={project.id} value={project.id.toString()}>
-                      {project.name} ({project.number})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Header and Controls */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Asset Management</h1>
-            <p className="text-gray-600">Monitor and manage critical assets according to safety protocols</p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
-            <div className="relative flex-1 lg:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search assets..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">All Status</SelectItem>
-                <SelectItem value="VERIFIED">Verified</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="OVERDUE">Overdue</SelectItem>
-                <SelectItem value="FAILED">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={handleCreateAsset} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Add Asset
-            </Button>
-          </div>
-        </div>
-
-        {/* Assets Grid */}
-        {!filteredAssets || filteredAssets.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Package className="h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No assets found</h3>
-              <p className="text-gray-500 text-center mb-4">
-                {!activeProjectId 
-                  ? "Please select a project to view assets" 
-                  : "No assets found for this project. Please add or verify assets."}
-              </p>
-              {activeProjectId && (
-                <Button onClick={handleCreateAsset} className="flex items-center gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create First Asset
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredAssets.map((asset: AssetVerification) => (
-              <Card key={asset.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-semibold text-gray-900 mb-1">
-                        {asset.assetName}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600">{asset.assetType}</p>
-                    </div>
-                    <Badge className={cn("ml-2", getStatusBadgeColor(asset.status))}>
-                      {asset.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      {asset.lastChecked 
-                        ? `Last checked: ${new Date(asset.lastChecked).toLocaleDateString()}`
-                        : "Not yet verified"}
-                    </span>
-                  </div>
-                  {asset.nextCheckDue && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Clock className="h-4 w-4" />
-                      <span>Due: {new Date(asset.nextCheckDue).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                  {asset.comments && (
-                    <div className="text-sm text-gray-700">
-                      <strong>Comments:</strong> {asset.comments}
-                    </div>
-                  )}
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedAsset(asset);
-                        setVerificationComment(asset.comments || "");
-                      }}
-                      className="flex-1"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Verify
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Verification Modal */}
-        {selectedAsset && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5" />
-                  Verify Asset: {selectedAsset.assetName}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Photo Upload */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Verification Photo
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-                      className="hidden"
-                      id="photo-upload"
-                    />
-                    <label
-                      htmlFor="photo-upload"
-                      className="flex flex-col items-center cursor-pointer"
-                    >
-                      <Camera className="h-8 w-8 text-gray-400 mb-2" />
-                      <span className="text-sm text-gray-600">
-                        {photoFile ? photoFile.name : "Click to upload photo"}
-                      </span>
-                    </label>
-                  </div>
-                </div>
-                {/* Comments */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Verification Comments
-                  </label>
-                  <Textarea
-                    value={verificationComment}
-                    onChange={(e) => setVerificationComment(e.target.value)}
-                    placeholder="Add verification notes, observations, or concerns..."
-                    rows={4}
-                  />
-                </div>
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    onClick={handleVerifyAsset}
-                    disabled={isVerifying || updateAssetMutation.isPending}
-                    className="flex-1"
-                  >
-                    {isVerifying || updateAssetMutation.isPending ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                        Verifying...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Complete Verification
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedAsset(null);
-                      setIsVerifying(false);
-                      setPhotoFile(null);
-                      setVerificationComment("");
-                    }}
-                    disabled={isVerifying || updateAssetMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-    </main>
-  );
-}
+         {/* --- Asset Detail Modal --- */}
+         {selectedAsset && (
+           <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-6">
+             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-7 flex flex-col items-stretch">
+               <h2 className="text-2xl font-extrabold mb-2 text-blue-900">{selectedAsset.name}</h2>
+               <div className="mb-3 flex flex-wrap gap-4">
+                 <Badge className={getStatusBadge(selectedAsset.condition)}>{selectedAsset.condition}</Badge>
+                 <span className="text-gray-600">{selectedAsset.category} • {selectedAsset.modelSerial}</span>
+                 <span className="text-gray-600">{selectedAsset.manufacturer} ({selectedAsset.year})</span>
+                 {selectedAsset.assignedTo && (
+                   <span className="text-blue-800 font-semibold">Assigned: {selectedAsset.assignedTo}</span>
+                 )}
+               </div>
+               <div className="mb-3 text-sm text-gray-800 whitespace-pre-wrap">
+                 <b>Specs:</b> {selectedAsset.specs || <span className="text-gray-400">None</span>}
+               </div>
+               <div className="mb-3 text-sm text-gray-700">
+                 <b>Notes:</b> {selectedAsset.notes || <span className="text-gray-400">None</span>}
+               </div>
+               <div className="flex gap-3 justify-end mt-2">
+                 <Button variant="outline" onClick={() => setSelectedAsset(null)}>
+                   Close
+                 </Button>
+                 {/* TODO: Attachments, maintenance history, AI/analytics, edit/delete */}
+               </div>
+             </div>
+           </div>
+         )}
+       </div>
+     </main>
+   );
+ }
