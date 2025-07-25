@@ -29,7 +29,9 @@ import {
   handleFirebaseOAuth,
   type AuthRequest
 } from "./auth";
-
+import { getDoc, doc } from "firebase/firestore";
+import { askAssetAI } from "./ai-asset-agent";
+import { db } from "@/firebase"; // or wherever your Firestore instance is
 
 import * as aiAssetAgent from "./ai-asset-agent"; // Use unique, clear names // Import all your asset agent functions
 
@@ -1668,20 +1670,22 @@ Be specific, practical, and safety-focused in your response.`;
     res.status(result.error ? 404 : 200).json(result);
   });
 
-  // 10. Ask Asset AI Assistant a question
+  // 10. Ask Asset AI Assistant a question (NEW!)
+  // POST /api/ai-asset/assistant/:assetId
   app.post('/api/ai-asset/assistant/:assetId', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { question } = req.body;
       const assetId = req.params.assetId;
-      const result = await aiAssetAgent.askAssetAI({ 
-        asset: { id: assetId }, 
-        question 
-      });
-      res.json({ answer: result });
+      const assetSnap = await getDoc(doc(db, "projects", "1", "assets", assetId));
+      if (!assetSnap.exists()) return res.status(404).json({ error: "Asset not found" });
+      const asset = { ...assetSnap.data(), id: assetId };
+      const aiAnswer = await askAssetAI({ asset, question });
+      res.json({ answer: aiAnswer });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "AI Assistant error" });
     }
   });
-
+  
   return httpServer;
 }
+

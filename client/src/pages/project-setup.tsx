@@ -31,7 +31,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { AIERPAdvisorModal } from "../components/AIERPAdvisorModal";
-
+import { AssetAIChat } from "@/components/AssetAiChat";
 // --- Types ---
 type EmergencyContact = {
   id?: string;
@@ -1931,6 +1931,7 @@ export default function ProjectSetup() {
                       </div>
                     )}
                   </CardContent>
+                  <AssetAIChatWidget/>
                 </Card>
               </TabsContent>
 {/* --- TEAM ASSIGNMENTS TAB --- */}
