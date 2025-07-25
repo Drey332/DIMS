@@ -105,11 +105,6 @@ type AssetEquipment = {
   createdAt?: string;
   updatedAt?: string;
   versions?: any[]; // For audit/versioning (optional)
-  history?: {
-    timestamp: string;
-    action: string;
-    details?: string;
-  }[];
 };
 
 const assetSchema = z.object({
@@ -136,7 +131,7 @@ export default function ProjectSetup() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState<ProjectInfo | null>(null);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
-
+  
   // --- Project Creation & Loading State ---
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -191,17 +186,6 @@ export default function ProjectSetup() {
   // Permission: Only allow editing if Gold code verified (or projectInfo exists, whatever you use)
     // adjust if needed
   const userCanEditAssets = assetModalUnlocked;
-  
-  // AI Asset Management State
-  const [aiAssetOpen, setAiAssetOpen] = useState(false);
-  const [aiAssetLoading, setAiAssetLoading] = useState(false);
-  const [aiAssetData, setAiAssetData] = useState<any>(null);
-  
-  // Additional Asset Management State
-  const [scheduleList, setScheduleList] = useState<any[]>([]);
-  const [scheduleInput, setScheduleInput] = useState({ date: "", description: "" });
-  const [documentList, setDocumentList] = useState<any[]>([]);
-  const [uploadingFile, setUploadingFile] = useState(false);
   // Firestore: Real-time sync for assets
   useEffect(() => {
     const coll = collection(db, "projects", PROJECT_ID, "assets");
@@ -290,91 +274,6 @@ export default function ProjectSetup() {
       toast({ title: "Asset removed" });
     } catch {
       toast({ title: "Error", description: "Could not delete asset", variant: "destructive" });
-    }
-  };
-
-  // AI Assistant Functions
-  const openAiAssistant = async () => {
-    if (!editingAsset) {
-      toast({ title: "Error", description: "No asset selected for AI analysis", variant: "destructive" });
-      return;
-    }
-    
-    setAiAssetOpen(true);
-    setAiAssetLoading(true);
-    setAiAssetData(null);
-    
-    try {
-      // Call AI service for asset recommendations
-      const response = await fetch('/api/ai-asset-recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          asset: editingAsset,
-          projectId: PROJECT_ID
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to get AI recommendations');
-      }
-      
-      const data = await response.json();
-      setAiAssetData(data);
-    } catch (error) {
-      setAiAssetData({ 
-        error: error instanceof Error ? error.message : 'Failed to get AI recommendations' 
-      });
-    } finally {
-      setAiAssetLoading(false);
-    }
-  };
-
-  const applyAiSuggestions = (suggestions: any[]) => {
-    if (!suggestions || suggestions.length === 0) return;
-    
-    // Apply suggestions to the asset form or schedule
-    suggestions.forEach(suggestion => {
-      setScheduleList(prev => [...prev, suggestion]);
-    });
-    
-    toast({ title: "AI suggestions applied successfully" });
-    setAiAssetOpen(false);
-  };
-
-  // Schedule Management Functions
-  const addScheduleEntry = () => {
-    if (!scheduleInput.date || !scheduleInput.description) {
-      toast({ title: "Error", description: "Please fill in both date and description", variant: "destructive" });
-      return;
-    }
-    
-    setScheduleList(prev => [...prev, { ...scheduleInput, id: Date.now() }]);
-    setScheduleInput({ date: "", description: "" });
-  };
-
-  // Document Upload Function
-  const handleDocumentUpload = async (file: File | null) => {
-    if (!file) return;
-    
-    setUploadingFile(true);
-    try {
-      // Simulate file upload - implement actual upload logic here
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const newDoc = {
-        id: Date.now(),
-        name: file.name,
-        size: file.size,
-        uploadedAt: new Date().toISOString()
-      };
-      
-      setDocumentList(prev => [...prev, newDoc]);
-      toast({ title: "Document uploaded successfully" });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to upload document", variant: "destructive" });
-    } finally {
-      setUploadingFile(false);
     }
   };
 // --- Reset ERP Modals ---
@@ -821,7 +720,7 @@ export default function ProjectSetup() {
                 onClick={() => {
                   setShowGoldModal(false);
                   setGoldCodeInput("");
-
+                  
                 }}
               >
                 Cancel
@@ -935,8 +834,8 @@ export default function ProjectSetup() {
       <Navigation />
       <main className="container mx-auto max-w-6xl lg:max-w-7xl px-4 lg:px-8 py-6 lg:py-10">
         <Tabs value={tabValue} onValueChange={setTabValue} className="space-y-6 lg:space-y-8">
-
-
+             
+          
               {/* DESKTOP: Horizontal Tabs */}
               <div className="hidden sm:flex">
                 <TabsList
@@ -1291,7 +1190,7 @@ export default function ProjectSetup() {
               </div>
             </div>
           ))}
-
+                     
                     </div>
                     {/* Contact Modal */}
                     {isContactModalOpen && (
@@ -1423,7 +1322,7 @@ export default function ProjectSetup() {
                                     <CardHeader>
                                       <CardTitle className="flex items-center">
                                         <Lock className="w-5 h-5 mr-2 text-yellow-600" />
-
+                                        
                                         Emergency Response Protocols (ERP)
                                       </CardTitle>
                                     </CardHeader>
@@ -1510,10 +1409,10 @@ export default function ProjectSetup() {
                                             )}
                                           </div>
 
-
-
+                                          
+                                          
                                           {/* ERP Protocol Modal */}
-
+                                      
                                           {isErpModalOpen && (
                                             <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
                                               <div className="bg-white rounded-xl shadow-2xl max-w-md lg:max-w-2xl w-full p-6 lg:p-8 max-h-[90vh] overflow-y-auto">
@@ -1577,7 +1476,7 @@ export default function ProjectSetup() {
                                           )}
                                         </div>
                                       )}
-
+                                      
                                       {showReviewChoice && (
                                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-2">
                                           <div
@@ -1903,7 +1802,7 @@ export default function ProjectSetup() {
                             </div>
                           )}
                         </div>
-
+        
                       ))}
                     </div>
 
@@ -2017,179 +1916,17 @@ export default function ProjectSetup() {
                                   <FormMessage />
                                 </FormItem>
                               )} />
-                              {/* Maintenance & Scheduling Section */}
-                              <div className="mt-4">
-                                <FormLabel className="font-bold">Maintenance & Scheduling</FormLabel>
-                                {scheduleList.length === 0 ? (
-                                  <p className="text-sm text-gray-500 mb-2">No maintenance entries scheduled.</p>
-                                ) : (
-                                  <ul className="mb-3 space-y-1">
-                                    {scheduleList.map((item, idx) => (
-                                      <li
-                                        key={idx}
-                                        className="text-sm text-gray-700 flex justify-between items-center"
-                                      >
-                                        <span>
-                                          {item.date}: {item.description}
-                                        </span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                                <div className="flex flex-col sm:flex-row gap-2">
-                                  <Input
-                                    type="date"
-                                    value={scheduleInput.date}
-                                    onChange={e => setScheduleInput(prev => ({ ...prev, date: e.target.value }))}
-                                    className="flex-1"
-                                  />
-                                  <Input
-                                    type="text"
-                                    placeholder="Description"
-                                    value={scheduleInput.description}
-                                    onChange={e => setScheduleInput(prev => ({ ...prev, description: e.target.value }))}
-                                    className="flex-1"
-                                  />
-                                  <Button type="button" variant="outline" onClick={addScheduleEntry}>
-                                    Add
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* Manuals & Documents Section */}
-                              <div className="mt-4">
-                                <FormLabel className="font-bold">Manuals & Documents</FormLabel>
-                                {documentList.length === 0 ? (
-                                  <p className="text-sm text-gray-500 mb-2">No documents uploaded yet.</p>
-                                ) : (
-                                  <ul className="mb-2 space-y-1">
-                                    {documentList.map((doc, idx) => (
-                                      <li key={idx} className="text-sm text-blue-700 underline break-all">
-                                        <a href={doc.url} target="_blank" rel="noopener noreferrer">
-                                          {doc.name}
-                                        </a>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                                <input
-                                  type="file"
-                                  onChange={e => handleDocumentUpload(e.target.files?.[0] ?? null)}
-                                  className="mt-1"
-                                />
-                                {uploadingFile && (
-                                  <p className="text-xs text-gray-500 mt-1">Uploading...</p>
-                                )}
-                              </div>
-
-                              {/* History / Audit Section */}
-                              <div className="mt-4">
-                                <FormLabel className="font-bold">History / Audit</FormLabel>
-                                {editingAsset?.history && editingAsset.history.length > 0 ? (
-                                  <div className="max-h-32 overflow-y-auto border rounded-lg p-2 text-sm">
-                                    {editingAsset.history.map((entry, idx) => (
-                                      <div key={idx} className="mb-1">
-                                        <div className="font-medium text-gray-800">
-                                          {new Date(entry.timestamp).toLocaleString()}
-                                        </div>
-                                        <div className="text-gray-600">{entry.action}</div>
-                                        {entry.details && (
-                                          <div className="text-gray-500 text-xs">{entry.details}</div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-500">No history yet.</p>
-                                )}
-                              </div>
-
-                              {/* AI Assistant */}
-                              <div className="mt-4 flex justify-end">
-                                <Button type="button" variant="secondary" onClick={openAiAssistant}>
-                                  AI Assistant
-                                </Button>
-                              </div>
-
-                              {/* Form Actions */}
+                              {/* Attachments: See note below */}
                               <div className="flex gap-3 mt-4 justify-end">
                                 <Button type="submit" className="hydro-button-primary font-bold px-7">
                                   {editingAsset ? "Update Asset" : "Add Asset"}
                                 </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  className="px-7"
-                                  onClick={() => setIsAssetModalOpen(false)}
-                                >
+                                <Button type="button" variant="outline" className="px-7" onClick={() => setIsAssetModalOpen(false)}>
                                   Cancel
                                 </Button>
                               </div>
                             </form>
                           </Form>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* AI Assistant Overlay */}
-                    {aiAssetOpen && (
-                      <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 p-2 sm:p-4">
-                        <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl w-full max-w-lg p-6 lg:p-8 overflow-y-auto max-h-[90vh]">
-                          <h3 className="text-xl lg:text-2xl font-bold mb-4 text-hydro-dark dark:text-white text-center">AI Maintenance Advisor</h3>
-                          {aiAssetLoading ? (
-                            <div className="flex flex-col items-center justify-center py-10">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hydro-dark mb-3"></div>
-                              <div className="text-hydro-dark dark:text-gray-200">Generating suggestions...</div>
-                            </div>
-                          ) : aiAssetData?.error ? (
-                            <div className="text-red-600 text-center mb-4">{aiAssetData.error}</div>
-                          ) : (
-                            <div>
-                              {/* Display AI suggestions when available. The backend is expected to return
-                                  an object with a `suggestions` or `recommendedSchedule` array. If not
-                                  available a generic message is shown. */}
-                              {aiAssetData?.recommendedSchedule || aiAssetData?.suggestions ? (
-                                <div className="space-y-2">
-                                  <p className="text-base font-semibold text-hydro-dark dark:text-gray-100">Suggested Maintenance Schedule:</p>
-                                  <ul className="list-disc list-inside space-y-1">
-                                    {(aiAssetData.recommendedSchedule || aiAssetData.suggestions).map((item: any, idx: number) => (
-                                      <li key={idx} className="text-sm text-gray-700 dark:text-gray-300">
-                                        <span className="font-medium">{item.date}</span>: {item.description}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              ) : (
-                                <p className="text-sm text-gray-700 dark:text-gray-300">
-                                  The AI assistant did not return any specific recommendations.
-                                </p>
-                              )}
-                              {aiAssetData?.complianceGaps && Array.isArray(aiAssetData.complianceGaps) && (
-                                <div className="mt-4">
-                                  <p className="text-base font-semibold text-hydro-dark dark:text-gray-100">Compliance Gaps:</p>
-                                  <ul className="list-disc list-inside space-y-1">
-                                    {aiAssetData.complianceGaps.map((gap: any, idx: number) => (
-                                      <li key={idx} className="text-sm text-red-600 dark:text-red-400">
-                                        {gap}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          <div className="mt-6 flex justify-end gap-2">
-                            {/* Apply suggestions button is disabled when there are no suggestions */}
-                            <Button
-                              disabled={!(aiAssetData?.recommendedSchedule || aiAssetData?.suggestions)}
-                              onClick={() => applyAiSuggestions(aiAssetData?.recommendedSchedule || aiAssetData?.suggestions || [])}
-                            >
-                              Apply Suggestions
-                            </Button>
-                            <Button variant="outline" onClick={() => setAiAssetOpen(false)}>
-                              Close
-                            </Button>
-                          </div>
                         </div>
                       </div>
                     )}
