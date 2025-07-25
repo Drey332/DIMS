@@ -1,8 +1,12 @@
-// EmergencyAlarmModal.tsx
-
 import React, { useEffect, useRef, useState } from "react";
 
-// Optional: Inline SVG for ultra-flashy icon
+// Types for props
+interface EmergencyAlarmModalProps {
+  open: boolean;
+  onAcknowledge: () => void;
+  message?: string;
+}
+
 const FlashIcon = () => (
   <svg width="80" height="80" viewBox="0 0 80 80" style={{
     animation: "spin 1.8s linear infinite"
@@ -20,70 +24,107 @@ const FlashIcon = () => (
   </svg>
 );
 
-export default function EmergencyAlarmModal({ open, onAcknowledge, message }) {
+const SIREN_SRC = "/siren.mp3";
+
+const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
+  open,
+  onAcknowledge,
+  message
+}) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isFullscreen, setFullscreen] = useState(false);
+  const vibrateRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Strobing background and continuous vibration
+  // ========== EFFECT: Strobe, Vibrate, Fullscreen, Siren, Notification ==========
   useEffect(() => {
-    if (open) {
-      // Add body strobe effect (Amber Alert style)
-      document.body.classList.add("stark-alarm-active");
-      // Freeze background scroll
-      document.body.style.overflow = "hidden";
-      // Continuous vibration pattern
-      let vibrateInterval: any = null;
-      if ("vibrate" in navigator) {
-        navigator.vibrate([900, 200, 900, 400, 2000]);
-        vibrateInterval = setInterval(() => {
-          navigator.vibrate([900, 200, 900, 400, 2000]);
-        }, 3200);
-      }
-      // Play loud alarm
-      audioRef.current?.play();
-      // Browser notification
-      if ("Notification" in window) {
-        if (Notification.permission === "granted") {
-          new Notification("🚨 EMERGENCY ALERT 🚨", {
-            body: message || "Immediate response required!",
-            requireInteraction: true,
-            icon: "/alert-icon.png",
-          });
-        } else if (Notification.permission !== "denied") {
-          Notification.requestPermission().then((permission) => {
-            if (permission === "granted") {
-              new Notification("🚨 EMERGENCY ALERT 🚨", {
-                body: message || "Immediate response required!",
-                requireInteraction: true,
-                icon: "/alert-icon.png",
-              });
-            }
-          });
-        }
-      }
-      // Try to go full screen for total UI lock (user must allow)
-      const el = document.documentElement;
-      if (el.requestFullscreen) {
-        el.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
-      }
-      window.onbeforeunload = (e) => {
-        e.preventDefault();
-        e.returnValue = "";
-      };
+    if (!open) return;
 
-      return () => {
-        document.body.classList.remove("stark-alarm-active");
-        document.body.style.overflow = "";
-        window.onbeforeunload = null;
-        if (vibrateInterval) clearInterval(vibrateInterval);
-        navigator.vibrate?.(0);
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-        }
-        if (isFullscreen && document.exitFullscreen) document.exitFullscreen();
-      };
+    // --- Strobe background class ---
+    document.body.classList.add("stark-alarm-active");
+    document.body.style.overflow = "hidden";
+
+    // --- Vibration pattern (looped) ---
+    function startVibrate() {
+      if ("vibrate" in navigator) {
+        navigator.vibrate([1000, 300, 1200, 500, 2000]);
+        vibrateRef.current = setInterval(() => {
+          navigator.vibrate([1000, 300, 1200, 500, 2000]);
+        }, 4000);
+      }
     }
+    startVibrate();
+
+    // --- Siren sound (try/catch) ---
+    function playSiren() {
+      try {
+        if (audioRef.current) {
+          // Always try to play, ignore pause errors.
+          audioRef.current.currentTime = 0;
+          audioRef.current.volume = 1;
+          audioRef.current.play().catch(() => {});
+        }
+      } catch {}
+    }
+    playSiren();
+
+    // --- Notification (Amber Alert style) ---
+    if ("Notification" in window) {
+      if (Notification.permission === "granted") {
+        new Notification("🚨 EMERGENCY ALERT 🚨", {
+          body: message || "Immediate response required!",
+          requireInteraction: true,
+          icon: "/alert-icon.png"
+        });
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then((perm) => {
+          if (perm === "granted") {
+            new Notification("🚨 EMERGENCY ALERT 🚨", {
+              body: message || "Immediate response required!",
+              requireInteraction: true,
+              icon: "/alert-icon.png"
+            });
+          }
+        });
+      }
+    }
+
+    // --- Try to go fullscreen for ultra-lock ---
+    const el = document.documentElement as any;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
+    }
+
+    // --- Prevent accidental closing ---
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+
+    // --- CLEANUP on modal close ---
+    return () => {
+      document.body.classList.remove("stark-alarm-active");
+      document.body.style.overflow = "";
+      if (vibrateRef.current) clearInterval(vibrateRef.current);
+      navigator.vibrate?.(0);
+      // Pause siren and rewind
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      // Only exit fullscreen if actually in it
+      try {
+        if (
+          isFullscreen &&
+          document.fullscreenElement &&
+          document.exitFullscreen
+        ) {
+          document.exitFullscreen();
+        }
+      } catch {}
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
+    // eslint-disable-next-line
   }, [open, message, isFullscreen]);
 
   if (!open) return null;
@@ -91,7 +132,7 @@ export default function EmergencyAlarmModal({ open, onAcknowledge, message }) {
   return (
     <>
       {/* --- Siren Sound --- */}
-      <audio ref={audioRef} src="/siren.mp3" loop preload="auto" />
+      <audio ref={audioRef} src={SIREN_SRC} loop preload="auto" />
       {/* --- Fullscreen Stark Modal --- */}
       <div
         style={{
@@ -104,15 +145,18 @@ export default function EmergencyAlarmModal({ open, onAcknowledge, message }) {
           justifyContent: "center",
           alignItems: "center",
           pointerEvents: "all",
-          animation: "strobe-bg 0.55s infinite alternate",
+          animation: "strobe-bg 0.55s infinite alternate"
         }}
+        aria-modal="true"
+        tabIndex={-1}
+        role="alertdialog"
       >
         {/* Flashing, rotating warning icon */}
         <div
           style={{
             marginBottom: 18,
             animation: "flash-icon 0.66s alternate infinite",
-            filter: "drop-shadow(0 0 28px #ff2929cc)",
+            filter: "drop-shadow(0 0 28px #ff2929cc)"
           }}
         >
           <FlashIcon />
@@ -126,7 +170,7 @@ export default function EmergencyAlarmModal({ open, onAcknowledge, message }) {
             padding: "48px 32px 36px 32px",
             boxShadow: "0 4px 48px 8px #8b0000",
             textAlign: "center",
-            animation: "pulse 1.2s infinite",
+            animation: "pulse 1.2s infinite"
           }}
         >
           <h1
@@ -137,24 +181,33 @@ export default function EmergencyAlarmModal({ open, onAcknowledge, message }) {
               color: "#ff2424",
               textShadow: "0 4px 22px #000",
               marginBottom: 22,
-              lineHeight: 1.18,
+              lineHeight: 1.18
             }}
           >
             🚨 EMERGENCY ALERT 🚨
           </h1>
-          <div style={{
-            fontSize: 24,
-            fontWeight: 700,
-            marginBottom: 22,
-            color: "#fff",
-            letterSpacing: 0.3,
-          }}>
-            {message || "A critical incident has been declared.<br />Follow muster instructions and acknowledge immediately!"}
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              marginBottom: 22,
+              color: "#fff",
+              letterSpacing: 0.3
+            }}
+          >
+            {message ||
+              "A critical incident has been declared. Follow muster instructions and acknowledge immediately!"}
           </div>
           <button
             autoFocus
             onClick={() => {
-              if (isFullscreen && document.exitFullscreen) document.exitFullscreen();
+              if (
+                isFullscreen &&
+                document.fullscreenElement &&
+                document.exitFullscreen
+              ) {
+                document.exitFullscreen();
+              }
               onAcknowledge();
             }}
             style={{
@@ -169,22 +222,23 @@ export default function EmergencyAlarmModal({ open, onAcknowledge, message }) {
               padding: "22px 68px",
               cursor: "pointer",
               outline: "none",
-              animation: "button-pulse 0.9s infinite alternate",
+              animation: "button-pulse 0.9s infinite alternate"
             }}
           >
             ACKNOWLEDGE & MUSTER
           </button>
-          <div style={{
-            marginTop: 26,
-            color: "#ffbcbc",
-            fontSize: 16,
-            textShadow: "0 0 2px #000",
-          }}>
+          <div
+            style={{
+              marginTop: 26,
+              color: "#ffbcbc",
+              fontSize: 16,
+              textShadow: "0 0 2px #000"
+            }}
+          >
             The alarm will stop when acknowledged. <br />Your response is required.
           </div>
         </div>
       </div>
-
       {/* --- Custom CSS Animations for true Stark UX --- */}
       <style>{`
         @keyframes strobe-bg {
@@ -209,4 +263,6 @@ export default function EmergencyAlarmModal({ open, onAcknowledge, message }) {
       `}</style>
     </>
   );
-}
+};
+
+export default EmergencyAlarmModal;
