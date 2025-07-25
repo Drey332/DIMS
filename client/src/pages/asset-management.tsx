@@ -33,11 +33,16 @@ interface Asset {
 }
 
 export default function AssetManagement() {
+  // Check if we're accessing a specific asset via QR code
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetAssetId = urlParams.get('asset');
+  
   const [assets, setAssets] = useState<Asset[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [showQR, setShowQR] = useState<{ open: boolean; asset: Asset | null }>({ open: false, asset: null });
+  const [highlightedAssetId, setHighlightedAssetId] = useState<string | null>(targetAssetId);
 
   // THIS is your Firestore project ID — matches what's in Firebase!
   const projectId = "1";
@@ -46,12 +51,26 @@ export default function AssetManagement() {
   useEffect(() => {
     const q = query(collection(db, "projects", projectId, "assets"));
     const unsub = onSnapshot(q, (snap) => {
-      setAssets(
-        snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Asset))
-      );
+      const assetData = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Asset));
+      setAssets(assetData);
+      
+      // If we have a target asset ID from QR code, auto-select it
+      if (targetAssetId && assetData.length > 0) {
+        const targetAsset = assetData.find(asset => asset.id === targetAssetId);
+        if (targetAsset) {
+          setSelectedAsset(targetAsset);
+          // Auto-scroll to the asset
+          setTimeout(() => {
+            const element = document.getElementById(`asset-${targetAssetId}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 100);
+        }
+      }
     });
     return unsub;
-  }, [projectId]);
+  }, [projectId, targetAssetId]);
 
   // Filter/search logic
   const filteredAssets = assets.filter((asset) => {
@@ -83,6 +102,23 @@ export default function AssetManagement() {
   return (
     <main>
       <div className="container mx-auto px-4 py-8">
+        {/* QR Code Access Banner */}
+        {targetAssetId && (
+          <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <QrCode className="h-5 w-5 text-yellow-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  <strong>QR Code Access:</strong> Showing asset {targetAssetId}
+                  {selectedAsset && ` - ${selectedAsset.name}`}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* HEADER */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
           <div>
@@ -137,9 +173,11 @@ export default function AssetManagement() {
             {filteredAssets.map(asset => (
               <Card
                 key={asset.id}
+                id={`asset-${asset.id}`}
                 className={cn(
                   "rounded-2xl p-0 overflow-hidden shadow-xl transition-transform hover:scale-105 group",
-                  "bg-gradient-to-tr from-[#f8faff] via-white to-[#e8f2fd]"
+                  "bg-gradient-to-tr from-[#f8faff] via-white to-[#e8f2fd]",
+                  highlightedAssetId === asset.id && "ring-4 ring-yellow-400 ring-opacity-75 shadow-2xl scale-105"
                 )}
               >
                 <CardHeader className="pb-3 bg-[#045cff]/5">
@@ -209,7 +247,7 @@ export default function AssetManagement() {
               <h2 className="text-xl font-bold mb-3">
                 QR Code for: {showQR.asset.name}
               </h2>
-              <QRCode value={`${window.location.origin}/asset/${showQR.asset.id}`} size={220} />
+              <QRCode value={`${window.location.origin}/asset-management?asset=${showQR.asset.id}`} size={220} />
               <div className="mt-4 text-center text-sm text-gray-600">
                 <p>Scan to open asset in HydroSafe</p>
                 <p className="font-mono text-xs">{showQR.asset.id}</p>

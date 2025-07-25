@@ -185,6 +185,9 @@ function Router() {
           <Switch>
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />
+            {/* Public asset access for QR codes */}
+            <Route path="/asset/:id" component={AssetDetails} />
+            <Route path="/asset-management/:assetId?" component={AssetManagement} />
             {isAuthenticated && (
               <>
                 <Route path="/" component={Dashboard} />
