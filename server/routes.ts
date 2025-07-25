@@ -1612,13 +1612,13 @@ Be specific, practical, and safety-focused in your response.`;
   app.use('/api/ai-asset', authenticateUser);
 
   // 1. Get asset status
-  app.get('/api/ai-asset/status/:assetId', async (req: Request, res: Response) => {
+  app.get('/api/ai-asset/status/:assetId', async (req: AuthenticatedRequest, res: Response) => {
     const result = await aiAssetAgent.getAssetStatus(req.params.assetId);
     res.status(result.error ? 404 : 200).json(result);
   });
 
   // 2. Schedule maintenance
-  app.post('/api/ai-asset/schedule/:assetId', async (req: Request, res: Response) => {
+  app.post('/api/ai-asset/schedule/:assetId', async (req: AuthenticatedRequest, res: Response) => {
     const { date, engineer } = req.body;
     if (!date || !engineer) return res.status(400).json({ error: "Missing date or engineer" });
     const result = await aiAssetAgent.scheduleMaintenance(req.params.assetId, date, engineer);
@@ -1626,44 +1626,44 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // 3. Generate report (all or single)
-  app.get('/api/ai-asset/report', async (req: Request, res: Response) => {
+  app.get('/api/ai-asset/report', async (req: AuthenticatedRequest, res: Response) => {
     const { assetId } = req.query;
     const result = await aiAssetAgent.generateReport(assetId as string | undefined);
     res.status(result.error ? 500 : 200).json(result);
   });
 
   // 4. Fetch open issues
-  app.get('/api/ai-asset/issues/:assetId', async (req: Request, res: Response) => {
+  app.get('/api/ai-asset/issues/:assetId', async (req: AuthenticatedRequest, res: Response) => {
     const result = await aiAssetAgent.fetchOpenIssues(req.params.assetId);
     res.status(result.error ? 500 : 200).json(result);
   });
 
   // 5. Suggest optimized maintenance schedule
-  app.get('/api/ai-asset/schedule/optimized/:assetId', async (req: Request, res: Response) => {
+  app.get('/api/ai-asset/schedule/optimized/:assetId', async (req: AuthenticatedRequest, res: Response) => {
     const result = await aiAssetAgent.suggestOptimizedSchedule(req.params.assetId);
     res.status(result.error ? 500 : 200).json(result);
   });
 
   // 6. Verify certification
-  app.get('/api/ai-asset/certification/:assetId/:certType', async (req: Request, res: Response) => {
+  app.get('/api/ai-asset/certification/:assetId/:certType', async (req: AuthenticatedRequest, res: Response) => {
     const result = await aiAssetAgent.verifyCertification(req.params.assetId, req.params.certType);
     res.status(result.error ? 404 : 200).json(result);
   });
 
   // 7. Predict next fault
-  app.get('/api/ai-asset/fault/:assetId', async (req: Request, res: Response) => {
+  app.get('/api/ai-asset/fault/:assetId', async (req: AuthenticatedRequest, res: Response) => {
     const result = await aiAssetAgent.predictNextFault(req.params.assetId);
     res.status(result.error ? 500 : 200).json(result);
   });
 
   // 8. Find overdue assets
-  app.get('/api/ai-asset/overdue', async (req: Request, res: Response) => {
+  app.get('/api/ai-asset/overdue', async (req: AuthenticatedRequest, res: Response) => {
     const result = await aiAssetAgent.findOverdueAssets();
     res.status(result.error ? 500 : 200).json(result);
   });
 
   // 9. Summarize asset history
-  app.get('/api/ai-asset/history/:assetId', async (req: Request, res: Response) => {
+  app.get('/api/ai-asset/history/:assetId', async (req: AuthenticatedRequest, res: Response) => {
     const result = await aiAssetAgent.summarizeAssetHistory(req.params.assetId);
     res.status(result.error ? 404 : 200).json(result);
   });
