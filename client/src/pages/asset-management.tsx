@@ -45,7 +45,7 @@ interface AssetVerification {
   updatedAt: string;
 }
 
-export default function AssetVerification() {
+export default function AssetManagement() {
   const [selectedAsset, setSelectedAsset] = useState<AssetVerification | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -256,8 +256,8 @@ export default function AssetVerification() {
         {/* Header and Controls */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Asset Verification</h1>
-            <p className="text-gray-600">Monitor and verify critical assets according to safety protocols</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Asset Management</h1>
+            <p className="text-gray-600">Monitor and manage critical assets according to safety protocols</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
             <div className="relative flex-1 lg:w-64">

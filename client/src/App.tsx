@@ -20,7 +20,7 @@ import Incidents from "@/pages/incidents";
 import TeamManagement from "@/pages/team-management";
 import Reports from "@/pages/reports";
 import ProjectSetup from "@/pages/project-setup";
-import AssetVerification from "@/pages/asset-verification";
+import AssetManagement from "@/pages/asset-management";
 import AssetUpload from "@/pages/asset-upload";
 import AssetManage from "@/pages/asset-manage";
 import Clients from "@/pages/clients";
@@ -196,8 +196,8 @@ function Router() {
                 <Route path="/reports/generate" component={Reports} />
                 <Route path="/reports/history" component={Reports} />
                 <Route path="/setup" component={ProjectSetup} />
-                <Route path="/asset-verification" component={AssetVerification} />
-                <Route path="/assets" component={AssetVerification} />
+                <Route path="/asset-verification" component={AssetManagement} />
+                <Route path="/assets" component={AssetManagement} />
                 <Route path="/assets/upload" component={AssetUpload} />
                 <Route path="/assets/manage" component={AssetManage} />
                 <Route path="/clients" component={Clients} />
