@@ -1668,5 +1668,20 @@ Be specific, practical, and safety-focused in your response.`;
     res.status(result.error ? 404 : 200).json(result);
   });
 
+  // 10. Ask Asset AI Assistant a question
+  app.post('/api/ai-asset/assistant/:assetId', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { question } = req.body;
+      const assetId = req.params.assetId;
+      const result = await aiAssetAgent.askAssetAI({ 
+        asset: { id: assetId }, 
+        question 
+      });
+      res.json({ answer: result });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || "AI Assistant error" });
+    }
+  });
+
   return httpServer;
 }

@@ -16,7 +16,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const ASSISTANT_ID = "asst_n8xDlhXKwjoaa3ajBvODLJex"; // your custom assistant
 
 // Helper to call the OpenAI Asset Assistant with asset info and a question
-async function askAssetAI({ asset, question, fileIds = [] }: { asset: any, question: string, fileIds?: string[] }) {
+export async function askAssetAI({ asset, question, fileIds = [] }: { asset: any, question: string, fileIds?: string[] }) {
   const thread = await openai.beta.threads.create({
     messages: [
       {
