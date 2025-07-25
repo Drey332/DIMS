@@ -1931,7 +1931,7 @@ export default function ProjectSetup() {
                       </div>
                     )}
                   </CardContent>
-                  <AssetAIChatWidget/>
+                  <AssetAIChat assetId="sample-asset-1" assetName="Sample Asset"/>
                 </Card>
               </TabsContent>
 {/* --- TEAM ASSIGNMENTS TAB --- */}

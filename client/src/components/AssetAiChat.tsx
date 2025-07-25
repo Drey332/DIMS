@@ -64,3 +64,19 @@ export function AssetAIChat({ assetId, assetName }: { assetId: string, assetName
     </Card>
   );
 }
+// At the bottom of your file, or in AssetAIChat.tsx if you prefer
+const AssetAIChatWidget = () => (
+  <div
+    style={{
+      position: "fixed",
+      bottom: "28px",
+      right: "32px",
+      zIndex: 1200,
+      maxWidth: 420,
+      width: "100%",
+    }}
+    className="shadow-2xl rounded-xl bg-white border border-gray-200"
+  >
+    <AssetAIChat/>
+  </div>
+);
