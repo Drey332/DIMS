@@ -181,9 +181,9 @@ export default function AssetManagement() {
                       size="sm"
                       variant="outline"
                       className="rounded-lg font-bold"
-                      onClick={() => setSelectedAsset(asset)}
+                      onClick={() => window.open(`/asset/${asset.id}`, '_blank')}
                     >
-                      <Eye className="w-5 h-5 mr-1" /> View
+                      <Eye className="w-5 h-5 mr-1" /> Open
                     </Button>
                   </div>
                   {asset.specs && (
@@ -210,6 +210,10 @@ export default function AssetManagement() {
                 QR Code for: {showQR.asset.name}
               </h2>
               <QRCode value={`${window.location.origin}/asset/${showQR.asset.id}`} size={220} />
+              <div className="mt-4 text-center text-sm text-gray-600">
+                <p>Scan to open asset in HydroSafe</p>
+                <p className="font-mono text-xs">{showQR.asset.id}</p>
+              </div>
               <Button
                 className="mt-6 bg-[#045cff] text-white px-7"
                 onClick={() => setShowQR({ open: false, asset: null })}

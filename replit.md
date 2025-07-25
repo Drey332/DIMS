@@ -146,6 +146,7 @@ Changelog:
 - June 26, 2025. Integrated comprehensive AI-Driven Incident Management Logic system providing automatic severity classification (Tier 0-3), intelligent corrective action suggestions following HydroDive ERP protocols, documentation completeness validation, and Bronze-Silver-Gold command hierarchy escalation with real-time AI analysis panel in incidents interface featuring severity visualization, recommended actions display, and compliance checking for offshore emergency response operations
 - July 22, 2025. Enhanced desktop UI responsiveness with larger modal sizes, improved spacing, and better typography scaling for professional desktop experience while maintaining mobile compatibility - updated all modals (ERP, contact, asset, project) with desktop-specific sizing and spacing enhancements
 - July 22, 2025. Fixed critical Firebase import errors in EmergencyMusterModal.tsx by correcting import paths from '../firebase' to './src/firebase' and created missing useActiveEmergency hook for real-time emergency monitoring functionality
+- July 25, 2025. Implemented comprehensive QR Code Asset Management system where QR codes generate direct URLs to specific asset pages within the HydroSafe app enabling field teams to scan codes and immediately access asset details, maintenance records, inspection forms, and update capabilities for efficient offshore asset management workflow
 
 ## User Preferences
 

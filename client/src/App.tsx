@@ -23,6 +23,7 @@ import ProjectSetup from "@/pages/project-setup";
 import AssetManagement from "@/pages/asset-management";
 import AssetUpload from "@/pages/asset-upload";
 import AssetManage from "@/pages/asset-manage";
+import AssetDetails from "@/pages/asset-details";
 import Clients from "@/pages/clients";
 import Profile from "@/pages/profile";
 import EmergencyProtocols from "@/pages/emergency-protocols";
@@ -198,6 +199,7 @@ function Router() {
                 <Route path="/setup" component={ProjectSetup} />
                 <Route path="/asset-verification" component={AssetManagement} />
                 <Route path="/assets" component={AssetManagement} />
+                <Route path="/asset/:id" component={AssetDetails} />
                 <Route path="/assets/upload" component={AssetUpload} />
                 <Route path="/assets/manage" component={AssetManage} />
                 <Route path="/clients" component={Clients} />
