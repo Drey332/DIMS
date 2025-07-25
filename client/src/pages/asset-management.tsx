@@ -6,15 +6,16 @@
    DocumentData,
  } from "firebase/firestore";
  import { db } from "@/firebase";
- import {
-   Card, CardContent, CardHeader, CardTitle,
-   Button, Input, Textarea, Badge,
-   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
- } from "@/components/ui";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Badge } from "@/components/ui/badge";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import {
    CheckCircle, Calendar, Clock, Eye, Search, Plus, Package, Filter, Edit, Trash2, QrCode
  } from "lucide-react";
- import QRCode from "qrcode.react"; // npm i qrcode.react
+ import { QRCodeSVG as QRCode } from "qrcode.react";
  import { cn } from "@/lib/utils";
 
  interface Asset {
@@ -105,7 +106,7 @@
                className="rounded-lg border-2 border-[#045cff] focus:border-blue-700 shadow-sm px-4 py-2 text-lg"
                placeholder="Search by name, serial, or category..."
                value={searchTerm}
-               onChange={e => setSearchTerm(e.target.value)}
+               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
              />
              <Select value={statusFilter} onValueChange={setStatusFilter}>
                <SelectTrigger className="rounded-lg border-[#045cff] w-40 text-base">
