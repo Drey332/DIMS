@@ -32,6 +32,131 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { AIERPAdvisorModal } from "../components/AIERPAdvisorModal";
 import { AssetAIChat } from "@/components/AssetAiChat";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+// For map markers
+const defaultIcon = new L.Icon({
+  iconUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+
+type AckUser = {
+  userId: string;
+  name: string;
+  photoURL: string;
+  gps?: { lat: number; lng: number };
+  time: number;
+};
+
+function MusterTracker({ alarmId }: { alarmId: string }) {
+  const [acks, setAcks] = useState<AckUser[]>([]);
+
+  useEffect(() => {
+    if (!alarmId) return;
+    const unsub = onSnapshot(
+      collection(db, "alarms", alarmId, "acks"),
+      (snap) => {
+        setAcks(
+          snap.docs
+            .map((doc) => doc.data() as AckUser)
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+      }
+    );
+    return unsub;
+  }, [alarmId]);
+
+  // Find the average location for map center (defaults to Nigeria)
+  const defaultCenter = [4.7, 7.0];
+  const gpsAcks = acks.filter((a) => a.gps);
+  const mapCenter =
+    gpsAcks.length > 0
+      ? [
+          gpsAcks.reduce((sum, u) => sum + (u.gps?.lat ?? 0), 0) / gpsAcks.length,
+          gpsAcks.reduce((sum, u) => sum + (u.gps?.lng ?? 0), 0) / gpsAcks.length,
+        ]
+      : defaultCenter;
+
+  return (
+    <div className="w-full flex flex-col gap-8">
+      <div className="flex flex-col md:flex-row md:items-end md:gap-8">
+        <div className="flex-1 mb-6">
+          <div className="font-bold text-xl mb-2">Live Muster Headcount</div>
+          <div className="flex items-center gap-4 flex-wrap">
+            <span className="text-lg font-mono text-green-800 bg-green-50 rounded-full px-3 py-1">
+              {acks.length} Acknowledged
+            </span>
+          </div>
+          <div className="mt-6 flex flex-col gap-2">
+            {acks.map((user) => (
+              <div key={user.userId} className="flex items-center gap-3 bg-white/70 px-3 py-2 rounded-lg shadow">
+                <img
+                  src={user.photoURL || "/avatar.png"}
+                  alt={user.name}
+                  className="w-10 h-10 rounded-full border"
+                />
+                <span className="font-semibold">{user.name}</span>
+                {user.gps ? (
+                  <span className="ml-2 text-green-600 font-bold">📍</span>
+                ) : (
+                  <span className="ml-2 text-yellow-500 font-bold">No Location</span>
+                )}
+                <span className="ml-auto text-xs text-gray-500">
+                  {user.time ? new Date(user.time).toLocaleTimeString() : ""}
+                </span>
+              </div>
+            ))}
+            {acks.length === 0 && (
+              <div className="p-3 text-center text-gray-400 italic">No one has acknowledged yet.</div>
+            )}
+          </div>
+        </div>
+        <div className="w-full md:w-[430px] h-[370px]">
+          <MapContainer
+            center={mapCenter as [number, number]}
+            zoom={7}
+            style={{ width: "100%", height: "100%", borderRadius: 20, boxShadow: "0 4px 32px 0 #c5d5ee99" }}
+            scrollWheelZoom={true}
+          >
+            <TileLayer
+              attribution='&copy; OpenStreetMap'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            {acks
+              .filter((user) => user.gps)
+              .map((user) => (
+                <Marker
+                  key={user.userId}
+                  position={[user.gps!.lat, user.gps!.lng]}
+                  icon={defaultIcon}
+                >
+                  <Popup>
+                    <div className="flex flex-col items-center">
+                      <img
+                        src={user.photoURL || "/avatar.png"}
+                        alt={user.name}
+                        className="w-14 h-14 rounded-full mb-1"
+                      />
+                      <div className="font-semibold">{user.name}</div>
+                      <div className="text-xs text-gray-700">
+                        {user.time ? new Date(user.time).toLocaleTimeString() : ""}
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+          </MapContainer>
+        </div>
+      </div>
+      <div className="text-xs text-gray-500 mt-3 text-center">
+        Last updated: {new Date().toLocaleTimeString()}
+      </div>
+    </div>
+  );
+}
+
 // --- Types ---
 type EmergencyContact = {
   id?: string;
@@ -1934,20 +2059,18 @@ export default function ProjectSetup() {
                   <AssetAIChat assetId="sample-asset-1" assetName="Sample Asset"/>
                 </Card>
               </TabsContent>
-{/* --- TEAM ASSIGNMENTS TAB --- */}
+{/* --- MUSTER TRACKER TAB --- */}
 <TabsContent value="team">
   <Card className="hydro-card">
     <CardHeader>
       <CardTitle className="flex items-center">
         <FileText className="w-5 h-5 mr-2 text-primary" />
-        Team Assignments
+        Muster Tracker (Live Map & Headcount)
       </CardTitle>
     </CardHeader>
     <CardContent>
-      <div className="p-6 text-gray-500 italic text-center">
-        {/* --- Plug in your team logic here, or extend from previous file! --- */}
-        (Team assignments management coming soon...)
-      </div>
+      {/* Replace alarmId below with your active alarm's id (or pass as prop, or grab from Firestore) */}
+      <MusterTracker alarmId={"active-alarm-001"} />
     </CardContent>
   </Card>
 </TabsContent>
