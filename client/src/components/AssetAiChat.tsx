@@ -65,7 +65,7 @@ export function AssetAIChat({ assetId, assetName }: { assetId: string, assetName
   );
 }
 // At the bottom of your file, or in AssetAIChat.tsx if you prefer
-const AssetAIChatWidget = ({ assetId, assetName }: { assetId: string, assetName?: string }) => (
+const AssetAIChatWidget = () => (
   <div
     style={{
       position: "fixed",
@@ -77,6 +77,6 @@ const AssetAIChatWidget = ({ assetId, assetName }: { assetId: string, assetName?
     }}
     className="shadow-2xl rounded-xl bg-white border border-gray-200"
   >
-    <AssetAIChat assetId={assetId} assetName={assetName} />
+    <AssetAIChat/>
   </div>
 );

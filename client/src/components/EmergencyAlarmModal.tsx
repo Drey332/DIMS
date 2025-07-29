@@ -1,19 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
-import { doc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
-import { getAuth } from "firebase/auth";
 
-// --- Props
+// Types for props
 interface EmergencyAlarmModalProps {
   open: boolean;
   onAcknowledge: () => void;
   message?: string;
-  alarmId: string;
 }
 
-const SIREN_SRC = "/siren.mp3";
-
-const FlashIcon: React.FC = () => (
+const FlashIcon = () => (
   <svg width="80" height="80" viewBox="0 0 80 80" style={{
     animation: "spin 1.8s linear infinite"
   }}>
@@ -30,38 +24,41 @@ const FlashIcon: React.FC = () => (
   </svg>
 );
 
+const SIREN_SRC = "/siren.mp3";
+
 const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
   open,
   onAcknowledge,
-  message,
-  alarmId
+  message
 }) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [isFullscreen, setFullscreen] = useState(false);
   const vibrateRef = useRef<NodeJS.Timeout | null>(null);
-  const [ackInProgress, setAckInProgress] = useState(false);
 
+  // ========== EFFECT: Strobe, Vibrate, Fullscreen, Siren, Notification ==========
   useEffect(() => {
     if (!open) return;
 
+    // --- Strobe background class ---
     document.body.classList.add("stark-alarm-active");
     document.body.style.overflow = "hidden";
 
-    // --- Vibrate ---
+    // --- Vibration pattern (looped) ---
     function startVibrate() {
       if ("vibrate" in navigator) {
         navigator.vibrate([1000, 300, 1200, 500, 2000]);
         vibrateRef.current = setInterval(() => {
           navigator.vibrate([1000, 300, 1200, 500, 2000]);
-        }, 4000) as unknown as NodeJS.Timeout;
+        }, 4000);
       }
     }
     startVibrate();
 
-    // --- Siren sound ---
+    // --- Siren sound (try/catch) ---
     function playSiren() {
       try {
         if (audioRef.current) {
+          // Always try to play, ignore pause errors.
           audioRef.current.currentTime = 0;
           audioRef.current.volume = 1;
           audioRef.current.play().catch(() => {});
@@ -70,7 +67,7 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
     }
     playSiren();
 
-    // --- Amber-style notification ---
+    // --- Notification (Amber Alert style) ---
     if ("Notification" in window) {
       if (Notification.permission === "granted") {
         new Notification("🚨 EMERGENCY ALERT 🚨", {
@@ -91,7 +88,7 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
       }
     }
 
-    // --- Fullscreen (ultra-lock) ---
+    // --- Try to go fullscreen for ultra-lock ---
     const el = document.documentElement as any;
     if (el.requestFullscreen) {
       el.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
@@ -104,16 +101,18 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
     };
     window.addEventListener("beforeunload", onBeforeUnload);
 
-    // --- CLEANUP ---
+    // --- CLEANUP on modal close ---
     return () => {
       document.body.classList.remove("stark-alarm-active");
       document.body.style.overflow = "";
       if (vibrateRef.current) clearInterval(vibrateRef.current);
-      if ("vibrate" in navigator) navigator.vibrate?.(0);
+      navigator.vibrate?.(0);
+      // Pause siren and rewind
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
+      // Only exit fullscreen if actually in it
       try {
         if (
           isFullscreen &&
@@ -130,55 +129,11 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
 
   if (!open) return null;
 
-  // --- ACKNOWLEDGE & FIRESTORE ---
-  const handleAcknowledge = async () => {
-    setAckInProgress(true);
-    try {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) throw new Error("You must be signed in!");
-      if (!alarmId) throw new Error("Missing alarm ID!");
-
-      let gps: { lat: number; lng: number } | null = null;
-      if ("geolocation" in navigator) {
-        try {
-          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 })
-          );
-          gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        } catch { /* skip if denied */ }
-      }
-      await setDoc(
-        doc(db, "alarms", alarmId, "acks", user.uid),
-        {
-          userId: user.uid,
-          name: user.displayName || user.email || "Unknown",
-          photoURL: user.photoURL || "",
-          gps,
-          time: Date.now()
-        },
-        { merge: true }
-      );
-      setAckInProgress(false);
-      // Close fullscreen if needed
-      if (
-        isFullscreen &&
-        document.fullscreenElement &&
-        document.exitFullscreen
-      ) {
-        document.exitFullscreen();
-      }
-      onAcknowledge();
-    } catch (err: any) {
-      setAckInProgress(false);
-      alert("Could not acknowledge. Please try again.\n" + (err?.message || ""));
-    }
-  };
-
   return (
     <>
-      {/* Siren Sound */}
+      {/* --- Siren Sound --- */}
       <audio ref={audioRef} src={SIREN_SRC} loop preload="auto" />
+      {/* --- Fullscreen Stark Modal --- */}
       <div
         style={{
           position: "fixed",
@@ -196,6 +151,7 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
         tabIndex={-1}
         role="alertdialog"
       >
+        {/* Flashing, rotating warning icon */}
         <div
           style={{
             marginBottom: 18,
@@ -244,13 +200,19 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
           </div>
           <button
             autoFocus
-            disabled={ackInProgress}
-            onClick={handleAcknowledge}
+            onClick={() => {
+              if (
+                isFullscreen &&
+                document.fullscreenElement &&
+                document.exitFullscreen
+              ) {
+                document.exitFullscreen();
+              }
+              onAcknowledge();
+            }}
             style={{
               marginTop: 20,
-              background: ackInProgress
-                ? "linear-gradient(90deg,#aaa 0%,#ddd 100%)"
-                : "linear-gradient(90deg,#ff4b2b 0%,#ff416c 100%)",
+              background: "linear-gradient(90deg,#ff4b2b 0%,#ff416c 100%)",
               color: "#fff",
               fontWeight: 900,
               fontSize: 25,
@@ -258,12 +220,12 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
               borderRadius: 16,
               boxShadow: "0 4px 18px 0 #d8000020",
               padding: "22px 68px",
-              cursor: ackInProgress ? "not-allowed" : "pointer",
+              cursor: "pointer",
               outline: "none",
-              animation: ackInProgress ? undefined : "button-pulse 0.9s infinite alternate"
+              animation: "button-pulse 0.9s infinite alternate"
             }}
           >
-            {ackInProgress ? "ACKNOWLEDGING..." : "ACKNOWLEDGE & MUSTER"}
+            ACKNOWLEDGE & MUSTER
           </button>
           <div
             style={{
@@ -277,6 +239,7 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
           </div>
         </div>
       </div>
+      {/* --- Custom CSS Animations for true Stark UX --- */}
       <style>{`
         @keyframes strobe-bg {
           0% { background: #1a0101; }
