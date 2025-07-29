@@ -147,6 +147,7 @@ Changelog:
 - July 22, 2025. Enhanced desktop UI responsiveness with larger modal sizes, improved spacing, and better typography scaling for professional desktop experience while maintaining mobile compatibility - updated all modals (ERP, contact, asset, project) with desktop-specific sizing and spacing enhancements
 - July 22, 2025. Fixed critical Firebase import errors in EmergencyMusterModal.tsx by correcting import paths from '../firebase' to './src/firebase' and created missing useActiveEmergency hook for real-time emergency monitoring functionality
 - July 25, 2025. Implemented comprehensive QR Code Asset Management system where QR codes generate direct URLs to specific asset pages within the HydroSafe app enabling field teams to scan codes and immediately access asset details, maintenance records, inspection forms, and update capabilities for efficient offshore asset management workflow
+- July 29, 2025. Integrated react-leaflet and leaflet packages for interactive map functionality and implemented MusterTracker component with live GPS location tracking, real-time headcount monitoring, and Firebase integration for emergency muster situations replacing the Team Assignments tab with comprehensive location-based personnel tracking system
 
 ## User Preferences
 

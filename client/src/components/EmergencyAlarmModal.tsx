@@ -3,7 +3,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import { getAuth } from "firebase/auth";
 
-// Props interface (explicit typing)
+// --- Props
 interface EmergencyAlarmModalProps {
   open: boolean;
   onAcknowledge: () => void;
@@ -130,7 +130,7 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
 
   if (!open) return null;
 
-  // ACK & WRITE to Firestore
+  // --- ACKNOWLEDGE & FIRESTORE ---
   const handleAcknowledge = async () => {
     setAckInProgress(true);
     try {
@@ -146,7 +146,7 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
             navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 })
           );
           gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        } catch { /* skip location if denied */ }
+        } catch { /* skip if denied */ }
       }
       await setDoc(
         doc(db, "alarms", alarmId, "acks", user.uid),
@@ -160,7 +160,7 @@ const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
         { merge: true }
       );
       setAckInProgress(false);
-      // Close fullscreen
+      // Close fullscreen if needed
       if (
         isFullscreen &&
         document.fullscreenElement &&
