@@ -27,6 +27,7 @@ import AssetDetails from "@/pages/asset-details";
 import Clients from "@/pages/clients";
 import Profile from "@/pages/profile";
 import EmergencyProtocols from "@/pages/emergency-protocols";
+import EmergencyAdminPanel from "@/pages/EmergencyAdminPanel";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import NotFound from "@/pages/not-found";
@@ -207,6 +208,7 @@ function Router() {
                 <Route path="/assets/manage" component={AssetManage} />
                 <Route path="/clients" component={Clients} />
                 <Route path="/emergency-protocols" component={EmergencyProtocols} />
+                <Route path="/emergency-admin" component={EmergencyAdminPanel} />
                 <Route path="/profile" component={Profile} />
               </>
             )}
