@@ -16,6 +16,7 @@ import {
   updateDoc,
   onSnapshot
 } from "firebase/firestore";
+import TeamHeadcountMap from "./TeamHeadcountMap"; // <-- Import your new map
 
 // --- TypeScript types ---
 type Incident = {
@@ -52,10 +53,19 @@ type TeamMember = {
   lastName: string;
   role: "GOLD" | "SILVER" | "BRONZE";
   title?: string;
-  status?: string; // e.g. "Active", "On Duty", etc
+  status?: string;
   activityStatus?: "ONLINE" | "IDLE" | "OFFLINE";
   isGoldCodeHolder?: boolean;
-  // Add other custom fields here if needed
+};
+
+type Ack = {
+  id: string;
+  name?: string;
+  lat: number;
+  lng: number;
+  avatarUrl?: string;
+  acknowledgedAt?: string;
+  role?: string;
 };
 
 export function CommandDashboard() {
@@ -73,8 +83,18 @@ export function CommandDashboard() {
   // --- Team Members (Firestore) ---
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
+  // --- Headcount Map State ---
+  const [acks, setAcks] = useState<Ack[]>([]);
+
+  // --- Escalate dialog (handles both) ---
+  const [escalateObsId, setEscalateObsId] = useState<string | null>(null);
+  const [escalateIncidentId, setEscalateIncidentId] = useState<string | null>(null);
+  const [codeInput, setCodeInput] = useState("");
+  const [viewIncident, setViewIncident] = useState<Incident | null>(null);
+  const [viewObservation, setViewObservation] = useState<Observation | null>(null);
+
+  // --- Firestore Query: Team Members (live) ---
   useEffect(() => {
-    // Firestore real-time subscription for command team
     const q = collection(db, "projects", "hydrosafe-5d245", "teamMembers");
     const unsub = onSnapshot(q, snap => {
       setTeamMembers(
@@ -86,13 +106,6 @@ export function CommandDashboard() {
     });
     return unsub;
   }, []);
-
-  // --- Escalate dialog (handles both) ---
-  const [escalateObsId, setEscalateObsId] = useState<string | null>(null);
-  const [escalateIncidentId, setEscalateIncidentId] = useState<string | null>(null);
-  const [codeInput, setCodeInput] = useState("");
-  const [viewIncident, setViewIncident] = useState<Incident | null>(null);
-  const [viewObservation, setViewObservation] = useState<Observation | null>(null);
 
   // --- Firestore Query: Incidents (Emergencies) ---
   useEffect(() => {
@@ -136,6 +149,33 @@ export function CommandDashboard() {
     fetchObservations();
   }, [obsView, showModal]);
 
+  // --- Live headcount/acknowledgments fetch for latest active incident ---
+  useEffect(() => {
+    // Find the most recent active incident
+    let unsub: (() => void) | undefined;
+    async function getLatestAcks() {
+      const q = query(collection(db, "emergencies"), where("status", "==", "ACTIVE"), orderBy("startTime", "desc"));
+      const snapshot = await getDocs(q);
+      const latestIncident = snapshot.docs[0]?.id;
+      if (!latestIncident) {
+        setAcks([]);
+        return;
+      }
+      unsub = onSnapshot(
+        collection(db, "emergencies", latestIncident, "acks"),
+        snap => {
+          setAcks(
+            snap.docs
+              .map(doc => ({ id: doc.id, ...doc.data() } as Ack))
+              .filter(a => typeof a.lat === "number" && typeof a.lng === "number")
+          );
+        }
+      );
+    }
+    getLatestAcks();
+    return () => { if (unsub) unsub(); };
+  }, [incidents]); // Refresh acks if incident changes
+
   // --- UI helpers ---
   const getObsStatusColor = (status: string) =>
     status === "OPEN" ? "bg-yellow-200 text-yellow-900"
@@ -149,16 +189,6 @@ export function CommandDashboard() {
       case 'MEDIUM': return 'priority-medium border';
       case 'LOW': return 'priority-low border';
       default: return 'bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active': return 'text-green-700';
-      case 'On Duty': return 'text-blue-600';
-      case 'Available': return 'text-green-700';
-      case 'Field Operations': return 'text-yellow-700';
-      default: return 'text-gray-500';
     }
   };
 
@@ -406,193 +436,225 @@ export function CommandDashboard() {
                     return order[a.role] - order[b.role];
                   })
                   .map((member) => (
-                    <div key={member.id} className={cn("flex items-center justify-between p-3 rounded-lg border",
-                      member.role === 'GOLD' ? 'border-yellow-300 bg-yellow-50'
-                        : member.role === 'SILVER' ? 'border-gray-300 bg-gray-100'
-                          : 'border-orange-300 bg-orange-50'
-                    )}>
-                      <div className="flex items-center space-x-3">
-                        <div className={cn(
-                          "w-10 h-10 text-white rounded-full flex items-center justify-center font-medium text-sm",
-                          member.role === 'GOLD' ? 'bg-yellow-400 text-yellow-900'
-                            : member.role === 'SILVER' ? 'bg-gray-400 text-gray-800'
-                              : 'bg-orange-400 text-orange-800'
-                        )}>
-                          {(member.firstName?.[0] ?? "") + (member.lastName?.[0] ?? "")}
-                        </div>
-                        <div>
-                          <div className="font-medium text-hydro-dark">{member.firstName} {member.lastName}</div>
-                          <div className="text-sm text-gray-600">{member.role} {member.title ? `- ${member.title}` : ""}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className={cn(
-                          "w-3 h-3 rounded-full",
-                          member.status === "Active"
-                            ? "bg-green-500"
-                            : member.status === "On Duty"
-                            ? "bg-blue-500"
-                            : member.status === "Field Operations"
-                            ? "bg-yellow-500"
-                            : "bg-gray-400"
-                        )}></div>
-                        <span className={cn(
-                          member.status === "Active"
-                            ? "text-green-700"
-                            : member.status === "On Duty"
-                            ? "text-blue-600"
-                            : member.status === "Field Operations"
-                            ? "text-yellow-700"
-                            : "text-gray-500",
-                          "text-sm font-medium"
-                        )}>
-                          {member.status || "—"}
-                        </span>
-                      </div>
-                      </div>
-                      ))}
-                      </div>
-                      </CardContent>
-                      </Card>
-                      </div>
-                      </div>
-      {/* Emergency Modal */}
-      <EmergencyModal open={showModal} onClose={() => setShowModal(false)} teamMembers={teamMembers} />
-      <EmergencyModal 
-        open={showModal} 
-        onClose={() => setShowModal(false)} 
-        teamMembers={teamMembers} 
-      />
+                                                       <div key={member.id} className={cn("flex items-center justify-between p-3 rounded-lg border",
+                                                         member.role === 'GOLD' ? 'border-yellow-300 bg-yellow-50'
+                                                           : member.role === 'SILVER' ? 'border-gray-300 bg-gray-100'
+                                                             : 'border-orange-300 bg-orange-50'
+                                                       )}>
+                                                         <div className="flex items-center space-x-3">
+                                                           <div className={cn(
+                                                             "w-10 h-10 text-white rounded-full flex items-center justify-center font-medium text-sm",
+                                                             member.role === 'GOLD' ? 'bg-yellow-400 text-yellow-900'
+                                                               : member.role === 'SILVER' ? 'bg-gray-400 text-gray-800'
+                                                                 : 'bg-orange-400 text-orange-800'
+                                                           )}>
+                                                             {(member.firstName?.[0] ?? "") + (member.lastName?.[0] ?? "")}
+                                                           </div>
+                                                           <div>
+                                                             <div className="font-medium text-hydro-dark">{member.firstName} {member.lastName}</div>
+                                                             <div className="text-sm text-gray-600">{member.role} {member.title ? `- ${member.title}` : ""}</div>
+                                                           </div>
+                                                         </div>
+                                                         <div className="flex items-center space-x-2">
+                                                           <div className={cn(
+                                                             "w-3 h-3 rounded-full",
+                                                             member.status === "Active"
+                                                               ? "bg-green-500"
+                                                               : member.status === "On Duty"
+                                                               ? "bg-blue-500"
+                                                               : member.status === "Field Operations"
+                                                               ? "bg-yellow-500"
+                                                               : "bg-gray-400"
+                                                           )}></div>
+                                                           <span className={cn(
+                                                             member.status === "Active"
+                                                               ? "text-green-700"
+                                                               : member.status === "On Duty"
+                                                               ? "text-blue-600"
+                                                               : member.status === "Field Operations"
+                                                               ? "text-yellow-700"
+                                                               : "text-gray-500",
+                                                             "text-sm font-medium"
+                                                           )}>
+                                                             {member.status || "—"}
+                                                           </span>
+                                                         </div>
+                                                       </div>
+                                                       ))}
+                                                       </div>
+                                                       </CardContent>
+                                                       </Card>
+                                                       </div>
+                                                       </div>
 
-                      {/* Escalate Dialog */}
-                      {(escalateObsId || escalateIncidentId) && (
-                      <div
-                      className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center"
-                      style={{ backdropFilter: "blur(2px)" }}
-                      >
-                      <div className="bg-white rounded-2xl shadow-2xl p-7 max-w-xs w-full relative">
-                      <h3 className="font-bold text-lg mb-4 text-red-700 flex items-center">
-                      <Lock className="w-5 h-5 mr-2" />
-                      Escalate {escalateObsId ? "Observation" : "Incident"}
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                      Enter escalation code to close this item. (Hint: <span className="font-mono bg-gray-100 px-2 py-1 rounded">000</span>)
-                      </p>
-                      <input
-                      type="password"
-                      value={codeInput}
-                      onChange={e => setCodeInput(e.target.value)}
-                      autoFocus
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 text-base outline-none"
-                      placeholder="Escalation code"
-                      onKeyDown={e => {
-                      if (e.key === "Enter") handleEscalateConfirm();
-                      if (e.key === "Escape") {
-                      setEscalateObsId(null);
-                      setEscalateIncidentId(null);
-                      setCodeInput("");
-                      }
-                      }}
-                      />
-                      <div className="flex gap-2">
-                      <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleEscalateConfirm}>
-                      Confirm
-                      </Button>
-                      <Button variant="outline" onClick={() => {
-                      setEscalateObsId(null);
-                      setEscalateIncidentId(null);
-                      setCodeInput("");
-                      }}>
-                      Cancel
-                      </Button>
-                      </div>
-                      </div>
-                      </div>
-                      )}
+                                                       {/* Emergency Modal */}
+                                                       <EmergencyModal open={showModal} onClose={() => setShowModal(false)} teamMembers={teamMembers} />
 
-                      {/* View Incident Modal */}
-                      {viewIncident && (
-                      <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
-                      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
-                      <button
-                      className="absolute right-4 top-4 text-gray-400 hover:text-red-600"
-                      onClick={() => setViewIncident(null)}
-                      >
-                      <X className="w-6 h-6" />
-                      </button>
-                      <h2 className="text-2xl font-bold text-hydro-dark mb-4 flex items-center">
-                      <AlertTriangle className="text-orange-500 mr-2" />
-                      {viewIncident.title}
-                      </h2>
-                      <div className="mb-3 text-sm text-gray-700">
-                      <div>
-                      <b>Status:</b> {viewIncident.status}
-                      </div>
-                      <div>
-                      <b>Priority:</b> {viewIncident.priority}
-                      </div>
-                      <div>
-                      <b>Started:</b> {viewIncident.startTime ? new Date(viewIncident.startTime).toLocaleString() : "-"}
-                      </div>
-                      {viewIncident.description && (
-                      <div className="mt-2">
-                      <b>Description:</b> {viewIncident.description}
-                      </div>
-                      )}
-                      </div>
-                      </div>
-                      </div>
-                      )}
+                                                       {/* Escalate Dialog */}
+                                                       {(escalateObsId || escalateIncidentId) && (
+                                                       <div
+                                                       className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center"
+                                                       style={{ backdropFilter: "blur(2px)" }}
+                                                       >
+                                                       <div className="bg-white rounded-2xl shadow-2xl p-7 max-w-xs w-full relative">
+                                                       <h3 className="font-bold text-lg mb-4 text-red-700 flex items-center">
+                                                       <Lock className="w-5 h-5 mr-2" />
+                                                       Escalate {escalateObsId ? "Observation" : "Incident"}
+                                                       </h3>
+                                                       <p className="text-gray-600 mb-4">
+                                                       Enter escalation code to close this item. (Hint: <span className="font-mono bg-gray-100 px-2 py-1 rounded">000</span>)
+                                                       </p>
+                                                       <input
+                                                       type="password"
+                                                       value={codeInput}
+                                                       onChange={e => setCodeInput(e.target.value)}
+                                                       autoFocus
+                                                       className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 text-base outline-none"
+                                                       placeholder="Escalation code"
+                                                       onKeyDown={e => {
+                                                       if (e.key === "Enter") handleEscalateConfirm();
+                                                       if (e.key === "Escape") {
+                                                       setEscalateObsId(null);
+                                                       setEscalateIncidentId(null);
+                                                       setCodeInput("");
+                                                       }
+                                                       }}
+                                                       />
+                                                       <div className="flex gap-2">
+                                                       <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleEscalateConfirm}>
+                                                       Confirm
+                                                       </Button>
+                                                       <Button variant="outline" onClick={() => {
+                                                       setEscalateObsId(null);
+                                                       setEscalateIncidentId(null);
+                                                       setCodeInput("");
+                                                       }}>
+                                                       Cancel
+                                                       </Button>
+                                                       </div>
+                                                       </div>
+                                                       </div>
+                                                       )}
 
-                      {/* View Observation Modal */}
-                      {viewObservation && (
-                      <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
-                      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
-                      <button
-                      className="absolute right-4 top-4 text-gray-400 hover:text-red-600"
-                      onClick={() => setViewObservation(null)}
-                      >
-                      <X className="w-6 h-6" />
-                      </button>
-                      <h2 className="text-xl font-bold text-blue-800 mb-4">
-                      Observation Detail
-                      </h2>
-                      <div className="mb-3 text-sm text-gray-700">
-                      <div>
-                      <b>Status:</b> {viewObservation.status}
-                      </div>
-                      <div>
-                      <b>Type:</b> {viewObservation.type.join(", ")}
-                      </div>
-                      <div>
-                      <b>Location:</b> {viewObservation.location}
-                      </div>
-                      <div>
-                      <b>Observation:</b> {viewObservation.observation}
-                      </div>
-                      {viewObservation.corrective && (
-                      <div>
-                      <b>Corrective:</b> {viewObservation.corrective}
-                      </div>
-                      )}
-                      {viewObservation.recommendation && (
-                      <div>
-                      <b>Recommendation:</b> {viewObservation.recommendation}
-                      </div>
-                      )}
-                      <div>
-                      <b>Reported by:</b> {viewObservation.name || "Anonymous"}
-                      </div>
-                      <div>
-                      <b>Date:</b> {viewObservation.date}
-                      </div>
-                      <div>
-                      <b>Closed Out:</b> {viewObservation.closedOut}
-                      </div>
-                      </div>
-                      </div>
-                      </div>
-                      )}
-                      </>
-                      );
-                      }
+                                                       {/* View Incident Modal — NOW WITH HEADCOUNT MAP! */}
+                                                       {viewIncident && (
+                                                       <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
+                                                       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full relative">
+                                                       <button
+                                                       className="absolute right-4 top-4 text-gray-400 hover:text-red-600"
+                                                       onClick={() => setViewIncident(null)}
+                                                       >
+                                                       <X className="w-6 h-6" />
+                                                       </button>
+                                                       <h2 className="text-2xl font-bold text-hydro-dark mb-4 flex items-center">
+                                                       <AlertTriangle className="text-orange-500 mr-2" />
+                                                       {viewIncident.title}
+                                                       </h2>
+                                                       <div className="mb-3 text-sm text-gray-700">
+                                                       <div>
+                                                       <b>Status:</b> {viewIncident.status}
+                                                       </div>
+                                                       <div>
+                                                       <b>Priority:</b> {viewIncident.priority}
+                                                       </div>
+                                                       <div>
+                                                       <b>Started:</b> {viewIncident.startTime ? new Date(viewIncident.startTime).toLocaleString() : "-"}
+                                                       </div>
+                                                       {viewIncident.description && (
+                                                       <div className="mt-2">
+                                                       <b>Description:</b> {viewIncident.description}
+                                                       </div>
+                                                       )}
+                                                       </div>
+                                                       {/* --- Stark Level Headcount Map --- */}
+                                                       <div className="mt-6 mb-1">
+                                                       <h3 className="font-bold text-xl mb-2 flex items-center">
+                                                       <Users className="mr-2 text-blue-500" /> Headcount Map: Mustered Personnel
+                                                       </h3>
+                                                       <div className="w-full h-[340px] rounded-xl shadow overflow-hidden border border-gray-100">
+                                                       <TeamHeadcountMap acks={acks} />
+                                                       </div>
+                                                       <div className="mt-4 text-[15px] text-gray-700">
+                                                       <b>Total Acknowledged:</b> {acks.length}
+                                                       {" "}
+                                                       {acks.length === 0 && (
+                                                       <span className="ml-2 text-gray-500">(No team members have mustered yet)</span>
+                                                       )}
+                                                       </div>
+                                                       {/* Display avatar/name/role list inline below map */}
+                                                       <div className="flex flex-wrap gap-3 mt-2">
+                                                       {acks.map(ack => (
+                                                       <div key={ack.id} className="flex items-center gap-2 px-2 py-1 rounded-xl bg-blue-50 border border-blue-100 shadow-sm">
+                                                       <img src={ack.avatarUrl || "/avatar-default.png"} alt="avatar" className="w-8 h-8 rounded-full border border-blue-200" />
+                                                       <span className="font-semibold text-gray-800">{ack.name || "Unknown"}</span>
+                                                       {ack.role && (
+                                                         <span className={cn(
+                                                           "ml-1 text-xs px-2 py-0.5 rounded-full font-semibold",
+                                                           ack.role === "GOLD" ? "bg-yellow-100 text-yellow-800" :
+                                                           ack.role === "SILVER" ? "bg-gray-200 text-gray-700" :
+                                                           ack.role === "BRONZE" ? "bg-orange-100 text-orange-800" :
+                                                           "bg-gray-50 text-gray-500"
+                                                         )}>{ack.role}</span>
+                                                       )}
+                                                       </div>
+                                                       ))}
+                                                       </div>
+                                                       </div>
+                                                       </div>
+                                                       </div>
+                                                       )}
+
+                                                       {/* View Observation Modal */}
+                                                       {viewObservation && (
+                                                       <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
+                                                       <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
+                                                       <button
+                                                       className="absolute right-4 top-4 text-gray-400 hover:text-red-600"
+                                                       onClick={() => setViewObservation(null)}
+                                                       >
+                                                       <X className="w-6 h-6" />
+                                                       </button>
+                                                       <h2 className="text-xl font-bold text-blue-800 mb-4">
+                                                       Observation Detail
+                                                       </h2>
+                                                       <div className="mb-3 text-sm text-gray-700">
+                                                       <div>
+                                                       <b>Status:</b> {viewObservation.status}
+                                                       </div>
+                                                       <div>
+                                                       <b>Type:</b> {viewObservation.type.join(", ")}
+                                                       </div>
+                                                       <div>
+                                                       <b>Location:</b> {viewObservation.location}
+                                                       </div>
+                                                       <div>
+                                                       <b>Observation:</b> {viewObservation.observation}
+                                                       </div>
+                                                       {viewObservation.corrective && (
+                                                       <div>
+                                                       <b>Corrective:</b> {viewObservation.corrective}
+                                                       </div>
+                                                       )}
+                                                       {viewObservation.recommendation && (
+                                                       <div>
+                                                       <b>Recommendation:</b> {viewObservation.recommendation}
+                                                       </div>
+                                                       )}
+                                                       <div>
+                                                       <b>Reported by:</b> {viewObservation.name || "Anonymous"}
+                                                       </div>
+                                                       <div>
+                                                       <b>Date:</b> {viewObservation.date}
+                                                       </div>
+                                                       <div>
+                                                       <b>Closed Out:</b> {viewObservation.closedOut}
+                                                       </div>
+                                                       </div>
+                                                       </div>
+                                                       </div>
+                                                       )}
+                                                       </>
+                                                       );
+                                                       }
+
+                                                       export default CommandDashboard;

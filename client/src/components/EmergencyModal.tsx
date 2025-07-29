@@ -1,12 +1,11 @@
 // EmergencyModal.tsx — Dynamic ERP, Full Observation Card Support, Muster Alert
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import Fuse from "fuse.js";
-import EmergencyAlarmModal from "@/components/EmergencyAlarmModal"; // <-- Import your Tony Stark alarm modal
+import EmergencyAlarmModal from "@/components/EmergencyAlarmModal";
 
-// ---------- Types ----------
 type TeamMember = {
   id: string;
   firstName: string;
@@ -15,6 +14,7 @@ type TeamMember = {
   title?: string;
   phone?: string;
 };
+
 type ERPProtocol = {
   id?: string;
   keywords: string;
@@ -22,6 +22,7 @@ type ERPProtocol = {
   notify: string[] | string;
   protocol: string;
 };
+
 type EmergencyModalProps = {
   open: boolean;
   onClose: () => void;
@@ -29,23 +30,7 @@ type EmergencyModalProps = {
   projectId?: string;
 };
 
-interface ObservationForm {
-  type: string[];
-  location: string;
-  vessel: string;
-  system: string;
-  client: string;
-  observation: string;
-  corrective: string;
-  recommendation: string;
-  closedOut: string;
-  name: string;
-  sign: string;
-  date: string;
-  stopWork: boolean;
-  photo: File | null;
-}
-const defaultForm: ObservationForm = {
+const defaultForm = {
   type: [],
   location: "",
   vessel: "",
@@ -61,6 +46,7 @@ const defaultForm: ObservationForm = {
   stopWork: false,
   photo: null,
 };
+
 const incidentTypes = [
   "Unsafe Act",
   "Unsafe Condition",
@@ -70,7 +56,6 @@ const incidentTypes = [
   "Near-miss",
 ];
 
-// --- Helper ---
 function normalize(str: string) {
   return str
     .toLowerCase()
@@ -79,6 +64,7 @@ function normalize(str: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
 function showEmergencyNotification(title: string, body: string) {
   if (!("Notification" in window)) return;
   if (Notification.permission === "granted") {
@@ -92,33 +78,29 @@ function showEmergencyNotification(title: string, body: string) {
   }
 }
 
-// ---------- Main Component ----------
 const EmergencyModal: React.FC<EmergencyModalProps> = ({
   open,
   onClose,
   teamMembers,
   projectId = "1",
 }) => {
-  // Dynamic ERP state
   const [erpProtocols, setErpProtocols] = useState<ERPProtocol[]>([]);
   const [fuse, setFuse] = useState<any>(null);
-
-  // UI State
   const [activeTab, setActiveTab] = useState<"emergency" | "observation">("emergency");
   const [emergencyDesc, setEmergencyDesc] = useState("");
   const [match, setMatch] = useState<ERPProtocol & { matchedKeyword?: string } | null>(null);
-  const [form, setForm] = useState<ObservationForm>(defaultForm);
+  const [form, setForm] = useState<any>(defaultForm);
 
-  // --- Emergency alarm modal state
+  // New: Track Firestore-generated incident ID
   const [alarmOpen, setAlarmOpen] = useState(false);
+  const [newIncidentId, setNewIncidentId] = useState<string | null>(null);
 
-  // Fetch ERPs from Firestore when modal opens
-  React.useEffect(() => {
+  // Fetch ERP protocols for this project
+  useEffect(() => {
     if (!open) return;
     getDocs(collection(db, "projects", projectId, "erpProtocols")).then((snapshot) => {
       const erps = snapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id } as ERPProtocol));
       setErpProtocols(erps);
-      // Prepare data for Fuse.js
       const fuseData = erps.flatMap((scenario) =>
         (scenario.keywords || "").split(",").map((k) => ({
           keyword: normalize(k),
@@ -129,14 +111,12 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     });
   }, [open, projectId]);
 
-  // Emergency keyword matching logic (runs when user types)
-  React.useEffect(() => {
+  useEffect(() => {
     if (!emergencyDesc || !fuse) {
       setMatch(null);
       return;
     }
     const desc = normalize(emergencyDesc);
-    // Try exact match first
     for (const scenario of erpProtocols) {
       const keys = (scenario.keywords || "").split(",").map(normalize);
       for (const k of keys) {
@@ -146,7 +126,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         }
       }
     }
-    // Fuzzy fallback
     const results = fuse.search(desc);
     if (results.length > 0) {
       setMatch({
@@ -158,12 +137,16 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }, [emergencyDesc, fuse, erpProtocols]);
 
-  // --- Reset alarm when modal closes
-  React.useEffect(() => {
-    if (!open) setAlarmOpen(false);
+  useEffect(() => {
+    if (!open) {
+      setAlarmOpen(false);
+      setNewIncidentId(null);
+      setEmergencyDesc("");
+      setMatch(null);
+    }
   }, [open]);
 
-  // Emergency Submit Handler (Firestore)
+  // ---- EMERGENCY SUBMIT HANDLER ----
   async function handleEmergencySubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -185,7 +168,9 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
             }))
         );
       }
-      await addDoc(collection(db, "emergencies"), {
+
+      // --- ADD EMERGENCY TO FIRESTORE AND CAPTURE DOC ID ---
+      const docRef = await addDoc(collection(db, "emergencies"), {
         type: match?.type || "Other",
         title: match?.type || emergencyDesc,
         description: emergencyDesc,
@@ -196,13 +181,12 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         createdAt: new Date().toISOString(),
       });
 
-      // --- Now trigger alarm/acknowledge UI
+      setNewIncidentId(docRef.id); // <-- SAVE THE DOC ID
       setAlarmOpen(true);
       showEmergencyNotification(
         "🚨 Muster Protocol Activated",
         "A muster alarm was triggered. Please acknowledge presence ASAP."
       );
-      // Don’t reset the form/close modal until alarm is acknowledged
     } catch (error) {
       alert("Critical error occurred. Please check the console for more information.");
       // eslint-disable-next-line no-console
@@ -210,22 +194,22 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }
 
-  // --- Observation form handlers ---
   function handleObsChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value, type, checked, files } = e.target as any;
     if (type === "checkbox" && name === "type") {
-      setForm((f) => ({
+      setForm((f: any) => ({
         ...f,
         type: checked ? [...f.type, value] : f.type.filter((t: string) => t !== value),
       }));
     } else if (type === "checkbox") {
-      setForm((f) => ({ ...f, [name]: checked }));
+      setForm((f: any) => ({ ...f, [name]: checked }));
     } else if (type === "file") {
-      setForm((f) => ({ ...f, photo: files[0] }));
+      setForm((f: any) => ({ ...f, photo: files[0] }));
     } else {
-      setForm((f) => ({ ...f, [name]: value }));
+      setForm((f: any) => ({ ...f, [name]: value }));
     }
   }
+
   async function handleObsSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -244,7 +228,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }
 
-  // --- UI Styles ---
   const fieldStyle: React.CSSProperties = {
     display: "flex",
     flexDirection: "column",
@@ -293,12 +276,18 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         zIndex: 1200,
       }}
     >
-      {/* --- Tony Stark Emergency Alarm Modal (strobe/siren/vibration/ack) --- */}
+      {/* --- Emergency Alarm Modal, now with incidentId! --- */}
       <EmergencyAlarmModal
         open={alarmOpen}
-        onAcknowledge={() => setAlarmOpen(false)}
+        onAcknowledge={() => {
+          setAlarmOpen(false);
+          setNewIncidentId(null);
+          onClose();
+        }}
         message="🚨 EMERGENCY: Muster required. Confirm your safety now!"
+        incidentId={newIncidentId}
       />
+
       <div
         style={{
           background: "#fff",
@@ -309,7 +298,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
           overflowY: "auto",
           maxHeight: "96vh",
           minHeight: 0,
-          filter: alarmOpen ? "blur(1.5px)" : undefined, // blur content if alarm is up
+          filter: alarmOpen ? "blur(1.5px)" : undefined,
           pointerEvents: alarmOpen ? "none" : undefined,
         }}
       >
@@ -578,18 +567,19 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                   border: "none",
                   fontSize: 15,
                   cursor: alarmOpen ? "not-allowed" : "pointer",
-                  }}
-                  disabled={alarmOpen}
-                  >
-                  Submit Emergency
-                  </button>
-                  <button
-                  type="button"
-                  onClick={() => {
+                }}
+                disabled={alarmOpen}
+              >
+                Submit Emergency
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   onClose();
                   setAlarmOpen(false);
-                  }}
-                  style={{
+                  setNewIncidentId(null);
+                }}
+                style={{
                   background: "#aaa",
                   color: "#fff",
                   borderRadius: 6,
@@ -598,14 +588,14 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                   border: "none",
                   fontSize: 15,
                   cursor: "pointer",
-                  }}
-                  disabled={alarmOpen}
-                  >
-                  Cancel
-                  </button>
-                  </div>
-                  </form>
-                  )}
+                }}
+                disabled={alarmOpen}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
                   {/* ----------- Observation Card Tab ----------- */}
                   {activeTab === "observation" && (
                   <form
