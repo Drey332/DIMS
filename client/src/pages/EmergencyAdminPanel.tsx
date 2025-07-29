@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, doc, deleteDoc, updateDoc, query, orderBy } from "firebase/firestore";
+import { collection, onSnapshot, doc, deleteDoc, updateDoc, query, orderBy, setDoc } from "firebase/firestore";
+import { v4 as uuidv4 } from "uuid";
 import { db } from "../firebase";
 import { Header } from "@/components/header";
 import { Navigation } from "@/components/navigation";
@@ -34,7 +35,24 @@ export default function EmergencyAdminPanel() {
   const [alarmAcks, setAlarmAcks] = useState<AckData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load all alarms
+  // --- TRIGGER NEW ALARM ---
+  const triggerNewAlarm = async () => {
+    const newId = uuidv4();
+    try {
+      await setDoc(doc(db, "alarms", newId), {
+        triggeredAt: Date.now(),
+        message: "EMERGENCY: Muster required. Confirm your safety now!",
+        status: "active",
+      });
+      toast({ title: "New emergency alarm triggered!" });
+      setSelectedAlarm(newId);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err: any) {
+      toast({ title: "Error creating alarm", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // --- Load all alarms ---
   useEffect(() => {
     const alarmsQuery = query(collection(db, "alarms"), orderBy("triggeredAt", "desc"));
     const unsubscribe = onSnapshot(alarmsQuery, (snapshot) => {
@@ -50,7 +68,7 @@ export default function EmergencyAdminPanel() {
     return unsubscribe;
   }, []);
 
-  // Load acknowledgments for selected alarm
+  // --- Load acknowledgments for selected alarm ---
   useEffect(() => {
     if (!selectedAlarm) {
       setAlarmAcks([]);
@@ -127,7 +145,7 @@ export default function EmergencyAdminPanel() {
     const duration = (end || Date.now()) - start;
     const minutes = Math.floor(duration / 60000);
     const hours = Math.floor(minutes / 60);
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes % 60}m`;
     }
@@ -158,6 +176,16 @@ export default function EmergencyAdminPanel() {
           <p className="text-gray-600">Monitor and manage emergency alarms and muster responses</p>
         </div>
 
+        {/* --- TRIGGER NEW ALARM BUTTON --- */}
+        <div className="flex gap-3 mb-6">
+          <Button
+            className="bg-red-600 text-white font-bold px-6 py-3 rounded-lg shadow hover:bg-red-700"
+            onClick={triggerNewAlarm}
+          >
+            🚨 Trigger New Emergency Alarm
+          </Button>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Alarms List */}
           <Card>
@@ -178,8 +206,8 @@ export default function EmergencyAdminPanel() {
                     <div
                       key={alarm.id}
                       className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedAlarm === alarm.id 
-                          ? 'border-blue-500 bg-blue-50' 
+                        selectedAlarm === alarm.id
+                          ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                       onClick={() => setSelectedAlarm(alarm.id)}
