@@ -34,8 +34,6 @@ import { AIERPAdvisorModal } from "../components/AIERPAdvisorModal";
 import { AssetAIChat } from "@/components/AssetAiChat";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
-import { v4 as uuidv4 } from "uuid";
-import EmergencyAlarmModal from "../components/EmergencyAlarmModal";
 // For map markers
 const defaultIcon = new L.Icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png",
@@ -310,10 +308,6 @@ export default function ProjectSetup() {
   const [goldAssetCodeInput, setGoldAssetCodeInput] = useState("");
   const [goldAssetError, setGoldAssetError] = useState("");
   const [assetModalUnlocked, setAssetModalUnlocked] = useState(false);
-  
-  // Emergency alarm state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [alarmId, setAlarmId] = useState("");
   // Permission: Only allow editing if Gold code verified (or projectInfo exists, whatever you use)
     // adjust if needed
   const userCanEditAssets = assetModalUnlocked;
@@ -341,17 +335,6 @@ export default function ProjectSetup() {
       notes: "",
     },
   });
-
-  // Alarm trigger function
-  const triggerAlarm = async () => {
-    const newId = uuidv4();
-    setAlarmId(newId);
-    setModalOpen(true);
-    await setDoc(doc(db, "alarms", newId), {
-      triggeredAt: Date.now(),
-      message: "EMERGENCY: Muster required. Confirm your safety now!"
-    });
-  };
 
   const saveAsset = async (data: z.infer<typeof assetSchema>) => {
     try {
@@ -2086,20 +2069,8 @@ export default function ProjectSetup() {
       </CardTitle>
     </CardHeader>
     <CardContent>
-      <div className="mb-4 flex justify-between items-center">
-        <Button 
-          onClick={triggerAlarm}
-          className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2"
-        >
-          🚨 TRIGGER EMERGENCY ALARM
-        </Button>
-        {alarmId && (
-          <span className="text-sm text-gray-600">
-            Active Alarm ID: {alarmId.slice(0, 8)}...
-          </span>
-        )}
-      </div>
-      <MusterTracker alarmId={alarmId || "demo-alarm-001"} />
+      {/* Replace alarmId below with your active alarm's id (or pass as prop, or grab from Firestore) */}
+      <MusterTracker alarmId={"active-alarm-001"} />
     </CardContent>
   </Card>
 </TabsContent>
@@ -2107,14 +2078,6 @@ export default function ProjectSetup() {
 {/* --- Add your other tabs here ... --- */}
         </Tabs>
       </main>
-      
-      {/* Emergency Alarm Modal */}
-      <EmergencyAlarmModal
-        open={modalOpen}
-        onAcknowledge={() => setModalOpen(false)}
-        message="EMERGENCY: Muster required. Confirm your safety now!"
-        alarmId={alarmId}
-      />
     </div>
   );
 }
