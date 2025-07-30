@@ -160,7 +160,6 @@ export function CommandDashboard() {
     let unsub: (() => void) | undefined;
 
     async function getLatestAcks() {
-      // Get the latest active incident
       const q = query(
         collection(db, "emergencies"),
         where("status", "==", "ACTIVE"),
@@ -178,43 +177,44 @@ export function CommandDashboard() {
         (snap) => {
           const processedAcks = snap.docs.map(doc => {
             const data = doc.data();
-            
-            // Handle both flat fields (lat/lng) and legacy nested gps format
-            let lat: number | null = null;
-            let lng: number | null = null;
-            
-            // First try flat fields (new format)
-            if (typeof data.lat === "number" && typeof data.lng === "number") {
-              lat = data.lat;
-              lng = data.lng;
+
+            // --- FLAT fields (latest format)
+            let lat: number | null = typeof data.lat === "number" ? data.lat : null;
+            let lng: number | null = typeof data.lng === "number" ? data.lng : null;
+
+            // --- Legacy gps object (older acks for backward compatibility)
+            if ((lat === null || lng === null) && data.gps) {
+              // Accept both gps.lat/lng and gps.latitude/longitude
+              if (typeof data.gps.lat === "number" && typeof data.gps.lng === "number") {
+                lat = data.gps.lat;
+                lng = data.gps.lng;
+              } else if (typeof data.gps.latitude === "number" && typeof data.gps.longitude === "number") {
+                lat = data.gps.latitude;
+                lng = data.gps.longitude;
+              }
             }
-            // Fallback to legacy nested gps format
-            else if (data.gps && typeof data.gps.latitude === "number" && typeof data.gps.longitude === "number") {
-              lat = data.gps.latitude;
-              lng = data.gps.longitude;
-            }
-            // Also try gps.lat/lng for alternative legacy format
-            else if (data.gps && typeof data.gps.lat === "number" && typeof data.gps.lng === "number") {
-              lat = data.gps.lat;
-              lng = data.gps.lng;
-            }
-            
+
+            // Has valid lat/lng (for markers)
+            const hasLocation = typeof lat === "number" && typeof lng === "number";
+
             return {
               id: doc.id,
               userId: data.userId || doc.id,
               name: data.name || data.displayName || data.gps?.name || "Unknown User",
-              avatarUrl: data.photoURL || data.avatarUrl || data.gps?.photoURL || null,
+              avatarUrl: data.avatarUrl || data.photoURL || data.gps?.photoURL || null,
               email: data.email || null,
-              lat: lat,
-              lng: lng,
-              acknowledgedAt: data.acknowledgedAt || data.timestamp || data.time || null,
+              lat,
+              lng,
+              acknowledgedAt: data.acknowledgedAt
+                || (data.time ? new Date(data.time).toISOString() : null)
+                || data.timestamp || null,
               role: data.role || data.gps?.role || null,
               locationError: data.locationError || null,
-              hasLocation: lat !== null && lng !== null
+              hasLocation,
             } as Ack;
           });
-          
-          // Set all acks (both with and without location)
+
+          // --- DO NOT FILTER --- Always set all acks, so everyone is listed
           setAcks(processedAcks);
         }
       );

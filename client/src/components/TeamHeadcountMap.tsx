@@ -3,13 +3,13 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Custom avatar marker, fallback to default if not set
+// --- Superhero Avatar or Fallback Icon ---
 const getIcon = (avatarUrl?: string) =>
   new L.Icon({
-    iconUrl: avatarUrl || "/avatar-default.png", // You can place a default avatar at public/avatar-default.png
+    iconUrl: avatarUrl || "/avatar-default.png",
     iconSize: [46, 46],
     iconAnchor: [23, 46],
-    className: "rounded-full border-2 border-yellow-500 shadow-xl"
+    className: "rounded-full border-2 border-yellow-500 shadow-xl",
   });
 
 type Ack = {
@@ -32,42 +32,45 @@ type Props = {
 
 const defaultCenter: [number, number] = [4.85, 7.01]; // Offshore Nigeria, or change as needed
 
-// Helper function to get user initials
+// Get user initials (fallback avatar)
 const getUserInitials = (name: string): string => {
   return name
     .split(" ")
+    .filter(Boolean)
     .map(n => n.charAt(0).toUpperCase())
     .slice(0, 2)
     .join("");
 };
 
-// Helper function to get role color
+// Tony Stark-level color coding
 const getRoleColor = (role?: string | null): string => {
   switch (role) {
-    case 'GOLD':
-      return 'border-yellow-500 bg-yellow-100';
-    case 'SILVER':
-      return 'border-gray-400 bg-gray-100';
-    case 'BRONZE':
-      return 'border-orange-500 bg-orange-100';
+    case "GOLD":
+      return "border-yellow-500 bg-yellow-100";
+    case "SILVER":
+      return "border-gray-400 bg-gray-100";
+    case "BRONZE":
+      return "border-orange-500 bg-orange-100";
     default:
-      return 'border-blue-500 bg-blue-100';
+      return "border-blue-500 bg-blue-100";
   }
 };
 
 export default function TeamHeadcountMap({ acks }: Props) {
-  // Separate acks with and without location
-  const acksWithLocation = acks.filter(ack => ack.hasLocation && ack.lat !== null && ack.lng !== null);
+  // Split into with/without location for smart display
+  const acksWithLocation = acks.filter(
+    ack => ack.hasLocation && ack.lat !== null && ack.lng !== null
+  );
   const acksWithoutLocation = acks.filter(ack => !ack.hasLocation);
 
-  // Try to center on first ack with location, fallback to default
+  // Center map on the first real coordinate
   const center: [number, number] =
     acksWithLocation.length > 0
       ? [acksWithLocation[0].lat!, acksWithLocation[0].lng!]
       : defaultCenter;
 
   return (
-    <div className="w-full h-[400px] space-y-4">
+    <div className="w-full h-[430px] space-y-4">
       {/* Map Section */}
       <div className="w-full h-[300px] rounded-2xl shadow-xl border border-yellow-300 overflow-hidden relative z-10">
         <MapContainer
@@ -96,13 +99,19 @@ export default function TeamHeadcountMap({ acks }: Props) {
                       alt={ack.name}
                     />
                   ) : (
-                    <div className={`w-12 h-12 rounded-full mx-auto border-2 border-yellow-400 shadow flex items-center justify-center font-bold text-sm ${getRoleColor(ack.role)}`}>
+                    <div
+                      className={`w-12 h-12 rounded-full mx-auto border-2 border-yellow-400 shadow flex items-center justify-center font-bold text-sm ${getRoleColor(
+                        ack.role
+                      )}`}
+                    >
                       {getUserInitials(ack.name)}
                     </div>
                   )}
                   <div className="font-bold mt-2 text-lg">{ack.name}</div>
                   {ack.role && (
-                    <div className="text-yellow-700 font-semibold text-xs">{ack.role}</div>
+                    <div className="text-yellow-700 font-semibold text-xs">
+                      {ack.role}
+                    </div>
                   )}
                   {ack.email && (
                     <div className="text-xs text-gray-600">{ack.email}</div>
@@ -139,11 +148,14 @@ export default function TeamHeadcountMap({ acks }: Props) {
         </div>
       </div>
 
-      {/* Users without location - show as list */}
+      {/* Users without location - Stark smart list */}
       {acksWithoutLocation.length > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-          <h4 className="font-semibold text-orange-800 mb-2 text-sm">
-            📍 Acknowledged (Location Unavailable):
+          <h4 className="font-semibold text-orange-800 mb-2 text-sm flex items-center gap-2">
+            <span role="img" aria-label="location">
+              📍
+            </span>
+            Acknowledged (Location Unavailable):
           </h4>
           <div className="flex flex-wrap gap-2">
             {acksWithoutLocation.map((ack) => (
@@ -158,7 +170,11 @@ export default function TeamHeadcountMap({ acks }: Props) {
                     alt={ack.name}
                   />
                 ) : (
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${getRoleColor(ack.role)}`}>
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${getRoleColor(
+                      ack.role
+                    )}`}
+                  >
                     {getUserInitials(ack.name)}
                   </div>
                 )}
