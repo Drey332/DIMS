@@ -1,317 +1,333 @@
-// client/src/components/EmergencyAlarmModal.tsx
-
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { AlertTriangle, MapPin, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { db, auth } from "../firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
-import { getAuth } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+import { useToast } from "@/hooks/use-toast";
 
 interface EmergencyAlarmModalProps {
-  open: boolean;
-  onAcknowledge: () => void;
-  message?: string;
-  incidentId: string | null;
+  isOpen: boolean;
+  onClose: () => void;
+  incidentId: string;
+  incidentTitle: string;
+  severity?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 }
 
-const SIREN_SRC = "/siren.mp3";
+interface User {
+  uid: string;
+  displayName: string | null;
+  photoURL: string | null;
+  email: string | null;
+}
 
-const FlashIcon = () => (
-  <svg width="80" height="80" viewBox="0 0 80 80" style={{
-    animation: "spin 1.8s linear infinite"
-  }}>
-    <circle cx="40" cy="40" r="35" stroke="#ff2222" strokeWidth="7" fill="none" />
-    <polygon points="40,12 50,45 35,45 45,68" fill="#ff2222" style={{
-      filter: "drop-shadow(0 0 18px #ff2222cc)"
-    }} />
-    <style>{`
-      @keyframes spin {
-        0% { transform: rotate(0deg);}
-        100% { transform: rotate(360deg);}
-      }
-    `}</style>
-  </svg>
-);
+export function EmergencyAlarmModal({ 
+  isOpen, 
+  onClose, 
+  incidentId, 
+  incidentTitle,
+  severity = "HIGH" 
+}: EmergencyAlarmModalProps) {
+  const [isAcknowledging, setIsAcknowledging] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [hasAcknowledged, setHasAcknowledged] = useState(false);
+  const [strobeEffect, setStrobeEffect] = useState(true);
+  const { toast } = useToast();
 
-const EmergencyAlarmModal: React.FC<EmergencyAlarmModalProps> = ({
-  open,
-  onAcknowledge,
-  message,
-  incidentId
-}) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isFullscreen, setFullscreen] = useState(false);
-  const vibrateRef = useRef<NodeJS.Timeout | null>(null);
-  const [ackInProgress, setAckInProgress] = useState(false);
-
-  // Alarm effect (siren, strobe, vibrate, etc.)
+  // Monitor auth state
   useEffect(() => {
-    if (!open) return;
-    document.body.classList.add("stark-alarm-active");
-    document.body.style.overflow = "hidden";
-
-    // Vibrate pattern (looped)
-    function startVibrate() {
-      if ("vibrate" in navigator) {
-        navigator.vibrate([1000, 300, 1200, 500, 2000]);
-        vibrateRef.current = setInterval(() => {
-          navigator.vibrate([1000, 300, 1200, 500, 2000]);
-        }, 4000) as unknown as NodeJS.Timeout;
-      }
-    }
-    startVibrate();
-
-    // Siren
-    function playSiren() {
-      try {
-        if (audioRef.current) {
-          audioRef.current.currentTime = 0;
-          audioRef.current.volume = 1;
-          audioRef.current.play().catch(() => {});
-        }
-      } catch {}
-    }
-    playSiren();
-
-    // Amber browser notification
-    if ("Notification" in window) {
-      if (Notification.permission === "granted") {
-        new Notification("🚨 EMERGENCY ALERT 🚨", {
-          body: message || "Immediate response required!",
-          requireInteraction: true,
-          icon: "/alert-icon.png"
+    const unsubscribe = onAuthStateChanged(auth, (user: any) => {
+      if (user) {
+        setCurrentUser({
+          uid: user.uid,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          email: user.email
         });
-      } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then((perm) => {
-          if (perm === "granted") {
-            new Notification("🚨 EMERGENCY ALERT 🚨", {
-              body: message || "Immediate response required!",
-              requireInteraction: true,
-              icon: "/alert-icon.png"
-            });
-          }
-        });
+      } else {
+        setCurrentUser(null);
       }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Strobe effect for emergency alarm
+  useEffect(() => {
+    if (!isOpen || hasAcknowledged) {
+      setStrobeEffect(false);
+      return;
     }
 
-    // Try to enter fullscreen
-    const el = document.documentElement as any;
-    if (el.requestFullscreen) {
-      el.requestFullscreen().then(() => setFullscreen(true)).catch(() => {});
+    const interval = setInterval(() => {
+      setStrobeEffect(prev => !prev);
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isOpen, hasAcknowledged]);
+
+  // Play alarm sound (optional - add audio file to public folder)
+  useEffect(() => {
+    if (isOpen && !hasAcknowledged) {
+      const audio = new Audio('/emergency-alarm.mp3'); // Add this file to public folder
+      audio.loop = true;
+      audio.volume = 0.7;
+      audio.play().catch(console.error); // Browser may block autoplay
+
+      return () => {
+        audio.pause();
+        audio.currentTime = 0;
+      };
     }
+  }, [isOpen, hasAcknowledged]);
 
-    // Prevent accidental closing
-    const onBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-    window.addEventListener("beforeunload", onBeforeUnload);
-
-    // Cleanup on close
-    return () => {
-      document.body.classList.remove("stark-alarm-active");
-      document.body.style.overflow = "";
-      if (vibrateRef.current) clearInterval(vibrateRef.current);
-      if ("vibrate" in navigator) navigator.vibrate?.(0);
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      try {
-        if (
-          isFullscreen &&
-          document.fullscreenElement &&
-          document.exitFullscreen
-        ) {
-          document.exitFullscreen();
-        }
-      } catch {}
-      window.removeEventListener("beforeunload", onBeforeUnload);
-    };
-    // eslint-disable-next-line
-  }, [open, message, isFullscreen]);
-
-  if (!open) return null;
-
-  // --- Handle Acknowledge ---
-  const handleAcknowledge = async () => {
-    setAckInProgress(true);
-    try {
-      if (!incidentId) throw new Error("No incidentId provided!");
-
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) throw new Error("You must be signed in!");
-
-      let gps: { lat: number; lng: number } | null = null;
-      if ("geolocation" in navigator) {
-        try {
-          const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 6000 })
-          );
-          gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        } catch { /* skip if denied */ }
-      }
-
-      // Write to /emergencies/{incidentId}/acks/{user.uid}
-      await setDoc(
-        doc(db, "emergencies", incidentId, "acks", user.uid),
-        {
-          userId: user.uid,
-          name: user.displayName || user.email || "Unknown",
-          photoURL: user.photoURL || "",
-          gps,
-          time: Date.now()
-        },
-        { merge: true }
-      );
-
-      setAckInProgress(false);
-
-      // Exit fullscreen (if any)
-      if (
-        isFullscreen &&
-        document.fullscreenElement &&
-        document.exitFullscreen
-      ) {
-        document.exitFullscreen();
-      }
-      onAcknowledge();
-    } catch (err: any) {
-      setAckInProgress(false);
-      alert("Could not acknowledge. Please try again.\n" + (err?.message || ""));
+  const getSeverityColors = (severity: string) => {
+    switch (severity) {
+      case 'CRITICAL':
+        return 'bg-red-600 border-red-700 text-white';
+      case 'HIGH':
+        return 'bg-orange-500 border-orange-600 text-white';
+      case 'MEDIUM':
+        return 'bg-yellow-500 border-yellow-600 text-black';
+      case 'LOW':
+        return 'bg-blue-500 border-blue-600 text-white';
+      default:
+        return 'bg-red-600 border-red-700 text-white';
     }
   };
 
+  const requestLocationAndAcknowledge = async () => {
+    if (!currentUser) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to acknowledge emergency",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsAcknowledging(true);
+
+    try {
+      let lat: number | null = null;
+      let lng: number | null = null;
+      let locationError: string | null = null;
+
+      // Request geolocation with clear prompt
+      if (navigator.geolocation) {
+        try {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+              resolve,
+              reject,
+              {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000 // 5 minutes
+              }
+            );
+          });
+
+          lat = position.coords.latitude;
+          lng = position.coords.longitude;
+          
+          toast({
+            title: "Location Captured",
+            description: "Your location has been recorded for emergency response",
+          });
+        } catch (geoError: any) {
+          locationError = geoError.message;
+          console.warn("Geolocation error:", geoError);
+          
+          // Show user-friendly message based on error
+          const errorMessage = geoError.code === 1 
+            ? "Location access denied. Acknowledgment saved without location."
+            : "Could not get location. Acknowledgment saved without location.";
+          
+          toast({
+            title: "Location Unavailable",
+            description: errorMessage,
+            variant: "destructive"
+          });
+        }
+      } else {
+        locationError = "Geolocation not supported";
+        toast({
+          title: "Location Not Supported",
+          description: "Your device doesn't support location services",
+          variant: "destructive"
+        });
+      }
+
+      // Save acknowledgment to Firestore with flat fields
+      const ackData = {
+        userId: currentUser.uid,
+        name: currentUser.displayName || currentUser.email || "Unknown User",
+        photoURL: currentUser.photoURL,
+        email: currentUser.email,
+        lat: lat, // Flat field
+        lng: lng, // Flat field
+        acknowledgedAt: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        locationError: locationError,
+        userAgent: navigator.userAgent,
+        // Legacy nested format for backward compatibility
+        gps: lat && lng ? {
+          latitude: lat,
+          longitude: lng,
+          accuracy: null,
+          timestamp: new Date().toISOString()
+        } : null
+      };
+
+      // Save to Firestore
+      await setDoc(
+        doc(db, "emergencies", incidentId, "acks", currentUser.uid),
+        ackData
+      );
+
+      setHasAcknowledged(true);
+      
+      toast({
+        title: "Emergency Acknowledged",
+        description: `You have successfully acknowledged the emergency: ${incidentTitle}`,
+      });
+
+      // Auto-close after acknowledgment
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+
+    } catch (error: any) {
+      console.error("Error acknowledging emergency:", error);
+      toast({
+        title: "Acknowledgment Failed",
+        description: error.message || "Failed to record emergency acknowledgment",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAcknowledging(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
   return (
-    <>
-      {/* Siren Sound */}
-      <audio ref={audioRef} src={SIREN_SRC} loop preload="auto" />
-      {/* Modal */}
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 999999,
-          background: "rgba(0,0,0,0.96)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          pointerEvents: "all",
-          animation: "strobe-bg 0.55s infinite alternate"
-        }}
-        aria-modal="true"
-        tabIndex={-1}
-        role="alertdialog"
-      >
-        <div
-          style={{
-            marginBottom: 18,
-            animation: "flash-icon 0.66s alternate infinite",
-            filter: "drop-shadow(0 0 28px #ff2929cc)"
-          }}
-        >
-          <FlashIcon />
-        </div>
-        <div
-          style={{
-            maxWidth: 480,
-            background: "#1a0101",
-            border: "8px solid #ff0000",
-            borderRadius: 32,
-            padding: "48px 32px 36px 32px",
-            boxShadow: "0 4px 48px 8px #8b0000",
-            textAlign: "center",
-            animation: "pulse 1.2s infinite"
-          }}
-        >
-          <h1
-            style={{
-              fontSize: 38,
-              fontWeight: 900,
-              letterSpacing: 1.5,
-              color: "#ff2424",
-              textShadow: "0 4px 22px #000",
-              marginBottom: 22,
-              lineHeight: 1.18
-            }}
-          >
-            🚨 EMERGENCY ALERT 🚨
-          </h1>
-          <div
-            style={{
-              fontSize: 24,
-              fontWeight: 700,
-              marginBottom: 22,
-              color: "#fff",
-              letterSpacing: 0.3
-            }}
-          >
-            {message ||
-              "A critical incident has been declared. Follow muster instructions and acknowledge immediately!"}
-          </div>
-          <button
-            autoFocus
-            disabled={ackInProgress || !incidentId}
-            onClick={handleAcknowledge}
-            style={{
-              marginTop: 20,
-              background: ackInProgress
-                ? "linear-gradient(90deg,#aaa 0%,#ddd 100%)"
-                : "linear-gradient(90deg,#ff4b2b 0%,#ff416c 100%)",
-              color: "#fff",
-              fontWeight: 900,
-              fontSize: 25,
-              border: "none",
-              borderRadius: 16,
-              boxShadow: "0 4px 18px 0 #d8000020",
-              padding: "22px 68px",
-              cursor: ackInProgress || !incidentId ? "not-allowed" : "pointer",
-              outline: "none",
-              animation: ackInProgress ? undefined : "button-pulse 0.9s infinite alternate"
-            }}
-          >
-            {ackInProgress
-              ? "ACKNOWLEDGING..."
-              : !incidentId
-              ? "LOADING..."
-              : "ACKNOWLEDGE & MUSTER"}
-          </button>
-          <div
-            style={{
-              marginTop: 26,
-              color: "#ffbcbc",
-              fontSize: 16,
-              textShadow: "0 0 2px #000"
-            }}
-          >
-            The alarm will stop when acknowledged.<br />Your response is required.
-          </div>
-        </div>
+    <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm">
+      {/* Strobe Effect Overlay */}
+      {strobeEffect && !hasAcknowledged && (
+        <div className="absolute inset-0 bg-red-500/30 animate-pulse pointer-events-none" />
+      )}
+      
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <Card className={`w-full max-w-2xl mx-auto ${getSeverityColors(severity)} border-4 shadow-2xl animate-bounce`}>
+          <CardContent className="p-8 text-center">
+            {/* Close Button - only show after acknowledgment */}
+            {hasAcknowledged && (
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 text-white/80 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* Emergency Icon */}
+            <div className="mb-6">
+              <AlertTriangle 
+                className={`w-24 h-24 mx-auto ${hasAcknowledged ? 'text-green-400' : 'text-white animate-ping'}`} 
+              />
+            </div>
+
+            {/* Alert Content */}
+            {!hasAcknowledged ? (
+              <>
+                <h1 className="text-4xl font-bold mb-4 uppercase tracking-wider">
+                  EMERGENCY ALERT
+                </h1>
+                
+                <div className="bg-black/20 rounded-lg p-4 mb-6">
+                  <h2 className="text-2xl font-semibold mb-2">
+                    {incidentTitle}
+                  </h2>
+                  <p className="text-lg opacity-90">
+                    Severity: {severity}
+                  </p>
+                </div>
+
+                <div className="mb-8">
+                  <p className="text-xl mb-4 font-medium">
+                    🚨 IMMEDIATE ACTION REQUIRED 🚨
+                  </p>
+                  <p className="text-lg opacity-90">
+                    Click "Acknowledge & Muster" to confirm you are safe and share your location for emergency response coordination.
+                  </p>
+                </div>
+
+                {/* Acknowledge Button */}
+                <Button
+                  onClick={requestLocationAndAcknowledge}
+                  disabled={isAcknowledging || !currentUser}
+                  className="w-full py-6 text-2xl font-bold bg-white text-red-600 hover:bg-gray-100 border-4 border-white"
+                >
+                  {isAcknowledging ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600 mr-3"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      <MapPin className="w-8 h-8 mr-3" />
+                      Acknowledge & Muster
+                    </div>
+                  )}
+                </Button>
+
+                {!currentUser && (
+                  <p className="mt-4 text-sm opacity-75">
+                    Please log in to acknowledge the emergency
+                  </p>
+                )}
+
+                {/* Location Permission Info */}
+                <div className="mt-6 bg-black/20 rounded-lg p-4">
+                  <p className="text-sm opacity-90">
+                    📍 Location permission will be requested to help emergency responders locate you.
+                    If you deny location access, your acknowledgment will still be recorded.
+                  </p>
+                </div>
+              </>
+            ) : (
+              /* Acknowledgment Success */
+              <div className="text-green-400">
+                <div className="mb-6">
+                  <div className="w-24 h-24 mx-auto bg-green-500 rounded-full flex items-center justify-center">
+                    <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"></path>
+                    </svg>
+                  </div>
+                </div>
+                
+                <h2 className="text-3xl font-bold mb-4">
+                  Emergency Acknowledged
+                </h2>
+                
+                <p className="text-xl mb-4">
+                  Thank you for confirming your status.
+                </p>
+                
+                <p className="text-lg opacity-90">
+                  Emergency response teams have been notified of your acknowledgment.
+                  Please follow all emergency procedures and await further instructions.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes strobe-bg {
-          0% { background: #1a0101; }
-          100% { background: #ff2c2c; }
-        }
-        @keyframes flash-icon {
-          0% { filter: drop-shadow(0 0 22px #ff0); opacity: 1;}
-          100% { filter: drop-shadow(0 0 42px #ff2424); opacity: 0.7;}
-        }
-        @keyframes pulse {
-          0% { box-shadow: 0 0 44px 8px #ff002044; }
-          100% { box-shadow: 0 0 78px 14px #ff3333cc; }
-        }
-        @keyframes button-pulse {
-          0% { box-shadow: 0 0 22px 3px #ff2c2c99;}
-          100% { box-shadow: 0 0 36px 6px #ff416cdd;}
-        }
-        .stark-alarm-active {
-          animation: strobe-bg 0.55s infinite alternate !important;
-        }
-      `}</style>
-    </>
+    </div>
   );
-};
+}
 
 export default EmergencyAlarmModal;

@@ -60,12 +60,16 @@ type TeamMember = {
 
 type Ack = {
   id: string;
-  name?: string;
-  lat: number;
-  lng: number;
-  avatarUrl?: string;
-  acknowledgedAt?: string;
-  role?: string;
+  userId: string;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  avatarUrl?: string | null;
+  email?: string | null;
+  acknowledgedAt?: string | null;
+  role?: string | null;
+  locationError?: string | null;
+  hasLocation: boolean;
 };
 
 export function CommandDashboard() {
@@ -149,33 +153,76 @@ export function CommandDashboard() {
     fetchObservations();
   }, [obsView, showModal]);
 
+  
+ 
   // --- Live headcount/acknowledgments fetch for latest active incident ---
   useEffect(() => {
-    // Find the most recent active incident
     let unsub: (() => void) | undefined;
+
     async function getLatestAcks() {
-      const q = query(collection(db, "emergencies"), where("status", "==", "ACTIVE"), orderBy("startTime", "desc"));
+      // Get the latest active incident
+      const q = query(
+        collection(db, "emergencies"),
+        where("status", "==", "ACTIVE"),
+        orderBy("startTime", "desc")
+      );
       const snapshot = await getDocs(q);
-      const latestIncident = snapshot.docs[0]?.id;
+      const latestIncident = snapshot.docs[0];
       if (!latestIncident) {
         setAcks([]);
         return;
       }
+
       unsub = onSnapshot(
-        collection(db, "emergencies", latestIncident, "acks"),
-        snap => {
-          setAcks(
-            snap.docs
-              .map(doc => ({ id: doc.id, ...doc.data() } as Ack))
-              .filter(a => typeof a.lat === "number" && typeof a.lng === "number")
-          );
+        collection(db, "emergencies", latestIncident.id, "acks"),
+        (snap) => {
+          const processedAcks = snap.docs.map(doc => {
+            const data = doc.data();
+            
+            // Handle both flat fields (lat/lng) and legacy nested gps format
+            let lat: number | null = null;
+            let lng: number | null = null;
+            
+            // First try flat fields (new format)
+            if (typeof data.lat === "number" && typeof data.lng === "number") {
+              lat = data.lat;
+              lng = data.lng;
+            }
+            // Fallback to legacy nested gps format
+            else if (data.gps && typeof data.gps.latitude === "number" && typeof data.gps.longitude === "number") {
+              lat = data.gps.latitude;
+              lng = data.gps.longitude;
+            }
+            // Also try gps.lat/lng for alternative legacy format
+            else if (data.gps && typeof data.gps.lat === "number" && typeof data.gps.lng === "number") {
+              lat = data.gps.lat;
+              lng = data.gps.lng;
+            }
+            
+            return {
+              id: doc.id,
+              userId: data.userId || doc.id,
+              name: data.name || data.displayName || data.gps?.name || "Unknown User",
+              avatarUrl: data.photoURL || data.avatarUrl || data.gps?.photoURL || null,
+              email: data.email || null,
+              lat: lat,
+              lng: lng,
+              acknowledgedAt: data.acknowledgedAt || data.timestamp || data.time || null,
+              role: data.role || data.gps?.role || null,
+              locationError: data.locationError || null,
+              hasLocation: lat !== null && lng !== null
+            } as Ack;
+          });
+          
+          // Set all acks (both with and without location)
+          setAcks(processedAcks);
         }
       );
     }
+
     getLatestAcks();
     return () => { if (unsub) unsub(); };
-  }, [incidents]); // Refresh acks if incident changes
-
+  }, [incidents]);
   // --- UI helpers ---
   const getObsStatusColor = (status: string) =>
     status === "OPEN" ? "bg-yellow-200 text-yellow-900"
@@ -571,33 +618,8 @@ export function CommandDashboard() {
                                                        <h3 className="font-bold text-xl mb-2 flex items-center">
                                                        <Users className="mr-2 text-blue-500" /> Headcount Map: Mustered Personnel
                                                        </h3>
-                                                       <div className="w-full h-[340px] rounded-xl shadow overflow-hidden border border-gray-100">
+                                                       <div className="w-full">
                                                        <TeamHeadcountMap acks={acks} />
-                                                       </div>
-                                                       <div className="mt-4 text-[15px] text-gray-700">
-                                                       <b>Total Acknowledged:</b> {acks.length}
-                                                       {" "}
-                                                       {acks.length === 0 && (
-                                                       <span className="ml-2 text-gray-500">(No team members have mustered yet)</span>
-                                                       )}
-                                                       </div>
-                                                       {/* Display avatar/name/role list inline below map */}
-                                                       <div className="flex flex-wrap gap-3 mt-2">
-                                                       {acks.map(ack => (
-                                                       <div key={ack.id} className="flex items-center gap-2 px-2 py-1 rounded-xl bg-blue-50 border border-blue-100 shadow-sm">
-                                                       <img src={ack.avatarUrl || "/avatar-default.png"} alt="avatar" className="w-8 h-8 rounded-full border border-blue-200" />
-                                                       <span className="font-semibold text-gray-800">{ack.name || "Unknown"}</span>
-                                                       {ack.role && (
-                                                         <span className={cn(
-                                                           "ml-1 text-xs px-2 py-0.5 rounded-full font-semibold",
-                                                           ack.role === "GOLD" ? "bg-yellow-100 text-yellow-800" :
-                                                           ack.role === "SILVER" ? "bg-gray-200 text-gray-700" :
-                                                           ack.role === "BRONZE" ? "bg-orange-100 text-orange-800" :
-                                                           "bg-gray-50 text-gray-500"
-                                                         )}>{ack.role}</span>
-                                                       )}
-                                                       </div>
-                                                       ))}
                                                        </div>
                                                        </div>
                                                        </div>
