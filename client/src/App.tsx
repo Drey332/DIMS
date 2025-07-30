@@ -10,9 +10,9 @@ import { ProjectHeader } from "@/components/project-header";
 import { useEnableOfflineSync } from "@shared/useOfflineSync";
 import EmergencyModal from "@/components/EmergencyModal";
 import { socket } from "./socket.js";
-
 import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
+import { useOnlineTracking } from "@/lib/onlineTracking";
 
 // Pages...
 import Dashboard from "@/pages/dashboard";
@@ -221,6 +221,7 @@ function Router() {
 // --- Main App Component ---
 function App() {
   useEnableOfflineSync(); // now just for listening, not enabling
+  useOnlineTracking();    // <-- TRACK ONLINE USERS HERE
 
   return (
     <ErrorBoundary fallback={<FatalErrorFallback error={new Error('App crashed')} resetErrorBoundary={() => window.location.reload()} />}>

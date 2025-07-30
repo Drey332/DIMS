@@ -32,6 +32,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { AIERPAdvisorModal } from "../components/AIERPAdvisorModal";
 import { AssetAIChat } from "@/components/AssetAiChat";
+
+import { useTeamOnlineStatus } from "@/lib/onlineTracking"; 
 // --- Types ---
 type EmergencyContact = {
   id?: string;
@@ -178,7 +180,23 @@ export default function ProjectSetup() {
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<AssetEquipment | null>(null);
 
+  // --- Team Members State ---
+  const [teamMembers, setTeamMembers] = useState<any[]>([]); // Add this
+  useEffect(() => {
+    // Listen to team members under project
+    const coll = collection(db, "projects", PROJECT_ID, "teamMembers");
+    const unsub = onSnapshot(coll, (snap) => {
+      setTeamMembers(snap.docs.map((d) => ({ ...d.data(), id: d.id })));
+    });
+    return unsub;
+  }, []);
 
+  // Get user IDs for online tracking
+  const userIds = teamMembers.map(m => m.id); // Or whatever field is the userId (sometimes it's m.userId)
+  const { teamActivity } = useTeamOnlineStatus(userIds); // INSERT HERE
+
+
+  
   const [showGoldAssetModal, setShowGoldAssetModal] = useState(false);
   const [goldAssetCodeInput, setGoldAssetCodeInput] = useState("");
   const [goldAssetError, setGoldAssetError] = useState("");
@@ -1935,22 +1953,54 @@ export default function ProjectSetup() {
                 </Card>
               </TabsContent>
 {/* --- TEAM ASSIGNMENTS TAB --- */}
-<TabsContent value="team">
-  <Card className="hydro-card">
-    <CardHeader>
-      <CardTitle className="flex items-center">
-        <FileText className="w-5 h-5 mr-2 text-primary" />
-        Team Assignments
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="p-6 text-gray-500 italic text-center">
-        {/* --- Plug in your team logic here, or extend from previous file! --- */}
-        (Team assignments management coming soon...)
-      </div>
-    </CardContent>
-  </Card>
-</TabsContent>
+          <TabsContent value="team">
+            <Card className="hydro-card">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <FileText className="w-5 h-5 mr-2 text-primary" />
+                  Team Assignments
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* --- INSERT ONLINE STATUS UI HERE --- */}
+                <div className="space-y-3">
+                  <h3 className="font-bold text-lg mb-2">Who's Online?</h3>
+                  {teamMembers.length === 0 ? (
+                    <div className="text-gray-400">No team members found.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {teamMembers.map(member => {
+                        const activity = teamActivity[member.id];
+                        return (
+                          <div key={member.id} className="flex items-center gap-3 border rounded-xl p-3 bg-white shadow-sm">
+                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl font-bold">
+                              {(member.firstName?.[0] ?? "U") + (member.lastName?.[0] ?? "N")}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-bold">{member.firstName} {member.lastName}</div>
+                              <div className="text-xs text-gray-600">{member.role}</div>
+                            </div>
+                            <div>
+                              <span className={
+                                activity?.status === "ONLINE"
+                                  ? "bg-green-500 text-white px-2 py-1 rounded-full"
+                                  : activity?.status === "IDLE"
+                                  ? "bg-yellow-500 text-white px-2 py-1 rounded-full"
+                                  : "bg-gray-300 text-gray-700 px-2 py-1 rounded-full"
+                              }>
+                                {activity?.status || "OFFLINE"}
+                              </span>
+                              </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                {/* --- END ONLINE STATUS UI --- */}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
 {/* --- Add your other tabs here ... --- */}
         </Tabs>
