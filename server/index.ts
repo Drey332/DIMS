@@ -105,15 +105,8 @@ app.use("/api/ai-erp-advisor", aiErpAdvisor);
   });
 
   // ====== STARTUP ======
-  const port = 5000;
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`🚀 HydroSafe API/AI/Socket server running on port ${port}`);
-    }
-  );
+  const port = process.env.PORT ? parseInt(process.env.PORT) : 5000;
+  server.listen(port, "0.0.0.0", () => {
+    log(`🚀 HydroSafe API/AI/Socket server running on port ${port}`);
+  });
 })();

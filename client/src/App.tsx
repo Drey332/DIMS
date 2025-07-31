@@ -14,7 +14,7 @@ import { doc, collection, onSnapshot } from "firebase/firestore";
 import { useOnlineTracking } from "@/lib/onlineTracking";
 
 // --- Emergency stuff ---
-import { useProjectEmergencyAlarm } from "@/lib/useProjectEmergencyAlarm";
+import { useProjectEmergencyAlarm } from "@/utils/useProjectEmergencyAlarm";
 import EmergencyAlarmModal from "@/components/EmergencyAlarmModal";
 
 // Pages...
