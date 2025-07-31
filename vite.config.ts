@@ -1,20 +1,29 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { fileURLToPath } from "url";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
+// --- Fix ESM: Replace __dirname/__filename with this: ---
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// --- Add your actual Replit hostname(s) below: ---
+const allowedHosts = [
+  "87050313-e668-43f1-8990-61484cda16f6-00-26onqyjlfe22j.worf.replit.dev"
+];
+
+// --- Main Export: ---
 export default defineConfig({
   plugins: [
     react(),
     runtimeErrorOverlay(),
-    // Remove this 'await' if not using ESM or dynamic import!
-    ...(process.env.NODE_ENV !== "production" &&
-      process.env.REPL_ID !== undefined
-      ? [
-          // Optional: comment out if you get syntax errors
-          // (await import("@replit/vite-plugin-cartographer")).cartographer(),
-        ]
-      : []),
+    // If you want Replit's Cartographer in dev mode:
+    // ...(process.env.NODE_ENV !== "production" && process.env.REPL_ID
+    //   ? [
+    //       (await import("@replit/vite-plugin-cartographer")).cartographer(),
+    //     ]
+    //   : []),
   ],
   resolve: {
     alias: {
@@ -33,10 +42,7 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
-    // 👇 **PASTE YOUR REPLIT HOSTNAME HERE!**
-    allowedHosts: [
-      "87050313-e668-43f1-8990-61484cda16f6-00-26onqyjlfe22j.worf.replit.dev"
-    ],
+    allowedHosts,
     proxy: {
       '/api': 'http://localhost:5000',
       '/socket.io': {
