@@ -154,15 +154,48 @@ function Router() {
     }
   }, []);
 
-  // --- Emergency Alarm Integration ---
-  // Use this custom hook (works for ALL logged-in users, shows live modal, tracks live ack list)
+  // --- GLOBAL EMERGENCY ALARM SYSTEM ---
+  // This ensures ALL devices/browsers get emergency notifications instantly
   const {
     emergency,
     isModalOpen,
     ackList,        // <-- List of all acknowledgers (for modal, team map, dashboard, etc.)
     acknowledge,
     ackInProgress,
-  } = useProjectEmergencyAlarm({ projectId: "1" });
+  } = useProjectEmergencyAlarm({ 
+    projectId: "1",
+    onAlarm: (emergency) => {
+      // Play alarm sound immediately
+      const audio = new Audio("/siren.mp3");
+      audio.play().catch(console.warn);
+      
+      // Browser notification
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification(`🚨 EMERGENCY: ${emergency.description}`, {
+          body: `Priority: ${emergency.priority} - Acknowledge immediately`,
+          icon: "/alert-icon.png",
+          requireInteraction: true
+        });
+      } else if ("Notification" in window && Notification.permission !== "denied") {
+        Notification.requestPermission().then((permission) => {
+          if (permission === "granted") {
+            new Notification(`🚨 EMERGENCY: ${emergency.description}`, {
+              body: `Priority: ${emergency.priority} - Acknowledge immediately`,
+              icon: "/alert-icon.png",
+              requireInteraction: true
+            });
+          }
+        });
+      }
+      
+      // Vibration on mobile devices
+      if ("vibrate" in navigator) {
+        navigator.vibrate([200, 100, 200, 100, 200]);
+      }
+      
+      console.log("🚨 GLOBAL EMERGENCY ALARM TRIGGERED:", emergency);
+    }
+  });
 
   if (isLoading) {
     return (

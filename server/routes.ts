@@ -1686,6 +1686,25 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
   
+  // GLOBAL EMERGENCY SYSTEM ENDPOINTS
+  // Create emergency for global real-time notifications
+  app.post('/api/emergencies', async (req, res) => {
+    try {
+      console.log('📢 Creating emergency via API:', req.body);
+      
+      // For now, just return success - emergencies are created in Firebase via frontend
+      res.status(200).json({ 
+        message: 'Emergency endpoint received', 
+        status: 'success',
+        note: 'Emergencies are created through Firebase in the frontend EmergencyModal',
+        receivedData: req.body
+      });
+    } catch (error) {
+      console.error("Error handling emergency API call:", error);
+      res.status(500).json({ message: "Failed to process emergency request" });
+    }
+  });
+
   return httpServer;
 }
 

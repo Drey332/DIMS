@@ -302,7 +302,7 @@ export function CommandDashboard() {
   }, [acks, activeIncident]);
 
   return (
-    <div className="px-2 md:px-3 pb-8 max-w-[1440px] mx-auto glassy-bg grid-pattern">
+    <div className="px-2 md:px-3 pb-8 max-w-[1440px] mx-auto bg-gray-50">
       {/* --- Filter Controls --- */}
       <div className="flex flex-col md:flex-row gap-6 mb-6">
         <div>
@@ -326,10 +326,10 @@ export function CommandDashboard() {
         {/* --- Emergencies and Observations: Main Section --- */}
         <div className="xl:col-span-2 space-y-8">
           {/* --- Emergencies --- */}
-          <Card className="hydro-card glassy-card animate-glow">
+          <Card className="hydro-card bg-white">
             <CardHeader className="flex flex-row items-center justify-between pb-4">
-              <CardTitle className="text-2xl font-black holographic flex items-center gap-2">
-                <AlertTriangle className="text-orange-500 animate-glow" />
+              <CardTitle className="text-2xl font-black text-hydro-dark flex items-center gap-2">
+                <AlertTriangle className="text-orange-500" />
                 {incidentView === "ACTIVE"
                   ? "Active Incidents & Operations"
                   : incidentView === "CLOSED"
@@ -404,10 +404,10 @@ export function CommandDashboard() {
             </CardContent>
           </Card>
           {/* --- Observations --- */}
-          <Card className="hydro-card glassy-card mt-6 animate-glow">
+          <Card className="hydro-card bg-white mt-6">
             <CardHeader>
-              <CardTitle className="text-xl font-bold holographic flex items-center">
-                <Eye className="text-blue-500 mr-3 h-5 w-5 animate-glow" />
+              <CardTitle className="text-xl font-bold text-hydro-dark flex items-center">
+                <Eye className="text-blue-500 mr-3 h-5 w-5" />
                 {obsView === "OPEN"
                   ? "Open Observations"
                   : obsView === "CLOSED"
@@ -423,391 +423,387 @@ export function CommandDashboard() {
           <div className="text-center py-8 text-gray-500">
             No observations found.
           </div>
-        ) : (
-          observations.map((obs) => (
-            <div key={obs.id} className="rounded-xl p-5 border bg-gray-50">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <span className="font-semibold text-blue-700">
-                    {obs.type.join(", ")}
-                  </span>
-                  <span className="ml-2 text-sm text-gray-600">{obs.location}</span>
-                </div>
-                <span className={cn(
-                  "px-3 py-1 rounded-full text-xs font-semibold",
-                  getObsStatusColor(obs.status)
-                )}>
-                  {obs.status}
-                </span>
-              </div>
-              <div className="text-gray-700 text-sm mb-1">
-                <strong>Observation:</strong> {obs.observation}
-              </div>
-              {obs.corrective && (
-                <div className="text-xs text-green-700 mb-1">
-                  <b>Corrective:</b> {obs.corrective}
-                </div>
+              ) : (
+                observations.map((obs) => (
+                  <div key={obs.id} className="rounded-xl p-5 border bg-gray-50">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <span className="font-semibold text-blue-700">{obs.type.join(", ")}</span>
+                        <span className="ml-2 text-sm text-gray-600">{obs.location}</span>
+                      </div>
+                      <span className={cn(
+                        "px-3 py-1 rounded-full text-xs font-semibold",
+                        getObsStatusColor(obs.status)
+                      )}>
+                        {obs.status}
+                      </span>
+                    </div>
+                    <div className="text-gray-700 text-sm mb-1">
+                      <strong>Observation:</strong> {obs.observation}
+                    </div>
+                    {obs.corrective && (
+                      <div className="text-xs text-green-700 mb-1">
+                        <b>Corrective:</b> {obs.corrective}
+                      </div>
+                    )}
+                    {obs.recommendation && (
+                      <div className="text-xs text-blue-700 mb-1">
+                        <b>Recommendation:</b> {obs.recommendation}
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500 mt-2">
+                      <span>By: {obs.name || "Anonymous"}</span>
+                      {" | "}
+                      <span>Date: {obs.date}</span>
+                    </div>
+                    {obs.status === "OPEN" && (
+                      <div className="flex gap-2 mt-3">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-blue-700 text-white hover:bg-blue-800"
+                          onClick={() => setViewObservation(obs)}
+                        >
+                          <Eye className="w-3 h-3 mr-1" />
+                          View
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-red-700 text-white hover:bg-red-800"
+                          onClick={() => {
+                            setEscalateObsId(obs.id);
+                            setEscalateIncidentId(null);
+                            setCodeInput("");
+                          }}
+                        >
+                          <Lock className="w-3 h-3 mr-1" />
+                          Archive
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))
               )}
-              {obs.recommendation && (
-                <div className="text-xs text-blue-700 mb-1">
-                  <b>Recommendation:</b> {obs.recommendation}
-                </div>
-              )}
-              <div className="text-xs text-gray-500 mt-2">
-                <span>By: {obs.name || "Anonymous"}</span>{" | "}
-                <span>Date: {obs.date}</span>
               </div>
-              {obs.status === "OPEN" && (
-                <div className="flex gap-2 mt-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-blue-700 text-white hover:bg-blue-800"
-                    onClick={() => setViewObservation(obs)}
-                  >
-                    <Eye className="w-3 h-3 mr-1" />
-                    View
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="bg-red-700 text-white hover:bg-red-800"
-                    onClick={() => {
-                      setEscalateObsId(obs.id);
-                      setEscalateIncidentId(null);
-                      setCodeInput("");
-                    }}
-                  >
-                    <Lock className="w-3 h-3 mr-1" />
-                    Archive
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-      </CardContent>
-      </Card>
-      </div>
+              </CardContent>
+              </Card>
+              </div>
 
-      {/* --- Command Team Status + Muster Analytics --- */}
-      <div>
-      <Card className="hydro-card glassy-card animate-glow">
-      <CardHeader>
-      <CardTitle className="text-xl font-bold holographic flex items-center gap-2">
-        <Users className="text-primary animate-glow" />
-        Command Team Status
-      </CardTitle>
-      </CardHeader>
-      <CardContent>
-      <div className="space-y-4">
-        {/* Muster Stats */}
-        {activeIncident && (
-          <div className="mb-2">
-            <div className="flex items-center gap-2 text-base font-semibold">
-              <span className="text-green-700">{acks.length}</span>
-              <span>/</span>
-              <span className="text-hydro-dark">{teamMembers.length}</span>
-              <span>mustered</span>
-              <span className="ml-2 text-xs text-gray-600">
-                (
-                {teamMembers.length > 0
-                  ? Math.round((acks.length / teamMembers.length) * 100)
-                  : 0}
-                %)
-              </span>
-            </div>
-            {acks.length > 0 && (
-              <div className="text-xs text-hydro-dark flex items-center gap-2 mt-1">
-                <Award className="w-4 h-4 text-yellow-500" />
-                Fastest:
-                <span className="font-bold text-orange-600">
-                  {fastest?.name ?? ""}
-                </span>
-                <span>
-                  (
-                  {fastest?.delta !== undefined
-                    ? `${fastest.delta}s`
-                    : ""}
-                  )
-                </span>
-                <span className="ml-auto text-xs text-gray-400 italic">
-                  Avg:{" "}
-                  {acks.length > 0 && activeIncident
-                    ? Math.round(
-                        acks
-                          .map((ack) =>
-                            (ack.time
-                              ? (ack.time -
-                                  new Date(activeIncident.startTime).getTime()) /
-                                1000
-                              : 0
-                            )
-                          )
-                          .reduce((a, b) => a + b, 0) / acks.length
-                      ) + "s"
-                    : "—"}
-                </span>
-              </div>
-            )}
-            {/* List not yet mustered */}
-            <div className="mt-2 text-xs text-orange-600">
-              <UserX className="inline-block mr-1 w-4 h-4" />
-              Waiting for:{" "}
-              {waiting.length > 0
-                ? waiting
-                    .map((m) => `${m.firstName} ${m.lastName}`)
-                    .join(", ")
-                : "—"}
-            </div>
-          </div>
-        )}
-
-        {/* Team status list */}
-        {[...teamMembers]
-          .sort((a, b) => {
-            const order = { GOLD: 0, SILVER: 1, BRONZE: 2 };
-            return order[a.role] - order[b.role];
-          })
-          .map((member) => (
-            <div
-              key={member.id}
-              className={cn(
-                "flex items-center justify-between p-3 rounded-lg border",
-                member.role === "GOLD"
-                  ? "border-yellow-300 bg-yellow-50"
-                  : member.role === "SILVER"
-                  ? "border-gray-300 bg-gray-100"
-                  : "border-orange-300 bg-orange-50"
+              {/* --- Command Team Status + Muster Analytics --- */}
+              <div>
+              <Card className="hydro-card bg-white">
+              <CardHeader>
+              <CardTitle className="text-xl font-bold text-hydro-dark flex items-center gap-2">
+              <Users className="text-primary" />
+              Command Team Status
+              </CardTitle>
+              </CardHeader>
+              <CardContent>
+              <div className="space-y-4">
+              {/* Muster Stats */}
+              {activeIncident && (
+                <div className="mb-2">
+                  <div className="flex items-center gap-2 text-base font-semibold">
+                    <span className="text-green-700">{acks.length}</span>
+                    <span>/</span>
+                    <span className="text-hydro-dark">{teamMembers.length}</span>
+                    <span>mustered</span>
+                    <span className="ml-2 text-xs text-gray-600">
+                      (
+                      {teamMembers.length > 0
+                        ? Math.round((acks.length / teamMembers.length) * 100)
+                        : 0}
+                      %)
+                    </span>
+                  </div>
+                  {acks.length > 0 && (
+                    <div className="text-xs text-hydro-dark flex items-center gap-2 mt-1">
+                      <Award className="w-4 h-4 text-yellow-500" />
+                      Fastest:
+                      <span className="font-bold text-orange-600">
+                        {fastest?.name ?? ""}
+                      </span>
+                      <span>
+                        (
+                        {fastest?.delta !== undefined
+                          ? `${fastest.delta}s`
+                          : ""}
+                        )
+                      </span>
+                      <span className="ml-auto text-xs text-gray-400 italic">
+                        Avg:{" "}
+                        {acks.length > 0 && activeIncident
+                          ? Math.round(
+                              acks
+                                .map((ack) =>
+                                  (ack.time
+                                    ? (ack.time -
+                                        new Date(activeIncident.startTime).getTime()) /
+                                      1000
+                                    : 0
+                                  )
+                                )
+                                .reduce((a, b) => a + b, 0) / acks.length
+                            ) + "s"
+                          : "—"}
+                      </span>
+                    </div>
+                  )}
+                  {/* List not yet mustered */}
+                  <div className="mt-2 text-xs text-orange-600">
+                    <UserX className="inline-block mr-1 w-4 h-4" />
+                    Waiting for:{" "}
+                    {waiting.length > 0
+                      ? waiting
+                          .map((m) => `${m.firstName} ${m.lastName}`)
+                          .join(", ")
+                      : "—"}
+                  </div>
+                </div>
               )}
-            >
-              <div className="flex items-center space-x-3">
-                {member.avatarUrl ? (
-                  <img
-                    src={member.avatarUrl}
-                    alt={member.firstName}
-                    className="w-10 h-10 rounded-full object-cover border"
-                  />
-                ) : (
+
+              {/* Team status list */}
+              {[...teamMembers]
+                .sort((a, b) => {
+                  const order = { GOLD: 0, SILVER: 1, BRONZE: 2 };
+                  return order[a.role] - order[b.role];
+                })
+                .map((member) => (
                   <div
+                    key={member.id}
                     className={cn(
-                      "w-10 h-10 text-white rounded-full flex items-center justify-center font-medium text-sm",
+                      "flex items-center justify-between p-3 rounded-lg border",
                       member.role === "GOLD"
-                        ? "bg-yellow-400 text-yellow-900"
+                        ? "border-yellow-300 bg-yellow-50"
                         : member.role === "SILVER"
-                        ? "bg-gray-400 text-gray-800"
-                        : "bg-orange-400 text-orange-800"
+                        ? "border-gray-300 bg-gray-100"
+                        : "border-orange-300 bg-orange-50"
                     )}
                   >
-                    {(member.firstName?.[0] ?? "") +
-                      (member.lastName?.[0] ?? "")}
+                    <div className="flex items-center space-x-3">
+                      {member.avatarUrl ? (
+                        <img
+                          src={member.avatarUrl}
+                          alt={member.firstName}
+                          className="w-10 h-10 rounded-full object-cover border"
+                        />
+                      ) : (
+                        <div
+                          className={cn(
+                            "w-10 h-10 text-white rounded-full flex items-center justify-center font-medium text-sm",
+                            member.role === "GOLD"
+                              ? "bg-yellow-400 text-yellow-900"
+                              : member.role === "SILVER"
+                              ? "bg-gray-400 text-gray-800"
+                              : "bg-orange-400 text-orange-800"
+                          )}
+                        >
+                          {(member.firstName?.[0] ?? "") +
+                            (member.lastName?.[0] ?? "")}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-medium text-hydro-dark">
+                          {member.firstName} {member.lastName}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {member.role}{" "}
+                          {member.title ? `- ${member.title}` : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div
+                        className={cn(
+                          "w-3 h-3 rounded-full",
+                          member.status === "Active"
+                            ? "bg-green-500"
+                            : member.status === "On Duty"
+                            ? "bg-blue-500"
+                            : member.status === "Field Operations"
+                            ? "bg-yellow-500"
+                            : "bg-gray-400"
+                        )}
+                      ></div>
+                      <span
+                        className={cn(
+                          member.status === "Active"
+                            ? "text-green-700"
+                            : member.status === "On Duty"
+                            ? "text-blue-600"
+                            : member.status === "Field Operations"
+                            ? "text-yellow-700"
+                            : "text-gray-500",
+                          "text-sm font-medium"
+                        )}
+                      >
+                        {member.status || "—"}
+                      </span>
+                    </div>
                   </div>
-                )}
-                <div>
-                  <div className="font-medium text-hydro-dark">
-                    {member.firstName} {member.lastName}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {member.role}{" "}
-                    {member.title ? `- ${member.title}` : ""}
+                ))}
+              </div>
+              </CardContent>
+              </Card>
+              </div>
+              </div>
+
+              {/* Emergency Modal */}
+              <EmergencyModal
+              open={showModal}
+              onClose={() => setShowModal(false)}
+              teamMembers={teamMembers}
+              />
+
+              {/* Escalate Dialog */}
+              {(escalateObsId || escalateIncidentId) && (
+              <div className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
+                <div className="bg-white rounded-2xl shadow-2xl p-7 max-w-xs w-full relative">
+                  <h3 className="font-bold text-lg mb-4 text-red-700 flex items-center">
+                    <Lock className="w-5 h-5 mr-2" />
+                    Escalate {escalateObsId ? "Observation" : "Incident"}
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Enter escalation code to close this item. (Hint:{" "}
+                    <span className="font-mono bg-gray-100 px-2 py-1 rounded">000</span>)
+                  </p>
+                  <input
+                    type="password"
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                    autoFocus
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 text-base outline-none"
+                    placeholder="Escalation code"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleEscalateConfirm();
+                      if (e.key === "Escape") {
+                        setEscalateObsId(null);
+                        setEscalateIncidentId(null);
+                        setCodeInput("");
+                      }
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleEscalateConfirm}>Confirm</Button>
+                    <Button variant="outline" onClick={() => {
+                      setEscalateObsId(null);
+                      setEscalateIncidentId(null);
+                      setCodeInput("");
+                    }}>
+                      Cancel
+                    </Button>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <div
-                  className={cn(
-                    "w-3 h-3 rounded-full",
-                    member.status === "Active"
-                      ? "bg-green-500"
-                      : member.status === "On Duty"
-                      ? "bg-blue-500"
-                      : member.status === "Field Operations"
-                      ? "bg-yellow-500"
-                      : "bg-gray-400"
-                  )}
-                ></div>
-                <span
-                  className={cn(
-                    member.status === "Active"
-                      ? "text-green-700"
-                      : member.status === "On Duty"
-                      ? "text-blue-600"
-                      : member.status === "Field Operations"
-                      ? "text-yellow-700"
-                      : "text-gray-500",
-                    "text-sm font-medium"
-                  )}
-                >
-                  {member.status || "—"}
-                </span>
-              </div>
-            </div>
-          ))}
-      </div>
-      </CardContent>
-      </Card>
-      </div>
-      </div>
+              )}
 
-      {/* Emergency Modal */}
-      <EmergencyModal
-      open={showModal}
-      onClose={() => setShowModal(false)}
-      teamMembers={teamMembers}
-      />
-
-      {/* Escalate Dialog */}
-      {(escalateObsId || escalateIncidentId) && (
-      <div className="fixed inset-0 bg-black/30 z-40 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
-      <div className="bg-white rounded-2xl shadow-2xl p-7 max-w-xs w-full relative">
-      <h3 className="font-bold text-lg mb-4 text-red-700 flex items-center">
-      <Lock className="w-5 h-5 mr-2" />
-      Escalate {escalateObsId ? "Observation" : "Incident"}
-      </h3>
-      <p className="text-gray-600 mb-4">
-      Enter escalation code to close this item. (Hint:{" "}
-      <span className="font-mono bg-gray-100 px-2 py-1 rounded">000</span>)
-      </p>
-      <input
-      type="password"
-      value={codeInput}
-      onChange={(e) => setCodeInput(e.target.value)}
-      autoFocus
-      className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 text-base outline-none"
-      placeholder="Escalation code"
-      onKeyDown={(e) => {
-        if (e.key === "Enter") handleEscalateConfirm();
-        if (e.key === "Escape") {
-          setEscalateObsId(null);
-          setEscalateIncidentId(null);
-          setCodeInput("");
-        }
-      }}
-      />
-      <div className="flex gap-2">
-      <Button className="bg-red-600 hover:bg-red-700 text-white" onClick={handleEscalateConfirm}>Confirm</Button>
-      <Button variant="outline" onClick={() => {
-        setEscalateObsId(null);
-        setEscalateIncidentId(null);
-        setCodeInput("");
-      }}>
-        Cancel
-      </Button>
-      </div>
-      </div>
-      </div>
-      )}
-
-      {/* View Incident Modal — with Headcount Map */}
-      {viewIncident && (
-      <div className="fixed inset-0 glassy-bg z-50 flex items-center justify-center" style={{ backdropFilter: "blur(8px)" }}>
-      <div className="glassy-card p-8 max-w-4xl w-full relative animate-glow">
-      <button className="absolute right-4 top-4 text-gray-400 hover:text-red-600" onClick={() => setViewIncident(null)}>
-      <X className="w-6 h-6" />
-      </button>
-      <h2 className="text-2xl font-bold holographic mb-4 flex items-center">
-      <AlertTriangle className="text-orange-500 mr-2 animate-glow" />
-      {viewIncident.title}
-      </h2>
-      <div className="mb-3 text-sm text-gray-700">
-      <div><b>Status:</b> {viewIncident.status}</div>
-      <div><b>Priority:</b> {viewIncident.priority}</div>
-      <div><b>Started:</b> {viewIncident.startTime ? new Date(viewIncident.startTime).toLocaleString() : "-"}</div>
-      {viewIncident.description && (
-        <div className="mt-2">
-          <b>Description:</b> {viewIncident.description}
-        </div>
-      )}
-      </div>
-      {/* Headcount Map */}
-      <div className="mt-6 mb-1">
-      <h3 className="font-bold text-xl mb-2 flex items-center neon-text">
-        <Users className="mr-2 text-blue-500 animate-glow" /> Headcount Map: Mustered Personnel
-      </h3>
-      <div className="w-full">
-        {/* Pass full props for analytics/replay! */}
-        <TeamHeadcountMap
-          acks={acks}
-          teamMembers={teamMembers}
-          // Convert startTime string (ISO) to number (ms since epoch)
-          incidentStartTime={
-            viewIncident.startTime
-              ? new Date(viewIncident.startTime).getTime()
-              : Date.now() // fallback to "now" so it's always a number
-          }
-          enableReplay={true}
-          replayWindow={5 * 60 * 1000} // 5 minutes replay window for emergency incidents
-        />
-      </div>
-      {/* Acknowledged List */}
-      <div className="mt-5">
-        <h4 className="font-bold text-lg mb-2 flex items-center">
-          <UserCheck className="text-green-600 mr-2" />
-          Acknowledged List
-        </h4>
-        <div className="space-y-2">
-          {acks.length === 0 ? (
-            <div className="text-gray-400">No one has acknowledged yet.</div>
-          ) : (
-            acks.map((ack) => (
-              <div key={ack.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-hydro-dark">
-                  {getUserInitials(ack.name)}
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium">
-                    {ack.name}
-                    {ack.role ? (<span className="ml-2 text-xs text-gray-500">({ack.role})</span>) : null}
+              {/* View Incident Modal — with Headcount Map (includes replay) */}
+              {viewIncident && (
+              <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
+                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-3xl w-full relative">
+                  <button className="absolute right-4 top-4 text-gray-400 hover:text-red-600" onClick={() => setViewIncident(null)}>
+                    <X className="w-6 h-6" />
+                  </button>
+                  <h2 className="text-2xl font-bold text-hydro-dark mb-4 flex items-center">
+                    <AlertTriangle className="text-orange-500 mr-2" />
+                    {viewIncident.title}
+                  </h2>
+                  <div className="mb-3 text-sm text-gray-700">
+                    <div><b>Status:</b> {viewIncident.status}</div>
+                    <div><b>Priority:</b> {viewIncident.priority}</div>
+                    <div><b>Started:</b> {viewIncident.startTime ? new Date(viewIncident.startTime).toLocaleString() : "-"}</div>
+                    {viewIncident.description && (
+                      <div className="mt-2">
+                        <b>Description:</b> {viewIncident.description}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-xs text-gray-500">{ack.email}</div>
-                </div>
-                {ack.acknowledgedAt && (
-                  <div className="text-xs text-gray-600">
-                    {new Date(ack.acknowledgedAt).toLocaleTimeString()}
+                  {/* === Headcount Map: Mustered Personnel (with Replay) === */}
+                  <div className="bg-white rounded-3xl shadow-2xl border border-blue-200 p-4 sm:p-8 w-full max-w-3xl mx-auto mt-7 mb-7">
+                    <h3 className="font-extrabold text-2xl mb-6 flex items-center gap-3 text-blue-700 tracking-tight">
+                      <Users className="w-8 h-8 text-sky-600" />
+                      Headcount Map: Mustered Personnel
+                    </h3>
+                    <div className="w-full h-[350px] rounded-xl border border-blue-200 shadow overflow-hidden mb-6">
+                      <TeamHeadcountMap
+                        acks={acks}
+                        teamMembers={teamMembers}
+                        incidentStartTime={viewIncident.startTime
+                          ? new Date(viewIncident.startTime).getTime()
+                          : Date.now()}
+                        enableReplay={true}
+                        replayWindow={5 * 60 * 1000}
+                      />
+                    </div>
                   </div>
-                )}
-                {ack.hasLocation && <span className="text-xs text-green-600 ml-2">📍</span>}
+                  {/* Acknowledged List */}
+                  <div className="mt-5">
+                    <h4 className="font-bold text-lg mb-2 flex items-center">
+                      <UserCheck className="text-green-600 mr-2" />
+                      Acknowledged List
+                    </h4>
+                    <div className="space-y-2">
+                      {acks.length === 0 ? (
+                        <div className="text-gray-400">No one has acknowledged yet.</div>
+                      ) : (
+                        acks.map((ack) => (
+                          <div key={ack.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-hydro-dark">
+                              {getUserInitials(ack.name)}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">
+                                {ack.name}
+                                {ack.role ? (<span className="ml-2 text-xs text-gray-500">({ack.role})</span>) : null}
+                              </div>
+                              <div className="text-xs text-gray-500">{ack.email}</div>
+                            </div>
+                            {ack.acknowledgedAt && (
+                              <div className="text-xs text-gray-600">
+                                {new Date(ack.acknowledgedAt).toLocaleTimeString()}
+                              </div>
+                            )}
+                            {ack.hasLocation && <span className="text-xs text-green-600 ml-2">📍</span>}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))
-          )}
-        </div>
-      </div>
-      </div>
-      </div>
-      </div>
-      )}
+              )}
 
-      {/* View Observation Modal */}
-      {viewObservation && (
-      <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
-      <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
-      <button className="absolute right-4 top-4 text-gray-400 hover:text-red-600" onClick={() => setViewObservation(null)}>
-      <X className="w-6 h-6" />
-      </button>
-      <h2 className="text-xl font-bold text-blue-800 mb-4">
-      Observation Detail
-      </h2>
-      <div className="mb-3 text-sm text-gray-700">
-      <div><b>Status:</b> {viewObservation.status}</div>
-      <div><b>Type:</b> {viewObservation.type.join(", ")}</div>
-      <div><b>Location:</b> {viewObservation.location}</div>
-      <div><b>Observation:</b> {viewObservation.observation}</div>
-      {viewObservation.corrective && (
-        <div><b>Corrective:</b> {viewObservation.corrective}</div>
-      )}
-      {viewObservation.recommendation && (
-        <div><b>Recommendation:</b> {viewObservation.recommendation}</div>
-      )}
-      <div><b>Reported by:</b> {viewObservation.name || "Anonymous"}</div>
-      <div><b>Date:</b> {viewObservation.date}</div>
-      <div><b>Closed Out:</b> {viewObservation.closedOut}</div>
-      </div>
-      </div>
-      </div>
-      )}
-      </div>
-      );
-      }
+              {/* View Observation Modal */}
+              {viewObservation && (
+              <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
+                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative">
+                  <button className="absolute right-4 top-4 text-gray-400 hover:text-red-600" onClick={() => setViewObservation(null)}>
+                    <X className="w-6 h-6" />
+                  </button>
+                  <h2 className="text-xl font-bold text-blue-800 mb-4">
+                    Observation Detail
+                  </h2>
+                  <div className="mb-3 text-sm text-gray-700">
+                    <div><b>Status:</b> {viewObservation.status}</div>
+                    <div><b>Type:</b> {viewObservation.type.join(", ")}</div>
+                    <div><b>Location:</b> {viewObservation.location}</div>
+                    <div><b>Observation:</b> {viewObservation.observation}</div>
+                    {viewObservation.corrective && (
+                      <div><b>Corrective:</b> {viewObservation.corrective}</div>
+                    )}
+                    {viewObservation.recommendation && (
+                      <div><b>Recommendation:</b> {viewObservation.recommendation}</div>
+                    )}
+                    <div><b>Reported by:</b> {viewObservation.name || "Anonymous"}</div>
+                    <div><b>Date:</b> {viewObservation.date}</div>
+                    <div><b>Closed Out:</b> {viewObservation.closedOut}</div>
+                  </div>
+                </div>
+              </div>
+              )}
+              </div>
+              );
+              }
 
-      export default CommandDashboard;
+              export default CommandDashboard;

@@ -57,11 +57,10 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
   useEffect(() => {
     if (!projectId) return;
 
-    // Assume "emergencies" are top-level, but filter by projectId if needed.
+    // Listen for ALL active emergencies across all projects for global coverage
     const q = query(
       collection(db, "emergencies"),
-      where("status", "==", "ACTIVE"),
-      where("projectId", "==", projectId)
+      where("status", "==", "ACTIVE")
     );
 
     let unsub: Unsubscribe | null = null;
@@ -74,46 +73,62 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
         return;
       }
 
-      // Show the first active emergency the user has not acknowledged yet
+      // Check each emergency to find the first unacknowledged one
       let found = false;
-      for (const docSnap of snap.docs) {
+      const emergencyDocs = snap.docs.sort((a, b) => {
+        // Prioritize by timestamp - newest first
+        const aTime = a.data().startTime ? new Date(a.data().startTime).getTime() : 0;
+        const bTime = b.data().startTime ? new Date(b.data().startTime).getTime() : 0;
+        return bTime - aTime;
+      });
+
+      for (const docSnap of emergencyDocs) {
         const emergencyId = docSnap.id;
-        // Check if this user has already acknowledged this emergency
+        const emergencyData = docSnap.data();
+        
+        // CRITICAL: Check acknowledgment strictly for THIS incident and THIS user
         const ackRef = doc(db, "emergencies", emergencyId, "acks", user.uid);
         const ackSnap = await getDoc(ackRef);
+        
         if (!ackSnap.exists()) {
-          // Not acknowledged, alarm!
-          setActiveEmergency({
+          // Not acknowledged - this is a new emergency for this user
+          const emergency = {
             id: emergencyId,
-            description: docSnap.data().description || "EMERGENCY! Muster required.",
-            status: docSnap.data().status,
-            priority: docSnap.data().priority,
-            startTime: docSnap.data().startTime,
+            description: emergencyData.description || "EMERGENCY! Muster required.",
+            status: emergencyData.status,
+            priority: emergencyData.priority || "HIGH",
+            startTime: emergencyData.startTime,
             acknowledged: false,
-          });
+          };
+
+          setActiveEmergency(emergency);
           setIsModalOpen(true);
-          alarmedEmergencies.current.add(emergencyId);
-          if (onAlarm) onAlarm({
-            id: emergencyId,
-            description: docSnap.data().description,
-            status: docSnap.data().status,
-            priority: docSnap.data().priority,
-            startTime: docSnap.data().startTime,
-            acknowledged: false,
-          });
+          
+          // Only trigger alarm once per emergency
+          if (!alarmedEmergencies.current.has(emergencyId)) {
+            alarmedEmergencies.current.add(emergencyId);
+            console.log(`🚨 NEW EMERGENCY DETECTED: ${emergencyId} for user ${user.uid}`);
+            
+            if (onAlarm) {
+              onAlarm(emergency);
+            }
+          }
+          
           found = true;
           break;
         }
       }
+      
       if (!found) {
         setActiveEmergency(null);
         setIsModalOpen(false);
       }
     });
 
-    return () => { unsub && unsub(); };
-    // eslint-disable-next-line
-  }, [projectId, auth.currentUser]);
+    return () => { 
+      if (unsub) unsub(); 
+    };
+  }, [projectId, auth.currentUser, onAlarm]);
 
   // Listen for ack updates (for live dashboard/headcount)
   useEffect(() => {
@@ -138,49 +153,90 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
     return () => unsub();
   }, [activeEmergency?.id]);
 
-  // --- Acknowledge function ---
+  // --- INCIDENT-SPECIFIC ACKNOWLEDGE FUNCTION ---
   const acknowledge = useCallback(async () => {
-    if (!activeEmergency) return;
+    if (!activeEmergency) {
+      console.warn("No active emergency to acknowledge");
+      return;
+    }
+    
     setAckInProgress(true);
-
     const user = auth.currentUser;
+    
     if (!user) {
       setAckInProgress(false);
-      throw new Error("You must be signed in.");
+      throw new Error("You must be signed in to acknowledge emergency.");
     }
 
-    let lat: number | null = null, lng: number | null = null;
-    let gotLocation = false;
-    if ("geolocation" in navigator) {
-      try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 12000 })
-        );
-        lat = pos.coords.latitude;
-        lng = pos.coords.longitude;
-        gotLocation = true;
-      } catch {}
-    }
+    try {
+      // Get GPS location with timeout
+      let lat: number | null = null, lng: number | null = null;
+      let gotLocation = false;
+      
+      if ("geolocation" in navigator) {
+        try {
+          const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+            const timeoutId = setTimeout(() => reject(new Error("Location timeout")), 8000);
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                clearTimeout(timeoutId);
+                resolve(position);
+              },
+              (error) => {
+                clearTimeout(timeoutId);
+                reject(error);
+              },
+              { 
+                enableHighAccuracy: true, 
+                timeout: 8000, 
+                maximumAge: 30000 
+              }
+            );
+          });
+          lat = pos.coords.latitude;
+          lng = pos.coords.longitude;
+          gotLocation = true;
+        } catch (locError) {
+          console.warn("Failed to get location:", locError);
+        }
+      }
 
-    await setDoc(
-      doc(db, "emergencies", activeEmergency.id, "acks", user.uid),
-      {
+      // CRITICAL: Store acknowledgment strictly for THIS emergency and THIS user
+      const ackData = {
         userId: user.uid,
-        name: user.displayName || user.email || "Unknown",
+        name: user.displayName || user.email || "Unknown User",
         email: user.email || "",
         avatarUrl: user.photoURL || "",
         lat,
         lng,
-        hasLocation: !!(lat !== null && lng !== null && gotLocation),
+        hasLocation: gotLocation,
         acknowledgedAt: new Date().toISOString(),
         time: Date.now(),
-      },
-      { merge: true }
-    );
+        incidentId: activeEmergency.id, // Double-check incident linkage
+        role: "USER" // Could be enhanced to pull from user profile
+      };
 
-    setAckInProgress(false);
-    setIsModalOpen(false);
-    setActiveEmergency(null);
+      console.log(`✅ Acknowledging emergency ${activeEmergency.id} for user ${user.uid}`);
+      
+      // Write to Firestore with incident-specific path
+      await setDoc(
+        doc(db, "emergencies", activeEmergency.id, "acks", user.uid),
+        ackData,
+        { merge: true }
+      );
+
+      // Close modal and clear state for this user
+      setAckInProgress(false);
+      setIsModalOpen(false);
+      setActiveEmergency(null);
+      
+      console.log(`✅ Emergency ${activeEmergency.id} acknowledged successfully by ${user.uid}`);
+      
+    } catch (error) {
+      console.error("Failed to acknowledge emergency:", error);
+      setAckInProgress(false);
+      throw error;
+    }
   }, [activeEmergency, auth.currentUser]);
 
   // --- Expose API ---
