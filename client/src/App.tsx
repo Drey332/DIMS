@@ -8,11 +8,14 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
 import { useEnableOfflineSync } from "@shared/useOfflineSync";
-import EmergencyModal from "@/components/EmergencyModal";
 import { socket } from "./socket.js";
 import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
 import { useOnlineTracking } from "@/lib/onlineTracking";
+
+// --- Emergency stuff ---
+import { useProjectEmergencyAlarm } from "@/lib/useProjectEmergencyAlarm";
+import EmergencyAlarmModal from "@/components/EmergencyAlarmModal";
 
 // Pages...
 import Dashboard from "@/pages/dashboard";
@@ -151,6 +154,14 @@ function Router() {
     }
   }, []);
 
+  // --- Emergency Alarm Integration ---
+  const {
+    emergency,
+    isModalOpen,
+    acknowledge,
+    ackInProgress,
+  } = useProjectEmergencyAlarm({ projectId: "1" });
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -169,14 +180,19 @@ function Router() {
   return (
     <>
       <ConnectionBanner />
-      {/* Emergency Modal: only for authenticated users and not on login/register */}
+
+      {/* --- Emergency Alarm Modal for ALL users (if not acknowledged) --- */}
+      <EmergencyAlarmModal
+        open={isModalOpen}
+        onAcknowledge={acknowledge}
+        message={emergency?.description}
+        incidentId={emergency?.id ?? null}
+      />
+
+      {/* --- Main UI --- */}
       {isAuthenticated && userData && (
-        <EmergencyModal open={false} onClose={() => {}} teamMembers={[]} />
-      )}
-      {isAuthenticated && (
         <>
           <PersistentNav />
-          {/* --- PROJECT HEADER (shows everywhere for logged-in users) --- */}
           <ProjectHeader project={projectInfo} />
         </>
       )}
@@ -185,7 +201,6 @@ function Router() {
           <Switch>
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />
-            {/* Public asset access for QR codes */}
             <Route path="/asset/:id" component={AssetDetails} />
             <Route path="/asset-management/:assetId?" component={AssetManagement} />
             {isAuthenticated && (
@@ -220,8 +235,8 @@ function Router() {
 
 // --- Main App Component ---
 function App() {
-  useEnableOfflineSync(); // now just for listening, not enabling
-  useOnlineTracking();    // <-- TRACK ONLINE USERS HERE
+  useEnableOfflineSync();
+  useOnlineTracking();
 
   return (
     <ErrorBoundary fallback={<FatalErrorFallback error={new Error('App crashed')} resetErrorBoundary={() => window.location.reload()} />}>
