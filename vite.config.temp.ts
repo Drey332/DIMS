@@ -1,7 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { fileURLToPath } from 'url';
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+
+// ES module equivalent of __dirname
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [
@@ -35,8 +39,11 @@ export default defineConfig({
     },
     // 👇 **PASTE YOUR REPLIT HOSTNAME HERE!**
     allowedHosts: [
-      "87050313-e668-43f1-8990-61484cda16f6-00-26onqyjlfe22j.worf.replit.dev"
+      "87050313-e668-43f1-8990-61484cda16f6-00-26onqyjlfe22j.worf.replit.dev",
+      ".replit.dev", // Allow all replit.dev subdomains
+      "localhost"
     ],
+    host: true, // Allow connections from any host
     proxy: {
       '/api': 'http://localhost:5000',
       '/socket.io': {

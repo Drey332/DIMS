@@ -1,347 +1,221 @@
-import { useState, useEffect, useCallback } from 'react';
-import { doc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useState, useEffect } from "react";
+import {
+  doc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  serverTimestamp,
+  collection,
+  query,
+  where,
+  getDocs,
+  DocumentReference
+} from "firebase/firestore";
+import { db, auth } from "../firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
 
-export type OnlineStatus = 'ONLINE' | 'IDLE' | 'OFFLINE';
+const PROJECT_ID = "hydrosafe-5d245";
 
-interface UserActivity {
-  userId: string;
-  status: OnlineStatus;
-  lastSeen: Date;
-  lastActivity: Date;
-  isActive: boolean;
+export type OnlineStatus = "ONLINE" | "IDLE" | "OFFLINE";
+
+export interface UserActivity {
+  id: string;
+  email: string;
+  name: string;
+  role: "GOLD" | "SILVER" | "BRONZE";
+  activityStatus: OnlineStatus;
+  lastSeen: Date | null;
 }
 
 interface OnlineTrackingOptions {
-  idleThreshold?: number; // milliseconds before considered idle (default: 5 minutes)
-  offlineThreshold?: number; // milliseconds before considered offline (default: 10 minutes)
-  updateInterval?: number; // how often to update status (default: 30 seconds)
+  idleThreshold?: number;
+  offlineThreshold?: number;
+  updateInterval?: number;
 }
 
-class OnlineTracker {
-  private userId: string | null = null;
-  private status: OnlineStatus = 'OFFLINE';
-  private lastActivity: Date = new Date();
-  private updateInterval: number;
-  private idleThreshold: number;
-  private offlineThreshold: number;
-  private intervalId: NodeJS.Timeout | null = null;
-  private activityTimeout: NodeJS.Timeout | null = null;
-  private isTracking = false;
+let globalCleanup: (() => void) | null = null;
 
-  constructor(options: OnlineTrackingOptions = {}) {
-    this.updateInterval = options.updateInterval || 30000; // 30 seconds
-    this.idleThreshold = options.idleThreshold || 300000; // 5 minutes
-    this.offlineThreshold = options.offlineThreshold || 600000; // 10 minutes
-    
-    this.setupActivityListeners();
-    this.setupAuthListener();
-  }
-
-  private setupAuthListener() {
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        this.userId = user.uid;
-        this.startTracking();
-      } else {
-        this.userId = null;
-        this.stopTracking();
-      }
-    });
-  }
-
-  private setupActivityListeners() {
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    const updateActivity = () => {
-      this.lastActivity = new Date();
-      if (this.status !== 'ONLINE') {
-        this.updateStatus('ONLINE');
-      }
-      
-      // Reset idle timer
-      if (this.activityTimeout) {
-        clearTimeout(this.activityTimeout);
-      }
-      
-      this.activityTimeout = setTimeout(() => {
-        this.updateStatus('IDLE');
-      }, this.idleThreshold);
-    };
-
-    events.forEach(event => {
-      document.addEventListener(event, updateActivity, true);
-    });
-
-    // Handle page visibility changes
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) {
-        this.updateStatus('IDLE');
-      } else {
-        updateActivity();
-      }
-    });
-
-    // Handle window focus/blur
-    window.addEventListener('focus', updateActivity);
-    window.addEventListener('blur', () => {
-      this.updateStatus('IDLE');
-    });
-
-    // Handle page unload
-    window.addEventListener('beforeunload', () => {
-      this.updateStatus('OFFLINE');
-    });
-  }
-
-  private async updateStatus(newStatus: OnlineStatus) {
-    if (!this.userId || this.status === newStatus) return;
-    
-    this.status = newStatus;
-    
-    try {
-      const userRef = doc(db, 'users', this.userId);
-      await updateDoc(userRef, {
-        status: newStatus,
-        lastSeen: serverTimestamp(),
-        lastActivity: this.lastActivity,
-        isOnline: newStatus === 'ONLINE'
-      });
-    } catch (error) {
-      console.error('Failed to update online status:', error);
-    }
-  }
-
-  private startTracking() {
-    if (this.isTracking || !this.userId) return;
-    
-    this.isTracking = true;
-    this.updateStatus('ONLINE');
-    
-    // Set up periodic status updates
-    this.intervalId = setInterval(() => {
-      const timeSinceActivity = Date.now() - this.lastActivity.getTime();
-      
-      if (timeSinceActivity > this.offlineThreshold) {
-        this.updateStatus('OFFLINE');
-      } else if (timeSinceActivity > this.idleThreshold && this.status === 'ONLINE') {
-        this.updateStatus('IDLE');
-      }
-    }, this.updateInterval);
-  }
-
-  private stopTracking() {
-    this.isTracking = false;
-    
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-    
-    if (this.activityTimeout) {
-      clearTimeout(this.activityTimeout);
-      this.activityTimeout = null;
-    }
-    
-    if (this.userId) {
-      this.updateStatus('OFFLINE');
-    }
-  }
-
-  public getCurrentStatus(): OnlineStatus {
-    return this.status;
-  }
-
-  public getLastActivity(): Date {
-    return this.lastActivity;
-  }
-
-  public destroy() {
-    this.stopTracking();
-  }
-}
-
-// Global tracker instance
-let globalTracker: OnlineTracker | null = null;
-
-export function initializeOnlineTracking(options?: OnlineTrackingOptions): OnlineTracker {
-  if (globalTracker) {
-    globalTracker.destroy();
-  }
-  
-  globalTracker = new OnlineTracker(options);
-  return globalTracker;
-}
-
-export function getOnlineTracker(): OnlineTracker | null {
-  return globalTracker;
-}
-
-// React hook for using online tracking
 export function useOnlineTracking(options?: OnlineTrackingOptions) {
-  const [status, setStatus] = useState<OnlineStatus>('OFFLINE');
-  const [lastActivity, setLastActivity] = useState<Date>(new Date());
+  const [status, setStatus] = useState<OnlineStatus>("OFFLINE");
+  const [userDocId, setUserDocId] = useState<string | null>(null);
 
   useEffect(() => {
-    const tracker = initializeOnlineTracking(options);
-    
-    // Update local state
-    const updateLocalState = () => {
-      setStatus(tracker.getCurrentStatus());
-      setLastActivity(tracker.getLastActivity());
+    let unsubAuth: (() => void) | undefined;
+    let activityTimeout: ReturnType<typeof setTimeout> | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let lastActivity = Date.now();
+
+    const findOrCreateUserDoc = async (user: User) => {
+      if (!user.email) return null;
+      const q = query(
+        collection(db, "projects", PROJECT_ID, "teamMembers"),
+        where("email", "==", user.email)
+      );
+      const snap = await getDocs(q);
+      let docId: string;
+      if (!snap.empty) {
+        // Already assigned, fetch role set by Gold/admin, and update latest name
+        const teamDoc = snap.docs[0];
+        docId = teamDoc.id;
+        const prevData = teamDoc.data();
+        await updateDoc(doc(db, "projects", PROJECT_ID, "teamMembers", docId), {
+          firstName: user.displayName?.split(" ")[0] || "",
+          lastName: user.displayName?.split(" ").slice(1).join(" ") || "",
+          activityStatus: "ONLINE",
+          isActive: true,
+          lastSeen: serverTimestamp(),
+        });
+        return { docId, role: prevData.role as "GOLD" | "SILVER" | "BRONZE" };
+      } else {
+        // New login, create as BRONZE
+        const ref: DocumentReference = doc(collection(db, "projects", PROJECT_ID, "teamMembers"));
+        await setDoc(ref, {
+          email: user.email,
+          firstName: user.displayName?.split(" ")[0] || "",
+          lastName: user.displayName?.split(" ").slice(1).join(" ") || "",
+          role: "BRONZE",
+          activityStatus: "ONLINE",
+          isActive: true,
+          lastSeen: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        });
+        return { docId: ref.id, role: "BRONZE" as "BRONZE" };
+      }
     };
-    
-    // Initial update
-    updateLocalState();
-    
-    // Set up periodic updates
-    const interval = setInterval(updateLocalState, 1000);
-    
+
+    const updateStatusInFirestore = async (docId: string, newStatus: OnlineStatus) => {
+      try {
+        const ref = doc(db, "projects", PROJECT_ID, "teamMembers", docId);
+        await updateDoc(ref, {
+          activityStatus: newStatus,
+          lastSeen: serverTimestamp(),
+        });
+      } catch (e) {
+        // No fatal, don't throw error in hooks
+      }
+    };
+
+    unsubAuth = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setStatus("OFFLINE");
+        setUserDocId(null);
+        if (globalCleanup) globalCleanup();
+        return;
+      }
+
+      const userInfo = await findOrCreateUserDoc(user);
+      if (!userInfo) return;
+      setUserDocId(userInfo.docId);
+
+      if (userInfo.docId) await updateStatusInFirestore(userInfo.docId, "ONLINE");
+      setStatus("ONLINE");
+
+      const handleActivity = () => {
+        lastActivity = Date.now();
+        if (status !== "ONLINE") {
+          setStatus("ONLINE");
+          if (userInfo.docId) updateStatusInFirestore(userInfo.docId, "ONLINE");
+        }
+        if (activityTimeout) clearTimeout(activityTimeout);
+        activityTimeout = setTimeout(() => {
+          setStatus("IDLE");
+          if (userInfo.docId) updateStatusInFirestore(userInfo.docId, "IDLE");
+        }, options?.idleThreshold || 300000);
+      };
+
+      const events = ["mousedown", "mousemove", "keypress", "scroll", "touchstart", "click"];
+      events.forEach((evt) => window.addEventListener(evt, handleActivity, true));
+      window.addEventListener("focus", handleActivity);
+      window.addEventListener("blur", () => {
+        setStatus("IDLE");
+        if (userInfo.docId) updateStatusInFirestore(userInfo.docId, "IDLE");
+      });
+      window.addEventListener("beforeunload", () => {
+        setStatus("OFFLINE");
+        if (userInfo.docId) updateStatusInFirestore(userInfo.docId, "OFFLINE");
+      });
+
+      intervalId = setInterval(() => {
+        const now = Date.now();
+        if (now - lastActivity > (options?.offlineThreshold || 600000)) {
+          setStatus("OFFLINE");
+          if (userInfo.docId) updateStatusInFirestore(userInfo.docId, "OFFLINE");
+        } else if (
+          now - lastActivity > (options?.idleThreshold || 300000) &&
+          status === "ONLINE"
+        ) {
+          setStatus("IDLE");
+          if (userInfo.docId) updateStatusInFirestore(userInfo.docId, "IDLE");
+        }
+      }, options?.updateInterval || 30000);
+
+      globalCleanup = () => {
+        events.forEach((evt) => window.removeEventListener(evt, handleActivity, true));
+        window.removeEventListener("focus", handleActivity);
+        window.removeEventListener("blur", () => {});
+        window.removeEventListener("beforeunload", () => {});
+        if (intervalId) clearInterval(intervalId);
+        if (activityTimeout) clearTimeout(activityTimeout);
+        setStatus("OFFLINE");
+        if (userInfo.docId) updateStatusInFirestore(userInfo.docId, "OFFLINE");
+      };
+    });
+
     return () => {
-      clearInterval(interval);
-      tracker.destroy();
+      if (globalCleanup) globalCleanup();
+      if (unsubAuth) unsubAuth();
     };
   }, []);
 
-  return { status, lastActivity };
+  return { status, userDocId };
 }
 
-// React hook for tracking other users' online status
-export function useUserOnlineStatus(userId: string) {
-  const [userActivity, setUserActivity] = useState<UserActivity | null>(null);
-  const [loading, setLoading] = useState(true);
-
+export function useTeamMembersWithStatus() {
+  const [members, setMembers] = useState<UserActivity[]>([]);
   useEffect(() => {
-    if (!userId) {
-      setLoading(false);
-      return;
-    }
-
-    const userRef = doc(db, 'users', userId);
-    
-    const unsubscribe = onSnapshot(
-      userRef,
-      (doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          setUserActivity({
-            userId: doc.id,
-            status: data.status || 'OFFLINE',
-            lastSeen: data.lastSeen?.toDate() || new Date(),
-            lastActivity: data.lastActivity?.toDate() || new Date(),
-            isActive: data.isOnline || false
-          });
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error listening to user status:', error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [userId]);
-
-  return { userActivity, loading };
-}
-
-// React hook for tracking multiple users' online status
-export function useTeamOnlineStatus(userIds: string[]) {
-  const [teamActivity, setTeamActivity] = useState<Record<string, UserActivity>>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!userIds.length) {
-      setLoading(false);
-      return;
-    }
-
-    const unsubscribes: (() => void)[] = [];
-    const activityData: Record<string, UserActivity> = {};
-
-    userIds.forEach(userId => {
-      const userRef = doc(db, 'users', userId);
-      
-      const unsubscribe = onSnapshot(
-        userRef,
-        (doc) => {
-          if (doc.exists()) {
-            const data = doc.data();
-            activityData[userId] = {
-              userId: doc.id,
-              status: data.status || 'OFFLINE',
-              lastSeen: data.lastSeen?.toDate() || new Date(),
-              lastActivity: data.lastActivity?.toDate() || new Date(),
-              isActive: data.isOnline || false
-            };
-          }
-          
-          setTeamActivity({ ...activityData });
-          setLoading(false);
-        },
-        (error) => {
-          console.error(`Error listening to user ${userId} status:`, error);
-        }
+    const q = collection(db, "projects", PROJECT_ID, "teamMembers");
+    const unsub = onSnapshot(q, (snap) => {
+      setMembers(
+        snap.docs.map((docSnap) => {
+          const d = docSnap.data();
+          return {
+            id: docSnap.id,
+            email: d.email,
+            name: `${d.firstName || ""} ${d.lastName || ""}`.trim(),
+            role: (d.role as "GOLD" | "SILVER" | "BRONZE") || "BRONZE",
+            activityStatus: (d.activityStatus as OnlineStatus) || "OFFLINE",
+            lastSeen: d.lastSeen?.toDate ? d.lastSeen.toDate() : d.lastSeen ? new Date(d.lastSeen) : null,
+          };
+        })
       );
-      
-      unsubscribes.push(unsubscribe);
     });
-
-    return () => {
-      unsubscribes.forEach(unsubscribe => unsubscribe());
-    };
-  }, [userIds]);
-
-  return { teamActivity, loading };
+    return unsub;
+  }, []);
+  return members;
 }
 
-// Utility functions
 export function getStatusColor(status: OnlineStatus): string {
   switch (status) {
-    case 'ONLINE':
-      return 'text-green-500';
-    case 'IDLE':
-      return 'text-yellow-500';
-    case 'OFFLINE':
-      return 'text-gray-400';
+    case "ONLINE":
+      return "text-green-500";
+    case "IDLE":
+      return "text-yellow-500";
+    case "OFFLINE":
+      return "text-gray-400";
     default:
-      return 'text-gray-400';
+      return "text-gray-400";
   }
 }
 
 export function getStatusBadge(status: OnlineStatus): string {
   switch (status) {
-    case 'ONLINE':
-      return 'bg-green-500';
-    case 'IDLE':
-      return 'bg-yellow-500';
-    case 'OFFLINE':
-      return 'bg-gray-400';
+    case "ONLINE":
+      return "bg-green-500";
+    case "IDLE":
+      return "bg-yellow-500";
+    case "OFFLINE":
+      return "bg-gray-400";
     default:
-      return 'bg-gray-400';
+      return "bg-gray-400";
   }
-}
-
-export function formatLastSeen(lastSeen: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - lastSeen.getTime();
-  const diffMinutes = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMinutes < 1) {
-    return 'Just now';
-  } else if (diffMinutes < 60) {
-    return `${diffMinutes}m ago`;
-  } else if (diffHours < 24) {
-    return `${diffHours}h ago`;
-  } else {
-    return `${diffDays}d ago`;
-  }
-}
-
-export function isUserActive(lastActivity: Date, thresholdMs: number = 300000): boolean {
-  return Date.now() - lastActivity.getTime() < thresholdMs;
 }
