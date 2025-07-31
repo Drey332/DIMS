@@ -13,7 +13,7 @@ import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
 import { useOnlineTracking } from "@/lib/onlineTracking";
 
-// --- Emergency stuff ---
+// --- Emergency alarm hook and modal ---
 import { useProjectEmergencyAlarm } from "@/utils/useProjectEmergencyAlarm";
 import EmergencyAlarmModal from "@/components/EmergencyAlarmModal";
 
@@ -155,9 +155,11 @@ function Router() {
   }, []);
 
   // --- Emergency Alarm Integration ---
+  // Use this custom hook (works for ALL logged-in users, shows live modal, tracks live ack list)
   const {
     emergency,
     isModalOpen,
+    ackList,        // <-- List of all acknowledgers (for modal, team map, dashboard, etc.)
     acknowledge,
     ackInProgress,
   } = useProjectEmergencyAlarm({ projectId: "1" });
@@ -187,6 +189,8 @@ function Router() {
         onAcknowledge={acknowledge}
         message={emergency?.description}
         incidentId={emergency?.id ?? null}
+        ackList={ackList}
+        ackInProgress={ackInProgress}
       />
 
       {/* --- Main UI --- */}
