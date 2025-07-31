@@ -164,10 +164,10 @@ export default function TeamHeadcountMap({
       : 0;
 
   return (
-    <div className="w-full h-[490px] space-y-4">
+    <div className="w-full h-[490px] space-y-4 grid-pattern">
       {/* Replay Controls */}
       {enableReplay && (
-        <div className="flex items-center gap-3 mt-2 mb-1 px-2 py-3 bg-slate-800 rounded-2xl shadow-xl border border-yellow-400">
+        <div className="flex items-center gap-3 mt-2 mb-1 px-2 py-3 glassy-card animate-glow neon-border">
           <button
             className={`w-10 h-10 rounded-full border-2 flex items-center justify-center ${playing ? "border-red-500 bg-red-500/20" : "border-green-500 bg-green-500/20"} transition`}
             onClick={() => setPlaying(p => !p)}
@@ -204,7 +204,7 @@ export default function TeamHeadcountMap({
       )}
 
       {/* Map */}
-      <div className="w-full h-[300px] rounded-2xl shadow-xl border border-yellow-300 overflow-hidden relative z-10">
+      <div className="w-full h-[300px] glassy-card overflow-hidden relative z-10">
         <MapContainer
           center={center}
           zoom={acksWithLocation.length > 0 ? 10 : 7}
@@ -283,25 +283,25 @@ export default function TeamHeadcountMap({
       </div>
 
       {/* Summary Stats */}
-      <div className="flex justify-between items-center text-sm bg-gray-50 rounded-lg p-3">
+      <div className="flex justify-between items-center text-sm glassy-card p-3">
         <div>
-          <span className="font-semibold text-green-600">
+          <span className="font-semibold neon-text">
             {acksWithLocation.length} with location
           </span>
           {acksWithoutLocation.length > 0 && (
-            <span className="ml-3 font-semibold text-orange-600">
+            <span className="ml-3 font-semibold text-orange-400 animate-glow">
               {acksWithoutLocation.length} location denied
             </span>
           )}
         </div>
-        <div className="font-bold text-gray-700">
+        <div className="font-bold holographic">
           Total: {filteredAcks.length} acknowledged
         </div>
       </div>
 
       {/* Users without location */}
       {acksWithoutLocation.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+        <div className="glassy-card border-orange-400/50 p-3">
           <h4 className="font-semibold text-orange-800 mb-2 text-sm flex items-center gap-2">
             <span role="img" aria-label="location">
               📍
@@ -346,7 +346,7 @@ export default function TeamHeadcountMap({
 
       {/* Not Mustered (Online, assigned to project) */}
       {notMustered.length > 0 && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2">
+        <div className="glassy-card border-gray-400/50 p-3 mt-2">
           <h4 className="font-semibold text-gray-700 mb-2 text-sm flex items-center gap-2">
             <span role="img" aria-label="not-mustered">⏳</span>
             Waiting for Muster:
@@ -379,26 +379,41 @@ export default function TeamHeadcountMap({
         </div>
       )}
 
-      {/* Muster Analytics */}
-      <div className="mt-4 bg-blue-50 rounded-xl px-4 py-3 text-sm grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <div>
-          <b>% Mustered:</b> {filteredAcks.length}/{onlineTeam.length} (
-          {onlineTeam.length > 0
-            ? Math.round((filteredAcks.length / onlineTeam.length) * 100)
-            : 0}
-          %)
+      {/* Advanced Muster Analytics */}
+      <div className="mt-4 glassy-card px-4 py-3 text-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="text-center">
+          <div className="holographic text-2xl font-bold">
+            {onlineTeam.length > 0
+              ? Math.round((filteredAcks.length / onlineTeam.length) * 100)
+              : 0}%
+          </div>
+          <div className="neon-text text-xs">Mustered</div>
+          <div className="text-gray-400 text-xs">
+            {filteredAcks.length}/{onlineTeam.length}
+          </div>
         </div>
-        <div>
-          <b>Avg. Response Time:</b>{" "}
-          {avgResponse > 0 ? `${avgResponse}s` : "—"}
+        <div className="text-center">
+          <div className="text-cyan-400 text-2xl font-bold animate-glow">
+            {avgResponse > 0 ? `${avgResponse}s` : "—"}
+          </div>
+          <div className="neon-text text-xs">Avg. Response</div>
+          <div className="text-gray-400 text-xs">Time</div>
         </div>
-        <div>
-          <b>Fastest:</b> {fastestAck ? fastestAck.name : "—"}
+        <div className="text-center">
+          <div className="text-green-400 text-lg font-bold">
+            {fastestAck ? getUserInitials(fastestAck.name) : "—"}
+          </div>
+          <div className="neon-text text-xs">Fastest</div>
+          <div className="text-gray-400 text-xs">
+            {fastestAck?.acknowledgedAt ? formatAgo(fastestAck.acknowledgedAt) : "—"}
+          </div>
         </div>
-        <div>
-          <b>First Muster:</b> {fastestAck?.acknowledgedAt
-            ? formatAgo(fastestAck.acknowledgedAt)
-            : "—"}
+        <div className="text-center">
+          <div className="text-purple-400 text-xl font-bold">
+            {acksWithLocation.length}
+          </div>
+          <div className="neon-text text-xs">GPS Tracked</div>
+          <div className="text-gray-400 text-xs">Locations</div>
         </div>
       </div>
     </div>
