@@ -7,6 +7,7 @@ import {
   onSnapshot,
   doc,
   setDoc,
+  getDoc,
   Unsubscribe,
   getDocs,
   Timestamp,
@@ -79,7 +80,7 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
         const emergencyId = docSnap.id;
         // Check if this user has already acknowledged this emergency
         const ackRef = doc(db, "emergencies", emergencyId, "acks", user.uid);
-        const ackSnap = await ackRef.get();
+        const ackSnap = await getDoc(ackRef);
         if (!ackSnap.exists()) {
           // Not acknowledged, alarm!
           setActiveEmergency({
