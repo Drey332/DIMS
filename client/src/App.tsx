@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,13 +8,11 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
 import { useEnableOfflineSync } from "@shared/useOfflineSync";
-import { useOnlineTracking } from "@/lib/onlineTracking";
-import EmergencyAlarmModal from "@/components/EmergencyAlarmModal";
-import { useGlobalEmergencyListener } from "@/lib/useGlobalEmergencyListener";
-
+import EmergencyModal from "@/components/EmergencyModal";
 import { socket } from "./socket.js";
 import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
+import { useOnlineTracking } from "@/lib/onlineTracking";
 
 // Pages...
 import Dashboard from "@/pages/dashboard";
@@ -51,8 +49,6 @@ type UserData = {
   role: string;
 };
 
-type AlarmState = { id: string; message?: string } | null;
-
 // --- Offline + Storage Banner ---
 function ConnectionBanner() {
   const [offline, setOffline] = useState(!navigator.onLine);
@@ -64,10 +60,7 @@ function ConnectionBanner() {
     window.addEventListener("offline", onStatusChange);
 
     window.addEventListener("hydrosafe:offline-fail", (e: any) => {
-      setStorageError(
-        e.detail ||
-          "Offline sync is not available in this browser. Try Chrome, Edge, or Safari."
-      );
+      setStorageError(e.detail || "Offline sync is not available in this browser. Try Chrome, Edge, or Safari.");
     });
 
     return () => {
@@ -87,10 +80,8 @@ function ConnectionBanner() {
   if (offline) {
     return (
       <div className="w-full bg-yellow-400 text-black text-center p-2 font-semibold z-50">
-        ⚠️ You’re offline. All data is read from device storage.
-        <br />
-        Changes will sync once you reconnect.{" "}
-        <span className="italic">(Keep this tab open.)</span>
+        ⚠️ You’re offline. All data is read from device storage.<br />
+        Changes will sync once you reconnect. <span className="italic">(Keep this tab open.)</span>
       </div>
     );
   }
@@ -98,13 +89,7 @@ function ConnectionBanner() {
 }
 
 // --- Error Boundary Fallback ---
-function FatalErrorFallback({
-  error,
-  resetErrorBoundary,
-}: {
-  error: Error;
-  resetErrorBoundary: () => void;
-}) {
+function FatalErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-red-50">
       <h1 className="text-3xl font-bold text-red-700 mb-2">Something went wrong</h1>
@@ -128,15 +113,6 @@ function Router() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [projectInfo, setProjectInfo] = useState<ProjectInfo | undefined>(undefined);
 
-  // ---- 🔥 GLOBAL EMERGENCY ALARM STATE ----
-  const [activeAlarm, setActiveAlarm] = useState<AlarmState>(null);
-
-  // Listen for global emergency from Firestore
-  const handleAlarm = useCallback((incidentId: string, message?: string) => {
-    setActiveAlarm({ id: incidentId, message });
-  }, []);
-  useGlobalEmergencyListener(handleAlarm);
-
   // Preload ALL critical project data on login
   useEffect(() => {
     if (isAuthenticated) {
@@ -149,14 +125,14 @@ function Router() {
         onSnapshot(collection(db, "projects", projectId, "assets"), () => {}),
         onSnapshot(collection(db, "projects", projectId, "contacts"), () => {}),
       ];
-      return () => unsubs.forEach((unsub) => unsub());
+      return () => unsubs.forEach(unsub => unsub());
     }
   }, [isAuthenticated]);
 
   // Auth, user, socket setup
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const user = localStorage.getItem("user");
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
     if (token && user) {
       setIsAuthenticated(true);
       setUserData(JSON.parse(user));
@@ -168,9 +144,9 @@ function Router() {
 
     if (token) {
       socket.connect();
-      const userObj = JSON.parse(user || "{}");
+      const userObj = JSON.parse(user || '{}');
       if (userObj.id) {
-        socket.emit("user-online", userObj.id);
+        socket.emit('user-online', userObj.id);
       }
     }
   }, []);
@@ -186,21 +162,17 @@ function Router() {
     );
   }
 
-  if (!isAuthenticated && !["/login", "/register"].includes(location)) {
+  if (!isAuthenticated && !['/login', '/register'].includes(location)) {
     return <Login />;
   }
 
   return (
     <>
       <ConnectionBanner />
-      {/* Global Emergency Alarm Modal (all users) */}
-      <EmergencyAlarmModal
-        open={!!activeAlarm}
-        onAcknowledge={() => setActiveAlarm(null)}
-        message={activeAlarm?.message || ""}
-        incidentId={activeAlarm?.id || ""}
-      />
-
+      {/* Emergency Modal: only for authenticated users and not on login/register */}
+      {isAuthenticated && userData && (
+        <EmergencyModal open={false} onClose={() => {}} teamMembers={[]} />
+      )}
       {isAuthenticated && (
         <>
           <PersistentNav />
@@ -209,13 +181,7 @@ function Router() {
         </>
       )}
       <div className="min-h-screen bg-gray-50">
-        <main
-          className={
-            isAuthenticated
-              ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6"
-              : ""
-          }
-        >
+        <main className={isAuthenticated ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6" : ""}>
           <Switch>
             <Route path="/login" component={Login} />
             <Route path="/register" component={Register} />
@@ -255,17 +221,10 @@ function Router() {
 // --- Main App Component ---
 function App() {
   useEnableOfflineSync(); // now just for listening, not enabling
-  useOnlineTracking(); // Ensures current user is always tracked/synced!
+  useOnlineTracking();    // <-- TRACK ONLINE USERS HERE
 
   return (
-    <ErrorBoundary
-      fallback={
-        <FatalErrorFallback
-          error={new Error("App crashed")}
-          resetErrorBoundary={() => window.location.reload()}
-        />
-      }
-    >
+    <ErrorBoundary fallback={<FatalErrorFallback error={new Error('App crashed')} resetErrorBoundary={() => window.location.reload()} />}>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />

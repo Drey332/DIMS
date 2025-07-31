@@ -33,7 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AIERPAdvisorModal } from "../components/AIERPAdvisorModal";
 import { AssetAIChat } from "@/components/AssetAiChat";
 
-import { useTeamMembersWithStatus } from "@/lib/onlineTracking";
+import { useTeamOnlineStatus } from "@/lib/onlineTracking"; 
 // --- Types ---
 type EmergencyContact = {
   id?: string;
@@ -192,7 +192,10 @@ export default function ProjectSetup() {
   }, []);
 
   // Get user IDs for online tracking
-  const teamMembersWithStatus = useTeamMembersWithStatus();
+  const userIds = teamMembers.map(m => m.id); // Or whatever field is the userId (sometimes it's m.userId)
+  const { teamActivity } = useTeamOnlineStatus(userIds); // INSERT HERE
+
+
   
   const [showGoldAssetModal, setShowGoldAssetModal] = useState(false);
   const [goldAssetCodeInput, setGoldAssetCodeInput] = useState("");
@@ -1966,45 +1969,28 @@ export default function ProjectSetup() {
                     <div className="text-gray-400">No team members found.</div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {[...teamMembers].sort((a, b) => {
-                        // Sort by status: ONLINE > IDLE > OFFLINE
-                      const order: Record<string, number> = { ONLINE: 0, IDLE: 1, OFFLINE: 2 };
-                      const statusA = typeof a.activityStatus === "string" ? a.activityStatus : "OFFLINE";
-                      const statusB = typeof b.activityStatus === "string" ? b.activityStatus : "OFFLINE";
-                      return (order[statusA] ?? 3) - (order[statusB] ?? 3);
-                      }).map(member => {
-                        const initials =
-                          (member.firstName?.[0] || member.name?.split(" ")[0]?.[0] || "U").toUpperCase() +
-                          (member.lastName?.[0] || member.name?.split(" ")[1]?.[0] || "N").toUpperCase();
-                        const fullName =
-                          (member.firstName || member.name?.split(" ")[0] || "Unknown") +
-                          " " +
-                          (member.lastName || member.name?.split(" ")[1] || "");
+                      {teamMembers.map(member => {
+                        const activity = teamActivity[member.id];
                         return (
                           <div key={member.id} className="flex items-center gap-3 border rounded-xl p-3 bg-white shadow-sm">
                             <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xl font-bold">
-                              {initials}
+                              {(member.firstName?.[0] ?? "U") + (member.lastName?.[0] ?? "N")}
                             </div>
                             <div className="flex-1">
-                              <div className="font-bold">{fullName}</div>
-                              <div className="text-xs text-gray-600">{member.role} {member.title ? `- ${member.title}` : ""}</div>
+                              <div className="font-bold">{member.firstName} {member.lastName}</div>
+                              <div className="text-xs text-gray-600">{member.role}</div>
                             </div>
                             <div>
                               <span className={
-                                member.activityStatus === "ONLINE"
+                                activity?.status === "ONLINE"
                                   ? "bg-green-500 text-white px-2 py-1 rounded-full"
-                                  : member.activityStatus === "IDLE"
+                                  : activity?.status === "IDLE"
                                   ? "bg-yellow-500 text-white px-2 py-1 rounded-full"
                                   : "bg-gray-300 text-gray-700 px-2 py-1 rounded-full"
                               }>
-                                {member.activityStatus || "OFFLINE"}
+                                {activity?.status || "OFFLINE"}
                               </span>
-                              {member.lastSeen && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  Last seen: {member.lastSeen}
-                                </div>
-                              )}
-                            </div>
+                              </div>
                           </div>
                         );
                       })}
