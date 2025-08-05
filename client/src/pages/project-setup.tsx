@@ -32,6 +32,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { AIERPAdvisorModal } from "../components/AIERPAdvisorModal";
 import { AssetAIChat } from "@/components/AssetAiChat";
+import ProjectAnalyticsDashboard from "@/components/ProjectAnalyticsDashboard";
 
 import { useTeamOnlineStatus } from "@/lib/onlineTracking"; 
 // --- Types ---
@@ -875,6 +876,9 @@ export default function ProjectSetup() {
                   <TabsTrigger className="px-4 py-2 rounded-xl font-medium truncate" value="team">
                     Team Assignments
                   </TabsTrigger>
+                  <TabsTrigger className="px-4 py-2 rounded-xl font-medium truncate" value="analytics">
+                    Analytics
+                  </TabsTrigger>
                   {/* --- Add other tabs here ... --- */}
                 </TabsList>
               </div>
@@ -891,6 +895,7 @@ export default function ProjectSetup() {
                   <option value="erp">ERP Protocols</option>
                   <option value="assets">Assets & Equipment</option>
                   <option value="team">Team Assignments</option>
+                  
                   {/* --- Add other options here ... --- */}
                 </select>
               </div>
@@ -2001,7 +2006,11 @@ export default function ProjectSetup() {
               </CardContent>
             </Card>
           </TabsContent>
-
+          
+          {/* ---ANALYTICS --- */}
+          <TabsContent value="analytics">
+            <ProjectAnalyticsDashboard projectId={projectInfo?.id ?? "default"} />
+          </TabsContent>
 {/* --- Add your other tabs here ... --- */}
         </Tabs>
       </main>

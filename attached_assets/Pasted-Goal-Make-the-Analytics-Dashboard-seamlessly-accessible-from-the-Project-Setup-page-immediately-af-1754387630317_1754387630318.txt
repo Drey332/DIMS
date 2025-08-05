@@ -1,0 +1,60 @@
+Goal:
+Make the Analytics Dashboard seamlessly accessible from the Project Setup page (immediately after Team Assignment). The dashboard must aggregate and visualize actionable data from emergencies and observations collections, providing real-time project safety and performance intelligence.
+
+⸻
+
+Core Analytics Dashboard Requirements:
+	1.	Trend Analysis
+	•	Visualize incident and observation trends over selectable timeframes (daily/weekly/monthly).
+	•	Show peak periods, recurring issues, and historical comparisons.
+	2.	Location Heatmaps
+	•	Interactive map displaying clusters of incidents/observations.
+	•	Identify high-risk zones/geographical hotspots.
+	3.	Type Breakdown
+	•	Pie/bar charts showing distribution of incident and observation types.
+	4.	Response Time Metrics
+	•	Display average/median response times for:
+	•	Emergency acknowledgments
+	•	Observation closure
+	5.	Team Performance Analytics
+	•	Muster rates by team/role/member
+	•	Fastest responders, laggards, and averages per role
+	6.	Compliance & Closure Tracking
+	•	Closure rates of observations/incidents
+	•	% adherence to required protocols/SOPs
+	7.	ROI Estimation
+	•	Estimate cost savings from reduced incidents, improved response, and enhanced safety compliance.
+	8.	Actionable Reports
+	•	One-click generation of management-ready reports (PDF/Excel) for review or regulatory needs.
+
+⸻
+
+Implementation Specs:
+	•	Placement:
+Analytics Dashboard must be linked and navigable from the Project Setup view (after Team Assignment step).
+	•	Data Sources:
+	•	Fetch/subscribe to emergencies and observations collections (Firestore)
+	•	Integrate with teamMembers, acks, etc., as needed for per-role analytics
+	•	Visualization:
+	•	Use charts (e.g., Recharts, Chart.js, or your UI lib), maps (react-leaflet/Mapbox), tables
+	•	All charts/tables should support filter by date range, type, status, team, and location
+	•	Export:
+	•	Export current analytics view as PDF/Excel (using libs like jsPDF/xlsx)
+	•	Performance:
+	•	Dashboard must load instantly; all visualizations must update live as data changes
+	•	UI:
+	•	Clean, modern layout matching rest of app; fits inside existing Command Dashboard shell
+
+⸻
+
+Deliverable:
+Analyze the current dashboard code, refactor and extend it to meet ALL above requirements.
+Ensure it is fully functional, stable, and ready to demo—no mockups, real data, no TypeScript errors.
+Place completed dashboard as a linked tab or section in Project Setup, immediately after Team Assignment.
+
+⸻
+
+Output:
+	•	Clean, well-commented, production-grade React code
+	•	Integrations for all analytics/visuals/exports as above
+	•	100% ready to test in staging
