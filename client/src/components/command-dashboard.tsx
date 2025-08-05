@@ -99,6 +99,7 @@ export function CommandDashboard() {
   const [obsLoading, setObsLoading] = useState(true);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [acks, setAcks] = useState<Ack[]>([]);
+  const [incidentAcks, setIncidentAcks] = useState<Record<string, Ack[]>>({});
   const [escalateObsId, setEscalateObsId] = useState<string | null>(null);
   const [escalateIncidentId, setEscalateIncidentId] = useState<string | null>(null);
   const [codeInput, setCodeInput] = useState("");
@@ -160,20 +161,24 @@ export function CommandDashboard() {
     fetchObservations();
   }, [obsView, showModal]);
 
-  // --- ACKS for latest active incident ---
+  // --- ACKS for all incidents (per-incident isolation) ---
   useEffect(() => {
     if (!incidents.length) {
       setAcks([]);
+      setIncidentAcks({});
       setActiveIncident(null);
       return;
     }
+    
     const inc = incidents.find(inc => inc.status === "ACTIVE") || incidents[0];
     setActiveIncident(inc);
 
-    let unsub: (() => void) | undefined;
-    if (inc) {
-      unsub = onSnapshot(
-        collection(db, "emergencies", inc.id, "acks"),
+    // Set up listeners for ALL incidents to ensure proper data isolation
+    const unsubscribers: Array<() => void> = [];
+    
+    incidents.forEach(incident => {
+      const unsub = onSnapshot(
+        collection(db, "emergencies", incident.id, "acks"),
         (snap) => {
           const processedAcks = snap.docs.map(doc => {
             const data = doc.data();
@@ -206,11 +211,25 @@ export function CommandDashboard() {
               time: data.time || null,
             } as Ack;
           });
-          setAcks(processedAcks);
+          
+          // Update per-incident acks storage
+          setIncidentAcks(prev => ({
+            ...prev,
+            [incident.id]: processedAcks
+          }));
+          
+          // If this is the active incident, also update the main acks state
+          if (incident.id === inc?.id) {
+            setAcks(processedAcks);
+          }
         }
       );
-    }
-    return () => { if (unsub) unsub(); };
+      unsubscribers.push(unsub);
+    });
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
   }, [incidents]);
 
   // --- Helper Functions ---
@@ -303,6 +322,35 @@ export function CommandDashboard() {
       .sort((a, b) => (a.delta! < b.delta! ? -1 : 1))[0];
   }, [acks, activeIncident]);
 
+  // Per-incident metrics for the viewed incident modal
+  const viewedIncidentMetrics = useMemo(() => {
+    if (!viewIncident) return null;
+    const viewedAcks = incidentAcks[viewIncident.id] || [];
+    const viewedAckedIds = new Set(viewedAcks.map((a) => a.userId));
+    const viewedWaiting = teamMembers.filter((m) => !viewedAckedIds.has(m.id));
+    const viewedMusterPct = teamMembers.length === 0 ? 0 : Math.round((viewedAcks.length / teamMembers.length) * 100);
+    
+    let viewedFastest = null;
+    if (viewedAcks.length > 0) {
+      const start = new Date(viewIncident.startTime).getTime();
+      viewedFastest = viewedAcks
+        .map((ack) => ({
+          ...ack,
+          delta: ack.acknowledgedAt ? Math.round((new Date(ack.acknowledgedAt).getTime() - start) / 1000) : null,
+        }))
+        .filter((a) => typeof a.delta === "number" && a.delta! >= 0)
+        .sort((a, b) => (a.delta! < b.delta! ? -1 : 1))[0];
+    }
+    
+    return {
+      ackedIds: viewedAckedIds,
+      waiting: viewedWaiting,
+      musterPct: viewedMusterPct,
+      fastest: viewedFastest,
+      totalAcks: viewedAcks.length
+    };
+  }, [viewIncident, incidentAcks, teamMembers]);
+
   return (
     <div className="px-2 md:px-3 pb-8 max-w-[1440px] mx-auto bg-gray-50">
       {/* --- Filter Controls --- */}
@@ -394,9 +442,9 @@ export function CommandDashboard() {
                         </Button>
                       </div>
                       {/* Analytics: Who hasn’t acknowledged? */}
-                      {idx === 0 && activeIncident && (
+                      {(
                         <div className="absolute top-2 right-2 text-xs text-red-600 font-bold uppercase">
-                          {acks.length} / {teamMembers.length} Mustered
+                          {(incidentAcks[incident.id] || []).length} / {teamMembers.length} Mustered
                         </div>
                       )}
                     </div>
@@ -733,6 +781,23 @@ export function CommandDashboard() {
                   </div>
                 )}
               </div>
+              
+              {/* Per-Incident Statistics */}
+              {viewedIncidentMetrics && (
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                  <h3 className="font-bold text-blue-900 mb-2">Incident Statistics</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div><b>Response Rate:</b> {viewedIncidentMetrics.musterPct}% ({viewedIncidentMetrics.totalAcks}/{teamMembers.length})</div>
+                    <div><b>Waiting:</b> {viewedIncidentMetrics.waiting.length} personnel</div>
+                    {viewedIncidentMetrics.fastest && (
+                      <>
+                        <div><b>Fastest Response:</b> {viewedIncidentMetrics.fastest.name}</div>
+                        <div><b>Response Time:</b> {viewedIncidentMetrics.fastest.delta}s</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* === Headcount Map: Mustered Personnel (with Replay) === */}
               <div className="bg-white rounded-3xl shadow-2xl border border-blue-200 p-4 sm:p-8 w-full mx-auto">
                 <h3 className="font-extrabold text-2xl mb-6 flex items-center gap-3 text-blue-700 tracking-tight">
@@ -741,7 +806,7 @@ export function CommandDashboard() {
                 </h3>
                 <div className="w-full h-[350px] rounded-xl border border-blue-200 shadow overflow-hidden mb-6">
                   <TeamHeadcountMap
-                    acks={acks}
+                    acks={incidentAcks[viewIncident.id] || []}
                     teamMembers={teamMembers}
                     incidentStartTime={viewIncident.startTime
                       ? new Date(viewIncident.startTime).getTime()
@@ -758,10 +823,10 @@ export function CommandDashboard() {
                   Acknowledged List
                 </h4>
                 <div className="space-y-2">
-                  {acks.length === 0 ? (
+                  {(incidentAcks[viewIncident.id] || []).length === 0 ? (
                     <div className="text-gray-400">No one has acknowledged yet.</div>
                   ) : (
-                    acks.map((ack) => (
+                    (incidentAcks[viewIncident.id] || []).map((ack) => (
                       <div key={ack.id} className="flex items-center gap-2 p-2 border rounded-lg">
                         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-hydro-dark">
                           {getUserInitials(ack.name)}
