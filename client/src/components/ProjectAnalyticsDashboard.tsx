@@ -1,51 +1,42 @@
-// ProjectAnalyticsDashboard.tsx
-import React, { useState, useEffect, useMemo } from 'react';
-import { db } from '../firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+// src/components/ProjectAnalyticsDashboard.tsx
+
+import React, { useState, useEffect, useMemo } from "react";
+import { db } from "../firebase";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import {
-  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area,
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LabelList
-} from 'recharts';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// Note: DatePickerWithRange would need to be implemented separately
-import { 
-  Users, AlertTriangle, Eye, Clock, CheckCircle, TrendingUp, 
-  Download, FileText, MapPin, Award, Target, DollarSign,
-  Filter, Calendar, BarChart3, PieChart as PieChartIcon,
-  Activity, Shield, Timer, Zap
-} from 'lucide-react';
-import { Incident } from '@/types';
-import jsPDF from 'jspdf';
-import * as XLSX from 'xlsx';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
+} from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Users, AlertTriangle, Eye, Clock, CheckCircle, TrendingUp, Download,
+  FileText, MapPin, Shield, DollarSign, Timer, BarChart3, PieChart as PieChartIcon
+} from "lucide-react";
+import jsPDF from "jspdf";
+import * as XLSX from "xlsx";
+import html2canvas from "html2canvas";
+import TeamHeadcountMap from "@/components/TeamHeadcountMap"; // adjust path if needed
 
-// Fix leaflet default marker icons
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-// --- Firebase-specific types for this component ---
-type FirebaseIncident = Incident & {
+type Incident = {
   id: string;
+  title: string;
+  type: string;
+  priority: string;
+  status: string;
   createdAt: string;
-  lat?: number;
-  lng?: number;
+  startTime: string;
+  description?: string;
+  initiatedBy?: string;
+  initiatorName?: string;
+  initiatorEmail?: string;
+  projectId?: string;
 };
 
 type Observation = {
   id: string;
   type: string[];
   location: string;
-  lat?: number | null; // Add optional location for heatmap
-  lng?: number | null; // Add optional location for heatmap
   vessel: string;
   system: string;
   client: string;
@@ -56,873 +47,818 @@ type Observation = {
   name: string;
   sign: string;
   date: string;
-  stopWork: boolean;
   createdAt: string;
   status: string;
-  // ... other fields if needed
+  lat?: number;
+  lng?: number;
 };
 
 type TeamMember = {
   id: string;
   firstName: string;
   lastName: string;
-  role: "GOLD" | "SILVER" | "BRONZE" | string;
+  role: string;
   title?: string;
   status?: string;
-  // ... other fields
 };
 
 type Ack = {
   id: string;
   userId: string;
+  name: string;
+  email?: string;
   acknowledgedAt: string;
-  lat?: number | null;
-  lng?: number | null;
+  time?: number;
+  lat?: number;
+  lng?: number;
   hasLocation?: boolean;
-  // ... other fields
+  incidentId?: string;
+  role?: string;
 };
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#8dd1e1'];
+const COLORS = [
+  "#2563eb", "#0ea5e9", "#10b981", "#f59e42",
+  "#f43f5e", "#a21caf", "#eab308", "#3b82f6"
+];
+
+// Main analytics tabs
+const VIEWS = [
+  { key: "live", label: "Live Analytics", icon: TrendingUp },
+  { key: "history", label: "History", icon: Clock },
+  { key: "replay", label: "Incident Replay", icon: Users },
+  { key: "performance", label: "Performance", icon: BarChart3 },
+  { key: "roi", label: "ROI Analysis", icon: DollarSign },
+] as const;
+type ViewType = typeof VIEWS[number]["key"];
 
 const ProjectAnalyticsDashboard: React.FC<{ projectId: string }> = ({ projectId }) => {
-  // --- Core Data State ---
-  const [incidents, setIncidents] = useState<FirebaseIncident[]>([]);
+  // --- Data State ---
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [acks, setAcks] = useState<Record<string, Ack[]>>({});
+  const [loading, setLoading] = useState(true);
 
-  // --- Filter State ---
-  const [timeframe, setTimeframe] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | undefined>(undefined);
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [teamFilter, setTeamFilter] = useState<string>('all');
-
-  // --- Analytics Derived State ---
-  const [selectedView, setSelectedView] = useState<'trends' | 'location' | 'performance' | 'compliance' | 'roi'>('trends');
+  // --- UI State ---
+  const [selectedView, setSelectedView] = useState<ViewType>("live");
+  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+  const [fastestResponders, setFastestResponders] = useState<Record<string, { name: string; time: number; incident: string }>>({});
 
   // --- Fetch Data ---
   useEffect(() => {
-    if (!projectId) return;
+    setLoading(true);
 
-    // Fetch Incidents
-    const incidentsQuery = query(collection(db, "emergencies"), orderBy("createdAt"));
-    const unsubIncidents = onSnapshot(incidentsQuery, (snapshot) => {
-      const incidentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FirebaseIncident));
-      setIncidents(incidentList);
-    });
+    const unsubIncidents = onSnapshot(
+      query(collection(db, "emergencies"), orderBy("createdAt")),
+      snap => {
+        const incidentData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Incident));
+        setIncidents(incidentData);
+        
+        // Set first incident as selected if none selected
+        if (!selectedIncident && incidentData.length > 0) {
+          setSelectedIncident(incidentData[0].id);
+        }
+      }
+    );
 
-    // Fetch Observations
-    const observationsQuery = query(collection(db, "observations"), orderBy("createdAt"));
-    const unsubObservations = onSnapshot(observationsQuery, (snapshot) => {
-      const observationList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation));
-      setObservations(observationList);
-    });
+    const unsubObservations = onSnapshot(
+      query(collection(db, "observations"), orderBy("createdAt")),
+      snap => setObservations(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation)))
+    );
 
-    // Fetch Team Members
-    const teamQuery = query(collection(db, "projects", projectId, "teamMembers"));
-    const unsubTeam = onSnapshot(teamQuery, (snapshot) => {
-      const teamList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember));
-      setTeamMembers(teamList);
-    });
+    const unsubTeam = onSnapshot(
+      query(collection(db, "projects", projectId, "teamMembers")),
+      snap => setTeamMembers(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TeamMember)))
+    );
 
-    // Fetch Acks for all incidents (This could be optimized if you have many incidents)
-    // For simplicity, we'll listen to acks for each incident. In a large app, consider batch fetching or limiting scope.
-    const ackUnsubs: (() => void)[] = [];
-    const handleIncidentsUpdate = () => {
-        // Unsubscribe previous ack listeners
-        ackUnsubs.forEach(unsub => unsub());
-        ackUnsubs.length = 0; // Clear the array
+    let ackUnsubs: Array<() => void> = [];
+    function setupAckListeners() {
+      ackUnsubs.forEach(fn => fn());
+      ackUnsubs = [];
+      incidents.forEach(inc => {
+        const unsub = onSnapshot(
+          collection(db, "emergencies", inc.id, "acks"),
+          snap => {
+            const ackData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ack));
+            setAcks(prev => ({
+              ...prev,
+              [inc.id]: ackData
+            }));
+            
+            // Calculate fastest responder for this incident
+            if (ackData.length > 0) {
+              const incidentStartTime = new Date(inc.startTime).getTime();
+              const fastest = ackData.reduce((fastest, ack) => {
+                const responseTime = (ack.time || new Date(ack.acknowledgedAt).getTime()) - incidentStartTime;
+                return responseTime < fastest.time ? { name: ack.name, time: responseTime, incident: inc.id } : fastest;
+              }, { name: '', time: Infinity, incident: inc.id });
+              
+              if (fastest.time !== Infinity) {
+                setFastestResponders(prev => ({
+                  ...prev,
+                  [inc.id]: fastest
+                }));
+              }
+            }
+          }
+        );
+        ackUnsubs.push(unsub);
+      });
+    }
+    setupAckListeners();
 
-        // Subscribe to acks for current incidents
-        incidents.forEach(incident => {
-            const ackQuery = query(collection(db, "emergencies", incident.id, "acks"));
-            const unsubAck = onSnapshot(ackQuery, (ackSnapshot) => {
-                 const ackList = ackSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Ack));
-                 setAcks(prev => ({ ...prev, [incident.id]: ackList }));
-            });
-            ackUnsubs.push(unsubAck);
-        });
-    };
-
-    // Run once initially and whenever incidents list changes
-    handleIncidentsUpdate();
-
-    // Cleanup listeners
+    setTimeout(() => setLoading(false), 800);
     return () => {
       unsubIncidents();
       unsubObservations();
       unsubTeam();
-      ackUnsubs.forEach(unsub => unsub());
+      ackUnsubs.forEach(fn => fn());
     };
-  }, [projectId, incidents]); // Add incidents as dependency to re-run ack subscription setup
+    // eslint-disable-next-line
+  }, [projectId, incidents.length]);
 
-  // --- Processed Data using useMemo ---
-
-  // 1. Trend Analysis: Daily Counts
+  // --- Metrics ---
   const trendData = useMemo(() => {
-    const dataMap: Record<string, { date: string; incidents: number; observations: number }> = {};
-
-    // Process Incidents
+    const map: Record<string, { date: string; incidents: number; observations: number }> = {};
     incidents.forEach(inc => {
-        const dateStr = inc.createdAt ? new Date(inc.createdAt).toISOString().split('T')[0] : '';
-        if (dateStr) {
-            if (!dataMap[dateStr]) {
-                dataMap[dateStr] = { date: dateStr, incidents: 0, observations: 0 };
-            }
-            dataMap[dateStr].incidents += 1;
-        }
+      const date = inc.createdAt ? inc.createdAt.slice(0, 10) : "";
+      if (!map[date]) map[date] = { date, incidents: 0, observations: 0 };
+      map[date].incidents += 1;
     });
-
-    // Process Observations
     observations.forEach(obs => {
-        const dateStr = obs.createdAt ? new Date(obs.createdAt).toISOString().split('T')[0] : '';
-        if (dateStr) {
-            if (!dataMap[dateStr]) {
-                dataMap[dateStr] = { date: dateStr, incidents: 0, observations: 0 };
-            }
-            dataMap[dateStr].observations += 1;
-        }
+      const date = obs.createdAt ? obs.createdAt.slice(0, 10) : "";
+      if (!map[date]) map[date] = { date, incidents: 0, observations: 0 };
+      map[date].observations += 1;
     });
-
-    // Convert map to sorted array
-    return Object.values(dataMap).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
   }, [incidents, observations]);
 
-  // --- Advanced Analytics Functions ---
-  
-  // Export to PDF
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text('HydroSafe Analytics Report', 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Project: ${projectId}`, 20, 35);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 45);
-    
-    // Add summary statistics
-    doc.text('Summary Statistics:', 20, 65);
-    doc.text(`Active Incidents: ${incidents.filter(i => i.status === 'ACTIVE').length}`, 30, 80);
-    doc.text(`Total Observations: ${observations.length}`, 30, 90);
-    doc.text(`Team Members: ${teamMembers.length}`, 30, 100);
-    
-    doc.save(`hydrosafe-analytics-${projectId}-${new Date().toISOString().split('T')[0]}.pdf`);
-  };
+  const obsTypeData = useMemo(() => {
+    const map: Record<string, number> = {};
+    observations.forEach(obs =>
+      obs.type.forEach(t => { map[t] = (map[t] || 0) + 1; })
+    );
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [observations]);
 
-  // Export to Excel
-  const exportToExcel = () => {
-    const wb = XLSX.utils.book_new();
-    
-    // Incidents sheet
-    const incidentsWS = XLSX.utils.json_to_sheet(incidents.map(inc => ({
-      'ID': inc.id,
-      'Title': inc.title,
-      'Type': inc.type,
-      'Priority': inc.priority,
-      'Status': inc.status,
-      'Start Time': inc.startTime,
-      'Description': inc.description
-    })));
-    XLSX.utils.book_append_sheet(wb, incidentsWS, 'Incidents');
-    
-    // Observations sheet
-    const observationsWS = XLSX.utils.json_to_sheet(observations.map(obs => ({
-      'ID': obs.id,
-      'Type': obs.type.join(', '),
-      'Location': obs.location,
-      'Vessel': obs.vessel,
-      'System': obs.system,
-      'Observation': obs.observation,
-      'Status': obs.status,
-      'Date': obs.date
-    })));
-    XLSX.utils.book_append_sheet(wb, observationsWS, 'Observations');
-    
-    XLSX.writeFile(wb, `hydrosafe-data-${projectId}-${new Date().toISOString().split('T')[0]}.xlsx`);
-  };
+  const incTypeData = useMemo(() => {
+    const map: Record<string, number> = {};
+    incidents.forEach(inc => {
+      const type = inc.type || "Unknown";
+      map[type] = (map[type] || 0) + 1;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [incidents]);
 
-  // Calculate ROI metrics
-  const roiMetrics = useMemo(() => {
-    const activeIncidents = incidents.filter(i => i.status === 'ACTIVE').length;
-    const resolvedIncidents = incidents.filter(i => i.status === 'RESOLVED').length;
-    const preventedIncidents = Math.max(0, observations.length - activeIncidents);
-    
-    // Estimated cost savings (example calculation)
-    const avgIncidentCost = 50000; // USD
-    const estimatedSavings = preventedIncidents * avgIncidentCost * 0.3; // 30% prevention rate
-    
-    return {
-      activeIncidents,
-      resolvedIncidents,
-      preventedIncidents,
-      estimatedSavings,
-      responseImprovement: resolvedIncidents > 0 ? (resolvedIncidents / incidents.length * 100) : 0
-    };
-  }, [incidents, observations]);
+  const closureRate = useMemo(() => {
+    if (!observations.length) return "N/A";
+    const closed = observations.filter(o => o.status === "CLOSED").length;
+    return `${Math.round((closed / observations.length) * 100)}%`;
+  }, [observations]);
 
-  // Response time analysis
+  const teamPerf = useMemo(() => {
+    const perf: Record<string, { responses: number }> = {};
+    Object.entries(acks).forEach(([, ackList]) => {
+      ackList.forEach(ack => {
+        perf[ack.userId] = perf[ack.userId] || { responses: 0 };
+        perf[ack.userId].responses += 1;
+      });
+    });
+    return teamMembers.map(m => ({
+      ...m,
+      responses: perf[m.id]?.responses || 0
+    })).sort((a, b) => b.responses - a.responses);
+  }, [acks, teamMembers]);
+
   const responseTimeMetrics = useMemo(() => {
-    const responseTimes: number[] = [];
+    const times: number[] = [];
+    const byIncident: Record<string, { 
+      average: number; 
+      fastest: number; 
+      slowest: number; 
+      count: number; 
+      responses: { name: string; time: number; userId: string }[] 
+    }> = {};
     
     Object.entries(acks).forEach(([incidentId, ackList]) => {
-      if (ackList.length > 0) {
-        const incident = incidents.find(i => i.id === incidentId);
-        if (incident?.startTime) {
-          const startTime = new Date(incident.startTime).getTime();
-          const firstAck = ackList.sort((a, b) => new Date(a.acknowledgedAt).getTime() - new Date(b.acknowledgedAt).getTime())[0];
-          if (firstAck) {
-            const ackTime = new Date(firstAck.acknowledgedAt).getTime();
-            const responseTime = (ackTime - startTime) / 1000 / 60; // minutes
-            responseTimes.push(responseTime);
+      const inc = incidents.find(i => i.id === incidentId);
+      if (inc?.startTime && ackList.length) {
+        const start = new Date(inc.startTime).getTime();
+        const incidentTimes: number[] = [];
+        const responses: { name: string; time: number; userId: string }[] = [];
+        
+        ackList.forEach(ack => {
+          const ackTime = ack.time || new Date(ack.acknowledgedAt).getTime();
+          if (Number.isFinite(ackTime) && ackTime > start) {
+            const responseTime = (ackTime - start) / 60000; // Convert to minutes
+            incidentTimes.push(responseTime);
+            times.push(responseTime);
+            responses.push({
+              name: ack.name,
+              time: responseTime,
+              userId: ack.userId
+            });
           }
+        });
+        
+        if (incidentTimes.length > 0) {
+          byIncident[incidentId] = {
+            average: incidentTimes.reduce((a, b) => a + b, 0) / incidentTimes.length,
+            fastest: Math.min(...incidentTimes),
+            slowest: Math.max(...incidentTimes),
+            count: incidentTimes.length,
+            responses: responses.sort((a, b) => a.time - b.time)
+          };
         }
       }
     });
-
-    const avgResponseTime = responseTimes.length > 0 ? 
-      responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length : 0;
-    const medianResponseTime = responseTimes.length > 0 ? 
-      responseTimes.sort((a, b) => a - b)[Math.floor(responseTimes.length / 2)] : 0;
-
+    
+    const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+    const med = times.length ? [...times].sort((a, b) => a - b)[Math.floor(times.length / 2)] : 0;
     return {
-      average: avgResponseTime,
-      median: medianResponseTime,
-      fastest: Math.min(...responseTimes) || 0,
-      slowest: Math.max(...responseTimes) || 0,
-      total: responseTimes.length
+      average: avg,
+      median: med,
+      fastest: times.length ? Math.min(...times) : 0,
+      slowest: times.length ? Math.max(...times) : 0,
+      total: times.length,
+      byIncident
     };
   }, [acks, incidents]);
 
-  // Team performance metrics
-  const teamPerformanceMetrics = useMemo(() => {
-    const memberPerformance: Record<string, { 
-      name: string; 
-      role: string; 
-      responses: number; 
-      avgResponseTime: number; 
-      totalIncidents: number 
-    }> = {};
+  // --- ROI: Improve/expand the math here later
+  const roiMetrics = useMemo(() => {
+    const active = incidents.filter(i => i.status === "ACTIVE").length;
+    const resolved = incidents.filter(i => i.status === "RESOLVED").length;
+    const prevented = Math.max(0, observations.length - active);
+    const avgCost = 50000;
+    const estimatedSavings = prevented * avgCost * 0.3;
+    return {
+      active, resolved, prevented, estimatedSavings,
+      responseImprovement: resolved > 0 ? (resolved / incidents.length) * 100 : 0
+    };
+  }, [incidents, observations]);
 
-    Object.entries(acks).forEach(([incidentId, ackList]) => {
-      ackList.forEach(ack => {
-        const member = teamMembers.find(m => m.id === ack.userId);
-        if (member) {
-          if (!memberPerformance[ack.userId]) {
-            memberPerformance[ack.userId] = {
-              name: `${member.firstName} ${member.lastName}`,
-              role: member.role,
-              responses: 0,
-              avgResponseTime: 0,
-              totalIncidents: 0
-            };
-          }
-          memberPerformance[ack.userId].responses++;
-        }
-      });
+
+  function enrichAcksForMap(
+    acks: Ack[],
+    teamMembers: TeamMember[]
+  ): {
+    id: string;
+    userId: string;
+    name: string;
+    lat: number | null;
+    lng: number | null;
+    avatarUrl?: string | null;
+    email?: string | null;
+    acknowledgedAt?: string | null;
+    role?: string | null;
+    locationError?: string | null;
+    hasLocation: boolean;
+    time?: number;
+  }[] {
+    return acks.map(ack => {
+      const member = teamMembers.find(m => m.id === ack.userId);
+      const lat = typeof ack.lat === "number" ? ack.lat : null;
+      const lng = typeof ack.lng === "number" ? ack.lng : null;
+      return {
+        ...ack,
+        name:
+          member
+            ? `${member.firstName} ${member.lastName}`
+            : (ack as any).name || "Unknown",
+        avatarUrl: (ack as any).avatarUrl || null,
+        email: (ack as any).email || null,
+        hasLocation: typeof lat === "number" && typeof lng === "number",
+        lat,
+        lng,
+        role: member?.role || (ack as any).role || null,
+        acknowledgedAt: (ack as any).acknowledgedAt || null,
+        time: (ack as any).time || undefined,
+        locationError: (ack as any).locationError || null,
+      };
     });
+  }
+  // --- Export Functions ---
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.text("HydroSafe Project Analytics Report", 10, 10);
+    doc.save(`hydrosafe-analytics-${projectId}.pdf`);
+  };
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(incidents), "Incidents");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(observations), "Observations");
+    XLSX.writeFile(wb, `hydrosafe-analytics-${projectId}.xlsx`);
+  };
 
-    return Object.values(memberPerformance).sort((a, b) => b.responses - a.responses);
-  }, [acks, teamMembers]);
+  // Export PDF of Map/Table (History tab)
+  const exportMapTableToPDF = async () => {
+    const input = document.getElementById('map-table-export');
+    if (!input) return;
+    const canvas = await html2canvas(input);
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    pdf.addImage(imgData, 'PNG', 40, 40, 750, 450);
+    pdf.save(`hydrosafe-analytics-map-table-${projectId}.pdf`);
+  };
 
-  // 2. Type Breakdown
-  const observationTypeData = useMemo(() => {
-    const typeMap: Record<string, number> = {};
-    observations.forEach(obs => {
-        obs.type.forEach(t => {
-            typeMap[t] = (typeMap[t] || 0) + 1;
-        });
-    });
-    return Object.entries(typeMap).map(([name, value]) => ({ name, value }));
-  }, [observations]);
-
-  const incidentTypeData = useMemo(() => {
-    const typeMap: Record<string, number> = {};
-    incidents.forEach(inc => {
-        const type = inc.type || 'Unknown';
-        typeMap[type] = (typeMap[type] || 0) + 1;
-    });
-    return Object.entries(typeMap).map(([name, value]) => ({ name, value }));
-  }, [incidents]);
-
-  // 3. Response Time Metrics (Average)
-  const avgResponseTime = useMemo(() => {
-    if (incidents.length === 0 || Object.keys(acks).length === 0) return "N/A";
-
-    let totalResponseTimeMs = 0;
-    let validIncidentCount = 0;
-
-    incidents.forEach(inc => {
-        const incidentStartTime = inc.startTime ? new Date(inc.startTime).getTime() : null;
-        const incidentAcks = acks[inc.id] || [];
-
-        if (incidentStartTime && incidentAcks.length > 0) {
-            // Find the earliest ack for this incident
-            const earliestAckTime = incidentAcks
-                .map(ack => ack.acknowledgedAt ? new Date(ack.acknowledgedAt).getTime() : null)
-                .filter(time => time !== null) as number[];
-
-            if (earliestAckTime.length > 0) {
-                const minAckTime = Math.min(...earliestAckTime);
-                totalResponseTimeMs += (minAckTime - incidentStartTime);
-                validIncidentCount += 1;
-            }
-        }
-    });
-
-    if (validIncidentCount === 0) return "N/A";
-
-    const avgMs = totalResponseTimeMs / validIncidentCount;
-    // Convert to minutes and seconds for display
-    const minutes = Math.floor(avgMs / 60000);
-    const seconds = Math.floor((avgMs % 60000) / 1000);
-    return `${minutes}m ${seconds}s`;
-  }, [incidents, acks]);
-
-  // 4. Closure Rate
-  const closureRate = useMemo(() => {
-    if (observations.length === 0) return "N/A";
-    const closedCount = observations.filter(obs => obs.status === "CLOSED").length;
-    return `${Math.round((closedCount / observations.length) * 100)}%`;
-  }, [observations]);
-
-  // 5. Team Performance: Muster Rate (Simplified - based on acks for latest active incident)
-  // This is a simplified version. A full analysis would require tracking acks per incident over time.
-  const musterRate = useMemo(() => {
-    if (incidents.length === 0 || teamMembers.length === 0 || Object.keys(acks).length === 0) return "N/A";
-
-    // Find the latest active incident or the most recent one
-    const latestIncident = [...incidents]
-        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())[0];
-
-    if (!latestIncident) return "N/A";
-
-    const latestAcks = acks[latestIncident.id] || [];
-    const ackedUserIds = new Set(latestAcks.map(ack => ack.userId));
-    const musterCount = teamMembers.filter(tm => ackedUserIds.has(tm.id)).length;
-
-    return `${Math.round((musterCount / teamMembers.length) * 100)}%`;
-  }, [incidents, teamMembers, acks]);
-
-  // 6. Location Heatmap Data (Prepare data points)
-  // This prepares data for a potential map component. For now, we'll show a list of locations with counts.
-  const locationHeatmapData = useMemo(() => {
-    const locMap: Record<string, { name: string; count: number; lat: number | null; lng: number | null }> = {};
-
-    // Combine locations from incidents (if stored) and observations
-    // Assuming observations primarily have the location field for heatmap
-    observations.forEach(obs => {
-        const locName = obs.location || 'Unknown Location';
-        if (!locMap[locName]) {
-            locMap[locName] = { name: locName, count: 0, lat: obs.lat || null, lng: obs.lng || null };
-        }
-        locMap[locName].count += 1;
-    });
-
-    // Sort by count descending
-    return Object.values(locMap).sort((a, b) => b.count - a.count);
-  }, [observations]);
-
-  // --- Render Component ---
+  // --- Render ---
   return (
-    <div className="space-y-6 p-4 lg:p-6 max-w-7xl mx-auto glassy-bg">
-      {/* Header with Export Actions */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+    <div className="w-full max-w-7xl mx-auto py-6 px-4 space-y-8">
+      {/* Header, Actions */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold neon-text">HydroSafe Analytics Dashboard</h1>
-          <p className="text-gray-300 mt-1">Real-time safety intelligence and performance metrics</p>
+          <h1 className="text-2xl font-extrabold text-slate-800">HydroSafe Analytics Dashboard</h1>
+          <div className="text-gray-500 text-sm mt-1">Project-wide safety & performance insights</div>
         </div>
         <div className="flex gap-2">
-          <Button onClick={exportToPDF} className="bg-blue-500 hover:bg-blue-600 neon-border">
-            <FileText className="w-4 h-4 mr-2" />
-            Export PDF
-          </Button>
-          <Button onClick={exportToExcel} className="bg-green-500 hover:bg-green-600 neon-border">
-            <Download className="w-4 h-4 mr-2" />
-            Export Excel
-          </Button>
+          <Button onClick={exportToPDF} variant="outline"><FileText className="w-4 h-4 mr-2" />Export PDF</Button>
+          <Button onClick={exportToExcel} variant="outline"><Download className="w-4 h-4 mr-2" />Export Excel</Button>
+          <Button onClick={exportMapTableToPDF} variant="outline"><Download className="w-4 h-4 mr-2" />Download Report</Button>
         </div>
       </div>
 
-      {/* Advanced Filter Controls */}
-      <Card className="glassy-card neon-border">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5 text-cyan-400" />
-            Advanced Filters & Controls
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-300">Timeframe</label>
-              <Select value={timeframe} onValueChange={(value: 'daily' | 'weekly' | 'monthly') => setTimeframe(value)}>
-                <SelectTrigger className="glassy-bg neon-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-300">Type Filter</label>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="glassy-bg neon-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="MEDICAL">Medical</SelectItem>
-                  <SelectItem value="EQUIPMENT">Equipment</SelectItem>
-                  <SelectItem value="WEATHER">Weather</SelectItem>
-                  <SelectItem value="OPERATIONAL">Operational</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-300">Status Filter</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="glassy-bg neon-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="RESOLVED">Resolved</SelectItem>
-                  <SelectItem value="ESCALATED">Escalated</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-300">Team Filter</label>
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger className="glassy-bg neon-border">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  <SelectItem value="GOLD">Gold Command</SelectItem>
-                  <SelectItem value="SILVER">Silver Command</SelectItem>
-                  <SelectItem value="BRONZE">Bronze Command</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* View Selector */}
-      <div className="flex gap-2 mb-6 overflow-x-auto">
-        {[
-          { key: 'trends', label: 'Trend Analysis', icon: TrendingUp },
-          { key: 'location', label: 'Location Heatmap', icon: MapPin },
-          { key: 'performance', label: 'Team Performance', icon: Users },
-          { key: 'compliance', label: 'Compliance', icon: Shield },
-          { key: 'roi', label: 'ROI Analysis', icon: DollarSign }
-        ].map(({ key, label, icon: Icon }) => (
+      {/* View Switcher */}
+      <div className="flex gap-2 mb-4 overflow-x-auto">
+        {VIEWS.map(({ key, label, icon: Icon }) => (
           <Button
             key={key}
-            onClick={() => setSelectedView(key as any)}
+            onClick={() => setSelectedView(key)}
             variant={selectedView === key ? "default" : "outline"}
-            className={`${selectedView === key ? 'neon-border animate-glow' : 'glassy-bg'} whitespace-nowrap`}
+            className="flex items-center gap-2 whitespace-nowrap"
           >
-            <Icon className="w-4 h-4 mr-2" />
+            <Icon className="w-4 h-4" />
             {label}
           </Button>
         ))}
       </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="glassy-card neon-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-300">Total Incidents</CardTitle>
-            <AlertTriangle className="h-5 w-5 text-red-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold neon-text">{incidents.length}</div>
-            <p className="text-xs text-gray-400">Monitored emergencies</p>
-          </CardContent>
-        </Card>
-        <Card className="glassy-card neon-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-300">Total Observations</CardTitle>
-            <Eye className="h-5 w-5 text-green-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold neon-text">{observations.length}</div>
-            <p className="text-xs text-gray-400">Safety observations</p>
-          </CardContent>
-        </Card>
-        <Card className="glassy-card neon-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-300">Avg. Response Time</CardTitle>
-            <Clock className="h-5 w-5 text-purple-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold neon-text">{responseTimeMetrics.average.toFixed(1)}m</div>
-            <p className="text-xs text-gray-400">To first acknowledgment</p>
-          </CardContent>
-        </Card>
-        <Card className="glassy-card neon-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-300">Closure Rate</CardTitle>
-            <CheckCircle className="h-5 w-5 text-amber-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold neon-text">{closureRate}</div>
-            <p className="text-xs text-gray-400">Actions completed</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Conditional Content Based on Selected View */}
-      {selectedView === 'trends' && (
-        <div className="space-y-6">
-          {/* Trend Analysis Chart */}
-          <Card className="glassy-card neon-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 neon-text">
-                <TrendingUp className="h-5 w-5 text-cyan-400" /> 
-                Incident & Observation Trends
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={trendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="colorIncidents" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorObservations" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="date" stroke="#9ca3af" />
-                    <YAxis stroke="#9ca3af" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(0,0,0,0.8)', 
-                        border: '1px solid #06b6d4',
-                        borderRadius: '8px'
-                      }} 
-                    />
-                    <Legend />
-                    <Area 
-                      type="monotone" 
-                      dataKey="incidents" 
-                      stroke="#ef4444" 
-                      fillOpacity={1} 
-                      fill="url(#colorIncidents)"
-                      name="Incidents"
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="observations" 
-                      stroke="#3b82f6" 
-                      fillOpacity={1} 
-                      fill="url(#colorObservations)"
-                      name="Observations"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+      {/* Loading State */}
+      {loading ? (
+        <div className="text-center text-lg text-blue-500 py-12">Loading analytics…</div>
+      ) : (
+        <>
+          {/* --- LIVE TAB --- */}
+          {selectedView === "live" && (
+            <>
+              {/* Key Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-base font-medium">Incidents</CardTitle>
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{incidents.length}</div>
+                    <div className="text-xs text-slate-500">Total emergencies</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-base font-medium">Observations</CardTitle>
+                    <Eye className="w-5 h-5 text-green-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{observations.length}</div>
+                    <div className="text-xs text-slate-500">Safety observations</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-base font-medium">Avg. Response Time</CardTitle>
+                    <Clock className="w-5 h-5 text-purple-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{responseTimeMetrics.average.toFixed(1)}m</div>
+                    <div className="text-xs text-slate-500">To first acknowledgment</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-base font-medium">Closure Rate</CardTitle>
+                    <CheckCircle className="w-5 h-5 text-amber-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{closureRate}</div>
+                    <div className="text-xs text-slate-500">Actions completed</div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
-      {selectedView === 'location' && (
-        <div className="space-y-6">
-          {/* Location Heatmap */}
-          <Card className="glassy-card neon-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 neon-text">
-                <MapPin className="h-5 w-5 text-green-400" />
-                Location Risk Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Risk Hotspots List */}
-                <div>
-                  <h4 className="font-semibold mb-4 text-gray-300">High-Risk Locations</h4>
-                  {locationHeatmapData.length > 0 ? (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {locationHeatmapData.slice(0, 10).map((loc, index) => (
-                        <div key={loc.name} className="flex items-center justify-between p-3 glassy-bg rounded-lg neon-border">
-                          <span className="font-medium text-gray-300">{index + 1}. {loc.name}</span>
-                          <Badge variant="secondary" className="neon-border">
-                            {loc.count} reports
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-gray-400 text-center py-4">No location data available.</p>
-                  )}
-                </div>
-                
-                {/* Interactive Map Placeholder */}
-                <div className="h-96 glassy-bg rounded-lg neon-border flex items-center justify-center">
-                  <div className="text-center text-gray-400">
-                    <MapPin className="h-16 w-16 mx-auto mb-4 text-cyan-400" />
-                    <p>Interactive Map</p>
-                    <p className="text-sm">Real-time location tracking</p>
+              {/* Trends Area Chart */}
+              <Card className="mt-8">
+                <CardHeader>
+                  <CardTitle className="flex gap-2 items-center text-lg font-bold">
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
+                    Incident & Observation Trends
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={trendData}>
+                        <defs>
+                          <linearGradient id="c1" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.9} />
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="c2" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+                        <XAxis dataKey="date" stroke="#64748b" />
+                        <YAxis stroke="#64748b" />
+                        <Tooltip />
+                        <Legend />
+                        <Area type="monotone" dataKey="incidents" stroke="#2563eb" fill="url(#c1)" />
+                        <Area type="monotone" dataKey="observations" stroke="#22d3ee" fill="url(#c2)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                </CardContent>
+              </Card>
+            </>
+          )}
 
-      {selectedView === 'performance' && (
-        <div className="space-y-6">
-          {/* Team Performance Analytics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="glassy-card neon-border">
+          {/* --- HISTORY TAB --- */}
+          {selectedView === "history" && (
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 neon-text">
-                  <Users className="h-5 w-5 text-blue-400" />
-                  Team Response Performance
+                <CardTitle className="flex gap-2 items-center text-lg font-bold">
+                  <Clock className="w-5 h-5 text-blue-500" /> Incident & Observation History
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {teamPerformanceMetrics.map((member, index) => (
-                    <div key={member.name} className="flex items-center justify-between p-3 glassy-bg rounded-lg">
-                      <div>
-                        <div className="font-medium text-gray-300">{member.name}</div>
-                        <div className="text-sm text-gray-400">{member.role}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold text-cyan-400">{member.responses}</div>
-                        <div className="text-xs text-gray-400">responses</div>
-                      </div>
+                <div className="overflow-x-auto" id="map-table-export">
+                  <table className="min-w-full text-left text-sm mt-2 border">
+                    <thead>
+                      <tr>
+                        <th className="px-3 py-2 font-bold">Date</th>
+                        <th className="px-3 py-2 font-bold">Type</th>
+                        <th className="px-3 py-2 font-bold">Title/Obs</th>
+                        <th className="px-3 py-2 font-bold">Status</th>
+                        <th className="px-3 py-2 font-bold">Location</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {incidents.map(i => (
+                        <tr key={i.id} className="border-b">
+                          <td className="px-3 py-2">{i.createdAt?.slice(0, 10)}</td>
+                          <td className="px-3 py-2">{i.type}</td>
+                          <td className="px-3 py-2">{i.title}</td>
+                          <td className="px-3 py-2">{i.status}</td>
+                          <td className="px-3 py-2">—</td>
+                          </tr>
+                          ))}
+                          {observations.map(obs => (
+                          <tr key={obs.id} className="border-b">
+                          <td className="px-3 py-2">{obs.createdAt?.slice(0, 10)}</td>
+                          <td className="px-3 py-2">{obs.type.join(", ")}</td>
+                          <td className="px-3 py-2">{obs.observation}</td>
+                          <td className="px-3 py-2">{obs.status}</td>
+                          <td className="px-3 py-2">{obs.location}</td>
+                          </tr>
+                          ))}
+                          </tbody>
+                          </table>
+                          </div>
+                          </CardContent>
+                          </Card>
+                          )}
+
+          {/* --- REPLAY TAB (INCIDENT-SPECIFIC REPLAY) --- */}
+          {selectedView === "replay" && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex gap-2 items-center text-lg font-bold">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  Per-Incident Muster Replay
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {incidents.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500">No incidents to replay.</div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Incident Selector */}
+                    <div className="space-y-3">
+                      <label className="font-semibold text-slate-700">Select Incident to Replay:</label>
+                      <select 
+                        value={selectedIncident || incidents[0]?.id || ""} 
+                        onChange={(e) => setSelectedIncident(e.target.value)}
+                        className="w-full p-2 border rounded-lg bg-white"
+                      >
+                        {incidents.map(inc => (
+                          <option key={inc.id} value={inc.id}>
+                            {inc.title} - {new Date(inc.startTime).toLocaleDateString()} 
+                            ({(acks[inc.id] || []).length} responses)
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  ))}
-                </div>
+
+                    {selectedIncident && incidents.find(i => i.id === selectedIncident) && (
+                      <>
+                        {/* Incident Details */}
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <h3 className="font-bold text-blue-900">Incident Details</h3>
+                          <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
+                            <div><strong>Started:</strong> {new Date(incidents.find(i => i.id === selectedIncident)!.startTime).toLocaleString()}</div>
+                            <div><strong>Type:</strong> {incidents.find(i => i.id === selectedIncident)!.type}</div>
+                            <div><strong>Priority:</strong> {incidents.find(i => i.id === selectedIncident)!.priority}</div>
+                            <div><strong>Status:</strong> {incidents.find(i => i.id === selectedIncident)!.status}</div>
+                            <div><strong>Initiated by:</strong> {incidents.find(i => i.id === selectedIncident)!.initiatorName || "Unknown"}</div>
+                            <div><strong>Total Responses:</strong> {(acks[selectedIncident] || []).length}</div>
+                          </div>
+                        </div>
+
+                        {/* Response Performance for Selected Incident */}
+                        {responseTimeMetrics.byIncident[selectedIncident] && (
+                          <div className="bg-green-50 p-4 rounded-lg">
+                            <h3 className="font-bold text-green-900">Response Performance</h3>
+                            <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
+                              <div><strong>Fastest:</strong> {responseTimeMetrics.byIncident[selectedIncident].fastest.toFixed(1)}m</div>
+                              <div><strong>Average:</strong> {responseTimeMetrics.byIncident[selectedIncident].average.toFixed(1)}m</div>
+                              <div><strong>Slowest:</strong> {responseTimeMetrics.byIncident[selectedIncident].slowest.toFixed(1)}m</div>
+                            </div>
+                            <div className="mt-3">
+                              <h4 className="font-semibold">Response Order:</h4>
+                              <div className="max-h-32 overflow-y-auto">
+                                {responseTimeMetrics.byIncident[selectedIncident].responses.map((resp, idx) => (
+                                  <div key={resp.userId} className="text-xs py-1 border-b">
+                                    #{idx + 1}: {resp.name} - {resp.time.toFixed(1)}m
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Map Replay */}
+                        <div style={{ height: 420 }} className="border rounded-lg shadow">
+                          <TeamHeadcountMap
+                            acks={enrichAcksForMap(
+                              acks[selectedIncident] || [], 
+                              teamMembers
+                            )}
+                            teamMembers={teamMembers}
+                            incidentStartTime={
+                              new Date(incidents.find(i => i.id === selectedIncident)!.startTime).getTime()
+                            }
+                            enableReplay={true}
+                            replayWindow={5 * 60 * 1000}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
+          )}
 
-            <Card className="glassy-card neon-border">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 neon-text">
-                  <Timer className="h-5 w-5 text-purple-400" />
-                  Response Time Metrics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 glassy-bg rounded-lg">
-                    <div className="text-2xl font-bold text-cyan-400">
+          {/* --- PERFORMANCE TAB --- */}
+          {selectedView === "performance" && (
+            <div className="space-y-6">
+              {/* Performance Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Fastest Overall Response</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
                       {responseTimeMetrics.fastest.toFixed(1)}m
                     </div>
-                    <div className="text-sm text-gray-400">Fastest</div>
-                  </div>
-                  <div className="text-center p-3 glassy-bg rounded-lg">
-                    <div className="text-2xl font-bold text-purple-400">
+                    <div className="text-xs text-slate-500">Best emergency response time</div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Average Response</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-blue-600">
                       {responseTimeMetrics.average.toFixed(1)}m
                     </div>
-                    <div className="text-sm text-gray-400">Average</div>
-                  </div>
-                  <div className="text-center p-3 glassy-bg rounded-lg">
-                    <div className="text-2xl font-bold text-yellow-400">
-                      {responseTimeMetrics.median.toFixed(1)}m
+                    <div className="text-xs text-slate-500">Across all incidents</div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">Team Participation</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {Math.round((responseTimeMetrics.total / (incidents.length * teamMembers.length || 1)) * 100)}%
                     </div>
-                    <div className="text-sm text-gray-400">Median</div>
-                  </div>
-                  <div className="text-center p-3 glassy-bg rounded-lg">
-                    <div className="text-2xl font-bold text-red-400">
-                      {responseTimeMetrics.slowest.toFixed(1)}m
-                    </div>
-                    <div className="text-sm text-gray-400">Slowest</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
-
-      {selectedView === 'compliance' && (
-        <div className="space-y-6">
-          {/* Compliance Dashboard */}
-          <Card className="glassy-card neon-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 neon-text">
-                <Shield className="h-5 w-5 text-green-400" />
-                Compliance & Safety Metrics
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center p-4 glassy-bg rounded-lg">
-                  <div className="text-3xl font-bold text-green-400 mb-2">
-                    {Math.round((incidents.filter(i => i.status === 'RESOLVED').length / Math.max(incidents.length, 1)) * 100)}%
-                  </div>
-                  <div className="text-sm text-gray-400">Incident Resolution Rate</div>
-                </div>
-                <div className="text-center p-4 glassy-bg rounded-lg">
-                  <div className="text-3xl font-bold text-blue-400 mb-2">
-                    {Math.round((observations.filter(o => o.status === 'CLOSED').length / Math.max(observations.length, 1)) * 100)}%
-                  </div>
-                  <div className="text-sm text-gray-400">Observation Closure Rate</div>
-                </div>
-                <div className="text-center p-4 glassy-bg rounded-lg">
-                  <div className="text-3xl font-bold text-purple-400 mb-2">
-                    {responseTimeMetrics.total}
-                  </div>
-                  <div className="text-sm text-gray-400">Total Responses</div>
-                </div>
+                    <div className="text-xs text-slate-500">Response rate per incident</div>
+                  </CardContent>
+                </Card>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
-      {selectedView === 'roi' && (
-        <div className="space-y-6">
-          {/* ROI Analysis */}
-          <Card className="glassy-card neon-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 neon-text">
-                <DollarSign className="h-5 w-5 text-yellow-400" />
-                ROI & Cost Savings Analysis
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="text-center p-4 glassy-bg rounded-lg neon-border">
-                  <div className="text-2xl font-bold text-green-400 mb-2">
-                    ${roiMetrics.estimatedSavings.toLocaleString()}
+              {/* Per-Incident Performance Table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Per-Incident Performance Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Incident</th>
+                          <th className="text-left p-2">Started</th>
+                          <th className="text-left p-2">Responses</th>
+                          <th className="text-left p-2">Fastest</th>
+                          <th className="text-left p-2">Average</th>
+                          <th className="text-left p-2">Champion</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {incidents.map(inc => {
+                          const perf = responseTimeMetrics.byIncident[inc.id];
+                          const fastest = fastestResponders[inc.id];
+                          return (
+                            <tr key={inc.id} className="border-b hover:bg-gray-50">
+                              <td className="p-2 font-medium">{inc.title}</td>
+                              <td className="p-2 text-gray-600">{new Date(inc.startTime).toLocaleDateString()}</td>
+                              <td className="p-2">{perf?.count || 0}</td>
+                              <td className="p-2 text-green-600">{perf?.fastest.toFixed(1) || "—"}m</td>
+                              <td className="p-2">{perf?.average.toFixed(1) || "—"}m</td>
+                              <td className="p-2">
+                                {fastest ? (
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                                    🏆 {fastest.name}
+                                  </span>
+                                ) : "—"}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="text-sm text-gray-400">Estimated Savings</div>
-                </div>
-                <div className="text-center p-4 glassy-bg rounded-lg neon-border">
-                  <div className="text-2xl font-bold text-blue-400 mb-2">
-                    {roiMetrics.preventedIncidents}
-                  </div>
-                  <div className="text-sm text-gray-400">Prevented Incidents</div>
-                </div>
-                <div className="text-center p-4 glassy-bg rounded-lg neon-border">
-                  <div className="text-2xl font-bold text-purple-400 mb-2">
-                    {roiMetrics.responseImprovement.toFixed(1)}%
-                  </div>
-                  <div className="text-sm text-gray-400">Response Improvement</div>
-                </div>
-                <div className="text-center p-4 glassy-bg rounded-lg neon-border">
-                  <div className="text-2xl font-bold text-cyan-400 mb-2">
-                    {Math.round(roiMetrics.estimatedSavings / 50000 * 100)}%
-                  </div>
-                  <div className="text-sm text-gray-400">ROI Efficiency</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                </CardContent>
+              </Card>
 
-      {/* Additional Analytics Charts for All Views */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Type Breakdown - Observations */}
-        <Card className="glassy-card neon-border">
-          <CardHeader>
-            <CardTitle className="neon-text">Observation Type Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              {observationTypeData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={observationTypeData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={true}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                      nameKey="name"
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {observationTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value) => [`${value}`, 'Count']}
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(0,0,0,0.8)', 
-                        border: '1px solid #06b6d4',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
-                  <div className="text-center">
-                    <PieChartIcon className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-                    <p>No observation data available</p>
+              {/* Team Member Performance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Team Response Statistics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {teamPerf.slice(0, 12).map(member => (
+                      <div key={member.id} className="p-3 border rounded-lg">
+                        <div className="font-medium">{member.firstName} {member.lastName}</div>
+                        <div className="text-sm text-gray-600">{member.role}</div>
+                        <div className="text-lg font-bold text-blue-600">{member.responses}</div>
+                        <div className="text-xs text-gray-500">emergency responses</div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              )}
+                </CardContent>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+          )}
+                          {/* --- ROI ANALYSIS --- */}
+                          {selectedView === "roi" && (
+                          <Card>
+                          <CardHeader>
+                          <CardTitle className="flex gap-2 items-center text-lg font-bold">
+                          <DollarSign className="w-5 h-5 text-yellow-400" />
+                          ROI & Cost Savings
+                          </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="text-center p-4">
+                          <div className="text-2xl font-bold text-green-600 mb-2">
+                          ${roiMetrics.estimatedSavings.toLocaleString()}
+                          </div>
+                          <div className="text-sm text-gray-500">Estimated Savings</div>
+                          </div>
+                          <div className="text-center p-4">
+                          <div className="text-2xl font-bold text-blue-600 mb-2">
+                          {roiMetrics.prevented}
+                          </div>
+                          <div className="text-sm text-gray-500">Prevented Incidents</div>
+                          </div>
+                          <div className="text-center p-4">
+                          <div className="text-2xl font-bold text-purple-600 mb-2">
+                          {roiMetrics.responseImprovement.toFixed(1)}%
+                          </div>
+                          <div className="text-sm text-gray-500">Response Improvement</div>
+                          </div>
+                          <div className="text-center p-4">
+                          <div className="text-2xl font-bold text-cyan-600 mb-2">
+                          {Math.round((roiMetrics.estimatedSavings / 50000) * 100)}%
+                          </div>
+                          <div className="text-sm text-gray-500">ROI Efficiency</div>
+                          </div>
+                          </div>
+                          </CardContent>
+                          </Card>
+                          )}
 
-        {/* Type Breakdown - Incidents */}
-        <Card className="glassy-card neon-border">
-          <CardHeader>
-            <CardTitle className="neon-text">Incident Type Distribution</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              {incidentTypeData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={incidentTypeData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} stroke="#9ca3af" />
-                    <YAxis stroke="#9ca3af" />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(0,0,0,0.8)', 
-                        border: '1px solid #06b6d4',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Bar dataKey="value" name="Count" fill="#ef4444">
-                      <LabelList dataKey="value" position="top" />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
-                  <div className="text-center">
-                    <BarChart3 className="h-16 w-16 mx-auto mb-4 text-gray-500" />
-                    <p>No incident data available</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-};
+                          {/* --- Additional Charts --- */}
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                          {/* Observation Type Pie */}
+                          <Card>
+                          <CardHeader>
+                          <CardTitle className="flex gap-2 items-center text-base font-bold">
+                          <PieChartIcon className="w-5 h-5 text-blue-600" />
+                          Observation Type Distribution
+                          </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                          <div className="h-80">
+                          {obsTypeData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                          <Pie
+                          data={obsTypeData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={true}
+                          outerRadius={80}
+                          fill="#2563eb"
+                          dataKey="value"
+                          nameKey="name"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          >
+                          {obsTypeData.map((entry, idx) => (
+                            <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                          ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                          </PieChart>
+                          </ResponsiveContainer>
+                          ) : (
+                          <div className="flex items-center justify-center h-full text-slate-400">
+                          <div className="text-center">
+                          <PieChartIcon className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+                          <p>No observation data available</p>
+                          </div>
+                          </div>
+                          )}
+                          </div>
+                          </CardContent>
+                          </Card>
 
-export default ProjectAnalyticsDashboard;
+                          {/* Incident Type Bar */}
+                          <Card>
+                          <CardHeader>
+                          <CardTitle className="flex gap-2 items-center text-base font-bold">
+                          <BarChart3 className="w-5 h-5 text-red-400" />
+                          Incident Type Distribution
+                          </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                          <div className="h-80">
+                          {incTypeData.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                          data={incTypeData}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                          >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+                          <XAxis
+                          dataKey="name"
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                          stroke="#64748b"
+                          />
+                          <YAxis stroke="#64748b" />
+                          <Tooltip />
+                          <Bar dataKey="value" name="Count" fill="#ef4444">
+                          <LabelList dataKey="value" position="top" />
+                          </Bar>
+                          </BarChart>
+                          </ResponsiveContainer>
+                          ) : (
+                          <div className="flex items-center justify-center h-full text-slate-400">
+                          <div className="text-center">
+                          <BarChart3 className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+                          <p>No incident data available</p>
+                          </div>
+                          </div>
+                          )}
+                          </div>
+                          </CardContent>
+                          </Card>
+                          </div>
+                          </>
+                          )}
+                          </div>
+                          );
+                          };
+
+                          export default ProjectAnalyticsDashboard;

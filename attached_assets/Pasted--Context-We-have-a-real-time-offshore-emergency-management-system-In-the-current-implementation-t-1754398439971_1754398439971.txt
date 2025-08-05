@@ -1,0 +1,43 @@
+
+Context:
+We have a real-time offshore emergency management system. In the current implementation, the muster (acknowledgment) system only shows the last incident’s acknowledgments — new acks overwrite old ones. We need per-incident tracking, correct analytics, and real accountability for who submitted or acknowledged each emergency.
+
+Requirements
+	1.	Incident-Scoped Acknowledgments
+	•	Each emergency (incident) must record and store all acknowledgments (acks) independently.
+	•	Acknowledging one incident should NOT affect the acks or status of other active or past incidents.
+	•	When a new emergency is started, acks for previous emergencies must be preserved and only new acks should be registered for the new incident.
+	2.	Record Initiator Info
+	•	When someone submits/creates an emergency, record their user name and user ID as the initiator on that emergency document in Firestore.
+	3.	Analytics & Dashboard (reference: ProjectAnalyticsDashboard.tsx)
+	•	The Analytics tab must:
+	•	Display emergency-by-emergency breakdowns: who acknowledged each, time to acknowledge, and other stats.
+	•	Allow viewing/replaying any past incident’s muster — not just the latest. (Add incident selector if needed.)
+	•	Live stats: Display who was the fastest to muster/acknowledge (name & response time) and how many people responded, per incident.
+	4.	Command Dashboard
+	•	Anyone logging into the app when an emergency is live should only see acknowledgment prompts for the currently active emergency.
+	•	Old emergencies should not “update” anymore (freeze their acks at the last state).
+	•	If a new emergency starts, all subsequent acks go to the new incident only, and the previous incident’s UI/data remains unchanged.
+	5.	Data Consistency
+	•	Analytics must always reference the incident’s own acks, so that historical replays, stats, and breakdowns are always accurate for each emergency.
+
+Acceptance Criteria
+	•	Acknowledgments are stored and displayed per incident, never globally.
+	•	The name and ID of the person who created/submitted an emergency is recorded on the incident.
+	•	The analytics dashboard lets users replay or view any incident’s muster, with all stats shown for that specific emergency.
+	•	The “fastest to acknowledge” and average/group response stats are always per-incident.
+	•	Starting a new emergency never wipes or changes previous emergencies’ acknowledgment data.
+	•	The system is robust to real-time updates, multiple users, and handles logins gracefully.
+
+Reference
+	•	Use/extend the logic in src/components/ProjectAnalyticsDashboard.tsx.
+	•	Review the screenshots for expected behavior and UX.
+	•	Code must be robust, scalable, and handle edge cases (multiple simultaneous emergencies, rapid acks, etc).
+
+⸻
+
+Priority: High
+Goal: Make the incident tracking, analytics, and replay investor-grade, accurate, and trusted for audits and real emergencies.
+Deliverables: PR with code changes, summary of data model changes, and QA checklist showing all criteria are met.
+
+⸻

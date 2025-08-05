@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { collection, addDoc, getDocs } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import Fuse from "fuse.js";
 
 type TeamMember = {
@@ -82,6 +83,10 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   teamMembers,
   projectId = "1", // Default project ID
 }) => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+  const activeProject = { id: projectId }; // Simple project context
+  
   const [erpProtocols, setErpProtocols] = useState<ERPProtocol[]>([]);
   const [fuse, setFuse] = useState<Fuse<any> | null>(null);
   const [activeTab, setActiveTab] = useState<"emergency" | "observation">("emergency");
@@ -248,6 +253,11 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         startTime: new Date().toISOString(),
         notifiedContacts,
         createdAt: new Date().toISOString(),
+        // REQUIREMENT 2: Record initiator info
+        initiatedBy: user?.uid || "anonymous",
+        initiatorName: user?.displayName || user?.email || "Unknown User",
+        initiatorEmail: user?.email || "",
+        projectId: activeProject?.id || "default",
       });
       setNewIncidentId(docRef.id); // <-- SAVE THE DOC ID
       setAlarmOpen(true);
