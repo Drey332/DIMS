@@ -45,6 +45,8 @@ type Observation = {
   stopWork: boolean;
   createdAt: string;
   status: string;
+  lat: number | null;
+  lng: number | null;
 };
 
 type TeamMember = {
@@ -699,81 +701,93 @@ export function CommandDashboard() {
               )}
 
               {/* View Incident Modal — with Headcount Map (includes replay) */}
-              {viewIncident && (
-              <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
-                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-3xl w-full relative">
-                  <button className="absolute right-4 top-4 text-gray-400 hover:text-red-600" onClick={() => setViewIncident(null)}>
-                    <X className="w-6 h-6" />
-                  </button>
-                  <h2 className="text-2xl font-bold text-hydro-dark mb-4 flex items-center">
-                    <AlertTriangle className="text-orange-500 mr-2" />
-                    {viewIncident.title}
-                  </h2>
-                  <div className="mb-3 text-sm text-gray-700">
-                    <div><b>Status:</b> {viewIncident.status}</div>
-                    <div><b>Priority:</b> {viewIncident.priority}</div>
-                    <div><b>Started:</b> {viewIncident.startTime ? new Date(viewIncident.startTime).toLocaleString() : "-"}</div>
-                    {viewIncident.description && (
-                      <div className="mt-2">
-                        <b>Description:</b> {viewIncident.description}
-                      </div>
-                    )}
+      {viewIncident && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>
+          {/* Make modal scrollable! */}
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full relative flex flex-col max-h-[95vh] overflow-y-auto"
+            style={{
+              // always let modal content scroll, never clip
+              overscrollBehavior: "contain",
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            <button
+              className="absolute right-4 top-4 text-gray-400 hover:text-red-600"
+              onClick={() => setViewIncident(null)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="p-5 sm:p-8 flex flex-col gap-5">
+              <h2 className="text-2xl font-bold text-hydro-dark mb-2 flex items-center">
+                <AlertTriangle className="text-orange-500 mr-2" />
+                {viewIncident.title}
+              </h2>
+              <div className="mb-3 text-sm text-gray-700">
+                <div><b>Status:</b> {viewIncident.status}</div>
+                <div><b>Priority:</b> {viewIncident.priority}</div>
+                <div><b>Started:</b> {viewIncident.startTime ? new Date(viewIncident.startTime).toLocaleString() : "-"}</div>
+                {viewIncident.description && (
+                  <div className="mt-2">
+                    <b>Description:</b> {viewIncident.description}
                   </div>
-                  {/* === Headcount Map: Mustered Personnel (with Replay) === */}
-                  <div className="bg-white rounded-3xl shadow-2xl border border-blue-200 p-4 sm:p-8 w-full max-w-3xl mx-auto mt-7 mb-7">
-                    <h3 className="font-extrabold text-2xl mb-6 flex items-center gap-3 text-blue-700 tracking-tight">
-                      <Users className="w-8 h-8 text-sky-600" />
-                      Headcount Map: Mustered Personnel
-                    </h3>
-                    <div className="w-full h-[350px] rounded-xl border border-blue-200 shadow overflow-hidden mb-6">
-                      <TeamHeadcountMap
-                        acks={acks}
-                        teamMembers={teamMembers}
-                        incidentStartTime={viewIncident.startTime
-                          ? new Date(viewIncident.startTime).getTime()
-                          : Date.now()}
-                        enableReplay={true}
-                        replayWindow={5 * 60 * 1000}
-                      />
-                    </div>
-                  </div>
-                  {/* Acknowledged List */}
-                  <div className="mt-5">
-                    <h4 className="font-bold text-lg mb-2 flex items-center">
-                      <UserCheck className="text-green-600 mr-2" />
-                      Acknowledged List
-                    </h4>
-                    <div className="space-y-2">
-                      {acks.length === 0 ? (
-                        <div className="text-gray-400">No one has acknowledged yet.</div>
-                      ) : (
-                        acks.map((ack) => (
-                          <div key={ack.id} className="flex items-center gap-2 p-2 border rounded-lg">
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-hydro-dark">
-                              {getUserInitials(ack.name)}
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-medium">
-                                {ack.name}
-                                {ack.role ? (<span className="ml-2 text-xs text-gray-500">({ack.role})</span>) : null}
-                              </div>
-                              <div className="text-xs text-gray-500">{ack.email}</div>
-                            </div>
-                            {ack.acknowledgedAt && (
-                              <div className="text-xs text-gray-600">
-                                {new Date(ack.acknowledgedAt).toLocaleTimeString()}
-                              </div>
-                            )}
-                            {ack.hasLocation && <span className="text-xs text-green-600 ml-2">📍</span>}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
+                )}
+              </div>
+              {/* === Headcount Map: Mustered Personnel (with Replay) === */}
+              <div className="bg-white rounded-3xl shadow-2xl border border-blue-200 p-4 sm:p-8 w-full mx-auto">
+                <h3 className="font-extrabold text-2xl mb-6 flex items-center gap-3 text-blue-700 tracking-tight">
+                  <Users className="w-8 h-8 text-sky-600" />
+                  Headcount Map: Mustered Personnel
+                </h3>
+                <div className="w-full h-[350px] rounded-xl border border-blue-200 shadow overflow-hidden mb-6">
+                  <TeamHeadcountMap
+                    acks={acks}
+                    teamMembers={teamMembers}
+                    incidentStartTime={viewIncident.startTime
+                      ? new Date(viewIncident.startTime).getTime()
+                      : Date.now()}
+                    enableReplay={true}
+                    replayWindow={5 * 60 * 1000}
+                  />
                 </div>
               </div>
-              )}
-
+              {/* Acknowledged List */}
+              <div className="mt-2">
+                <h4 className="font-bold text-lg mb-2 flex items-center">
+                  <UserCheck className="text-green-600 mr-2" />
+                  Acknowledged List
+                </h4>
+                <div className="space-y-2">
+                  {acks.length === 0 ? (
+                    <div className="text-gray-400">No one has acknowledged yet.</div>
+                  ) : (
+                    acks.map((ack) => (
+                      <div key={ack.id} className="flex items-center gap-2 p-2 border rounded-lg">
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center font-bold text-hydro-dark">
+                          {getUserInitials(ack.name)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">
+                            {ack.name}
+                            {ack.role ? (<span className="ml-2 text-xs text-gray-500">({ack.role})</span>) : null}
+                          </div>
+                          <div className="text-xs text-gray-500">{ack.email}</div>
+                        </div>
+                        {ack.acknowledgedAt && (
+                          <div className="text-xs text-gray-600">
+                            {new Date(ack.acknowledgedAt).toLocaleTimeString()}
+                          </div>
+                        )}
+                        {ack.hasLocation && <span className="text-xs text-green-600 ml-2">📍</span>}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
               {/* View Observation Modal */}
               {viewObservation && (
               <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(2px)" }}>

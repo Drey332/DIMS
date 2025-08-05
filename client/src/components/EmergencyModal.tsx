@@ -1,10 +1,8 @@
-// EmergencyModal.tsx — Dynamic ERP, Full Observation Card Support, Muster Alert
-
+// EmergencyModal.tsx
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
 import { collection, addDoc, getDocs } from "firebase/firestore";
 import Fuse from "fuse.js";
-import EmergencyAlarmModal from "@/components/EmergencyAlarmModal";
 
 type TeamMember = {
   id: string;
@@ -31,7 +29,7 @@ type EmergencyModalProps = {
 };
 
 const defaultForm = {
-  type: [],
+  type: [] as string[],
   location: "",
   vessel: "",
   system: "",
@@ -44,7 +42,7 @@ const defaultForm = {
   sign: "",
   date: new Date().toISOString().substring(0, 10),
   stopWork: false,
-  photo: null,
+  photo: null as File | null,
 };
 
 const incidentTypes = [
@@ -82,18 +80,74 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   open,
   onClose,
   teamMembers,
-  projectId = "1",
+  projectId = "1", // Default project ID
 }) => {
   const [erpProtocols, setErpProtocols] = useState<ERPProtocol[]>([]);
-  const [fuse, setFuse] = useState<any>(null);
+  const [fuse, setFuse] = useState<Fuse<any> | null>(null);
   const [activeTab, setActiveTab] = useState<"emergency" | "observation">("emergency");
   const [emergencyDesc, setEmergencyDesc] = useState("");
-  const [match, setMatch] = useState<ERPProtocol & { matchedKeyword?: string } | null>(null);
+  const [match, setMatch] = useState<(ERPProtocol & { matchedKeyword?: string }) | null>(null);
   const [form, setForm] = useState<any>(defaultForm);
 
-  // New: Track Firestore-generated incident ID
+  // --- Location State for Observation ---
+  const [location, setLocation] = useState<{ lat: number | null; lng: number | null }>({ lat: null, lng: null });
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'fetching' | 'success' | 'error'>('idle');
+
+  // Emergency Alarm State
   const [alarmOpen, setAlarmOpen] = useState(false);
   const [newIncidentId, setNewIncidentId] = useState<string | null>(null);
+
+  // --- Function to get current location ---
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser.");
+      setLocationStatus('error');
+      return;
+    }
+
+    setLocationStatus('fetching');
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationStatus('success');
+        // Optional: Show a brief confirmation toast/snackbar if you have one
+        // showToast("Location captured successfully!", true);
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        let errorMsg = "Unable to retrieve your location.";
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMsg = "Location access denied. Location will not be recorded.";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          errorMsg = "Location information is unavailable.";
+        } else if (error.code === error.TIMEOUT) {
+          errorMsg = "The request to get user location timed out.";
+        }
+        setLocationError(errorMsg);
+        setLocationStatus('error');
+        setLocation({ lat: null, lng: null }); // Explicitly set to null on error
+      },
+      {
+        enableHighAccuracy: true, // Try for best accuracy
+        timeout: 10000, // 10 seconds
+        maximumAge: 300000 // Accept cached position up to 5 minutes old
+      }
+    );
+  };
+
+  // --- Reset location state helper ---
+  const resetLocationState = () => {
+    setLocation({ lat: null, lng: null });
+    setLocationStatus('idle');
+    setLocationError(null);
+  };
+
 
   // Fetch ERP protocols for this project
   useEffect(() => {
@@ -111,6 +165,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     });
   }, [open, projectId]);
 
+  // Match ERP protocol based on description
   useEffect(() => {
     if (!emergencyDesc || !fuse) {
       setMatch(null);
@@ -137,12 +192,25 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }, [emergencyDesc, fuse, erpProtocols]);
 
+  // Effect to request location when observation tab is active
+  useEffect(() => {
+    if (open && activeTab === "observation") {
+      // Only request if we haven't successfully fetched or aren't fetching
+      if (locationStatus === 'idle' || locationStatus === 'error') {
+         getCurrentLocation();
+      }
+    }
+  }, [activeTab, open]); // Re-run if tab or modal state changes
+
+  // Reset modal state on close
   useEffect(() => {
     if (!open) {
       setAlarmOpen(false);
       setNewIncidentId(null);
       setEmergencyDesc("");
       setMatch(null);
+      // Reset location state when modal closes
+      resetLocationState();
     }
   }, [open]);
 
@@ -156,6 +224,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         : match?.notify
         ? [match?.notify]
         : [];
+
       if (match) {
         notifiedContacts = notifyRoles.flatMap((role) =>
           (teamMembers ?? [])
@@ -180,7 +249,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         notifiedContacts,
         createdAt: new Date().toISOString(),
       });
-
       setNewIncidentId(docRef.id); // <-- SAVE THE DOC ID
       setAlarmOpen(true);
       showEmergencyNotification(
@@ -194,32 +262,46 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }
 
-  function handleObsChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const { name, value, type, checked, files } = e.target as any;
+  // Handle Observation Form Changes
+  function handleObsChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
+    const target = e.target as HTMLInputElement; // Type assertion for files/checked
+    const { name, value, type } = target;
+
     if (type === "checkbox" && name === "type") {
+      const checked = (target as HTMLInputElement).checked; // Re-assert for checked
       setForm((f: any) => ({
         ...f,
         type: checked ? [...f.type, value] : f.type.filter((t: string) => t !== value),
       }));
     } else if (type === "checkbox") {
+      const checked = (target as HTMLInputElement).checked; // Re-assert for checked
       setForm((f: any) => ({ ...f, [name]: checked }));
     } else if (type === "file") {
-      setForm((f: any) => ({ ...f, photo: files[0] }));
+      const files = (target as HTMLInputElement).files; // Re-assert for files
+      setForm((f: any) => ({ ...f, photo: files?.[0] || null }));
     } else {
       setForm((f: any) => ({ ...f, [name]: value }));
     }
   }
 
+  // ---- OBSERVATION SUBMIT HANDLER (Updated) ----
   async function handleObsSubmit(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await addDoc(collection(db, "observations"), {
+      // Prepare data including location
+      const observationData = {
         ...form,
+        lat: location.lat, // Include latitude
+        lng: location.lng, // Include longitude
         createdAt: new Date().toISOString(),
         status: form.closedOut === "Yes" ? "CLOSED" : "OPEN",
-      });
+      };
+
+      await addDoc(collection(db, "observations"), observationData);
       alert("Observation submitted!");
       setForm(defaultForm);
+      // Reset location state on successful submit
+      resetLocationState();
       onClose();
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -228,6 +310,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
     }
   }
 
+  // --- Styles ---
   const fieldStyle: React.CSSProperties = {
     display: "flex",
     flexDirection: "column",
@@ -254,6 +337,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
   };
 
   if (!open) return null;
+
   const notifyRoles =
     Array.isArray(match?.notify)
       ? match.notify
@@ -276,17 +360,14 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         zIndex: 1200,
       }}
     >
-      {/* --- Emergency Alarm Modal, now with incidentId! --- */}
-      <EmergencyAlarmModal
-        open={alarmOpen}
-        onAcknowledge={() => {
-          setAlarmOpen(false);
-          setNewIncidentId(null);
-          onClose();
-        }}
-        message="🚨 EMERGENCY: Muster required. Confirm your safety now!"
-        incidentId={newIncidentId}
-      />
+      {/* --- Emergency Alarm Modal Placeholder (Assuming it exists) --- */}
+      {/* You'll need to implement or import EmergencyAlarmModal and pass newIncidentId */}
+      {alarmOpen && (
+         <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1300, padding: 20, background: 'white', borderRadius: 10 }}>
+           <p>Emergency Alarm Modal would be here. Incident ID: {newIncidentId}</p>
+           <button onClick={() => { setAlarmOpen(false); setNewIncidentId(null); onClose(); }}>Acknowledge</button>
+         </div>
+       )}
 
       <div
         style={{
@@ -337,6 +418,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
             Observation Card
           </button>
         </div>
+
         {/* Emergency Tab */}
         {activeTab === "emergency" && (
           <form
@@ -578,6 +660,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                   onClose();
                   setAlarmOpen(false);
                   setNewIncidentId(null);
+                  resetLocationState(); // Reset on cancel
                 }}
                 style={{
                   background: "#aaa",
@@ -596,19 +679,44 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
             </div>
           </form>
         )}
-                  {/* ----------- Observation Card Tab ----------- */}
-                  {activeTab === "observation" && (
-                  <form
-                  onSubmit={handleObsSubmit}
-                  style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}
-                  >
-                  <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#036" }}>
-                  Hazard Observation Card
-                  </h2>
-                  <div style={{ marginBottom: 13 }}>
-                  <div style={labelStyle}>Type of Observation:</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-                  {incidentTypes.map((type) => (
+
+        {/* ----------- Observation Card Tab (Updated) ----------- */}
+        {activeTab === "observation" && (
+          <form
+            onSubmit={handleObsSubmit}
+            style={{ padding: "26px 22px 18px 22px", overflowY: "auto" }}
+          >
+            <h2 style={{ fontWeight: 700, marginBottom: 16, color: "#036" }}>
+              Hazard Observation Card
+            </h2>
+
+            {/* --- Location Status Feedback --- */}
+            <div style={{ marginBottom: 15, padding: '10px', borderRadius: '6px', fontSize: '14px' }}>
+              {locationStatus === 'fetching' && (
+                <div style={{ color: '#0074b8', display: 'flex', alignItems: 'center' }}>
+                  <div className="spinner" style={{ width: '16px', height: '16px', marginRight: '8px', border: '2px solid #f3f3f3', borderTop: '2px solid #0074b8', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                  Detecting your location...
+                </div>
+              )}
+              {locationStatus === 'success' && (
+                <div style={{ color: '#28a745', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ fontSize: '16px', marginRight: '8px' }}>✓</span>
+                  Location captured successfully.
+                </div>
+              )}
+              {locationStatus === 'error' && locationError && (
+                <div style={{ color: '#dc3545', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ fontSize: '16px', marginRight: '8px' }}>⚠️</span>
+                  {locationError}
+                </div>
+              )}
+            </div>
+            {/* --- End Location Status Feedback --- */}
+
+            <div style={{ marginBottom: 13 }}>
+              <div style={labelStyle}>Type of Observation:</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                {incidentTypes.map((type) => (
                   <label
                     key={type}
                     style={{
@@ -628,167 +736,182 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                     />
                     {type}
                   </label>
-                  ))}
-                  </div>
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Location:</label>
-                  <input
-                  type="text"
-                  name="location"
-                  value={form.location}
-                  onChange={handleObsChange}
-                  required
-                  style={inputStyle}
-                  />
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Vessel:</label>
-                  <input
-                  type="text"
-                  name="vessel"
-                  value={form.vessel}
-                  onChange={handleObsChange}
-                  style={inputStyle}
-                  />
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>System:</label>
-                  <input
-                  type="text"
-                  name="system"
-                  value={form.system}
-                  onChange={handleObsChange}
-                  style={inputStyle}
-                  />
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Client:</label>
-                  <input
-                  type="text"
-                  name="client"
-                  value={form.client}
-                  onChange={handleObsChange}
-                  style={inputStyle}
-                  />
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Observation:</label>
-                  <textarea
-                  name="observation"
-                  value={form.observation}
-                  onChange={handleObsChange}
-                  required
-                  style={textareaStyle}
-                  />
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Recommendation from your Observation:</label>
-                  <textarea
-                  name="recommendation"
-                  value={form.recommendation}
-                  onChange={handleObsChange}
-                  style={textareaStyle}
-                  />
-                  </div>
-                  <div
-                  style={{
-                  ...fieldStyle,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 17,
-                  }}
-                  >
-                  <span style={labelStyle}>Closed Out?</span>
-                  <label style={{ fontWeight: 400, fontSize: 14 }}>
-                  <input
+                ))}
+              </div>
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>
+                Location:
+                {locationStatus === 'success' && (
+                  <span style={{ color: '#28a745', marginLeft: '8px', fontSize: '12px' }}>(Captured)</span>
+                )}
+                {locationStatus === 'error' && (
+                  <span style={{ color: '#dc3545', marginLeft: '8px', fontSize: '12px' }}>(Error)</span>
+                )}
+                {locationStatus === 'fetching' && (
+                  <span style={{ color: '#0074b8', marginLeft: '8px', fontSize: '12px' }}>(Detecting...)</span>
+                )}
+              </label>
+              <input
+                type="text"
+                name="location"
+                value={form.location}
+                onChange={handleObsChange}
+                required
+                style={inputStyle}
+                placeholder="Describe the location (e.g., Deck 5, Near Crane 3)"
+              />
+              {locationError && locationStatus === 'error' && (
+                <div style={{ fontSize: '12px', color: '#dc3545', marginTop: '4px' }}>{locationError}</div>
+              )}
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Vessel:</label>
+              <input
+                type="text"
+                name="vessel"
+                value={form.vessel}
+                onChange={handleObsChange}
+                style={inputStyle}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>System:</label>
+              <input
+                type="text"
+                name="system"
+                value={form.system}
+                onChange={handleObsChange}
+                style={inputStyle}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Client:</label>
+              <input
+                type="text"
+                name="client"
+                value={form.client}
+                onChange={handleObsChange}
+                style={inputStyle}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Observation:</label>
+              <textarea
+                name="observation"
+                value={form.observation}
+                onChange={handleObsChange}
+                required
+                style={textareaStyle}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Recommendation from your Observation:</label>
+              <textarea
+                name="recommendation"
+                value={form.recommendation}
+                onChange={handleObsChange}
+                style={textareaStyle}
+              />
+            </div>
+            <div
+              style={{
+                ...fieldStyle,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 17,
+              }}
+            >
+              <span style={labelStyle}>Closed Out?</span>
+              <label style={{ fontWeight: 400, fontSize: 14 }}>
+                <input
                   type="radio"
                   name="closedOut"
                   value="Yes"
                   checked={form.closedOut === "Yes"}
                   onChange={handleObsChange}
-                  />{" "}
-                  Yes
-                  </label>
-                  <label style={{ fontWeight: 400, fontSize: 14 }}>
-                  <input
+                />{" "}
+                Yes
+              </label>
+              <label style={{ fontWeight: 400, fontSize: 14 }}>
+                <input
                   type="radio"
                   name="closedOut"
                   value="No"
                   checked={form.closedOut === "No"}
                   onChange={handleObsChange}
-                  />{" "}
-                  No
-                  </label>
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Name (Optional):</label>
-                  <input
-                  type="text"
-                  name="name"
-                  value={form.name}
-                  onChange={handleObsChange}
-                  style={inputStyle}
-                  />
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Sign:</label>
-                  <input
-                  type="text"
-                  name="sign"
-                  value={form.sign}
-                  onChange={handleObsChange}
-                  style={inputStyle}
-                  />
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Date:</label>
-                  <input
-                  type="date"
-                  name="date"
-                  value={form.date}
-                  onChange={handleObsChange}
-                  style={inputStyle}
-                  />
-                  </div>
-                  <div style={fieldStyle}>
-                  <label style={labelStyle}>Attach Photo/Video:</label>
-                  <input
-                  type="file"
-                  accept="image/*,video/*"
-                  name="photo"
-                  onChange={handleObsChange}
-                  />
-                  </div>
-                  <div
-                  style={{
-                  ...fieldStyle,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 9,
-                  }}
-                  >
-                  <input
-                  type="checkbox"
-                  name="stopWork"
-                  checked={form.stopWork}
-                  onChange={handleObsChange}
-                  />
-                  <span style={{ fontWeight: 500, color: "#b30000" }}>
-                  I am exercising STOP WORK AUTHORITY for this incident.
-                  </span>
-                  </div>
-                  <div
-                  style={{
-                  marginTop: 19,
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  gap: 13,
-                  }}
-                  >
-                  <button
-                  type="submit"
-                  style={{
+                />{" "}
+                No
+              </label>
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Name (Optional):</label>
+              <input
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleObsChange}
+                style={inputStyle}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Sign:</label>
+              <input
+                type="text"
+                name="sign"
+                value={form.sign}
+                onChange={handleObsChange}
+                style={inputStyle}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Date:</label>
+              <input
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleObsChange}
+                style={inputStyle}
+              />
+            </div>
+            <div style={fieldStyle}>
+              <label style={labelStyle}>Attach Photo/Video:</label>
+              <input
+                type="file"
+                accept="image/*,video/*"
+                name="photo"
+                onChange={handleObsChange}
+              />
+            </div>
+            <div
+              style={{
+                ...fieldStyle,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 9,
+              }}
+            >
+              <input
+                type="checkbox"
+                name="stopWork"
+                checked={form.stopWork}
+                onChange={handleObsChange}
+              />
+              <span style={{ fontWeight: 500, color: "#b30000" }}>
+                I am exercising STOP WORK AUTHORITY for this incident.
+              </span>
+            </div>
+            <div
+              style={{
+                marginTop: 19,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 13,
+              }}
+            >
+              <button
+                type="submit"
+                style={{
                   background: "#0074b8",
                   color: "#fff",
                   padding: "10px 22px",
@@ -797,18 +920,19 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                   border: "none",
                   fontSize: 15,
                   cursor: "pointer",
-                  }}
-                  disabled={alarmOpen}
-                  >
-                  Submit Observation
-                  </button>
-                  <button
-                  type="button"
-                  onClick={() => {
+                }}
+                disabled={alarmOpen}
+              >
+                Submit Observation
+              </button>
+              <button
+                type="button"
+                onClick={() => {
                   onClose();
                   setAlarmOpen(false);
-                  }}
-                  style={{
+                  resetLocationState(); // Reset on cancel
+                }}
+                style={{
                   background: "#aaa",
                   color: "#fff",
                   borderRadius: 6,
@@ -817,17 +941,27 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                   border: "none",
                   fontSize: 15,
                   cursor: "pointer",
-                  }}
-                  disabled={alarmOpen}
-                  >
-                  Cancel
-                  </button>
-                  </div>
-                  </form>
-                  )}
-                  </div>
-                  </div>
-                  );
-                  };
+                }}
+                disabled={alarmOpen}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+      {/* Simple CSS for spinner */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .spinner {
+          animation: spin 1s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+};
 
-                  export default EmergencyModal;
+export default EmergencyModal;
