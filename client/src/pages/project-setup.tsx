@@ -895,6 +895,7 @@ export default function ProjectSetup() {
                   <option value="erp">ERP Protocols</option>
                   <option value="assets">Assets & Equipment</option>
                   <option value="team">Team Assignments</option>
+                  <option value="analytics">Analytics</option>
                   
                   {/* --- Add other options here ... --- */}
                 </select>
