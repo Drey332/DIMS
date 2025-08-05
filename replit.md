@@ -1,158 +1,28 @@
 # HydroSafe - AI Emergency Response Co-Pilot
 
 ## Overview
+HydroSafe is an AI-powered emergency response management system for offshore operations, specifically designed for HydroDive's marine safety protocols. It acts as an AI co-pilot, assisting emergency response teams within a Bronze-Silver-Gold command hierarchy. The system integrates real-time incident management, intelligent decision support, team coordination, and comprehensive audit trails to ensure rapid and effective emergency response in offshore environments. Its capabilities include dynamic checklist generation, risk assessment, and decision support based on the IAPOAR model, aiming to enhance safety and efficiency in critical situations.
 
-HydroSafe is a sophisticated emergency response management system designed for offshore operations, specifically built for HydroDive's marine safety protocols. The application serves as an AI-powered co-pilot that assists emergency response teams using a Bronze-Silver-Gold command hierarchy system.
-
-The system combines real-time incident management, intelligent decision-making support, team coordination, and comprehensive audit trails to ensure rapid and effective emergency response in offshore environments.
+## User Preferences
+Preferred communication style: Simple, everyday language.
+Navigation preferences: Single dropdown menu to avoid congestion - prefer one "Management" dropdown containing Assets and Reports options rather than multiple separate dropdowns.
 
 ## System Architecture
+HydroSafe utilizes a modern web application architecture. The **Frontend** is built with React 18 and TypeScript, using Vite for fast development, Shadcn/ui (on Radix UI) for UI components, TailwindCSS for styling, TanStack React Query for state management, Wouter for routing, and React Hook Form with Zod for form handling. The **Backend** uses Node.js with Express.js and TypeScript, providing RESTful APIs with WebSocket support for real-time communication. Multer handles file uploads, and Express sessions manage user sessions.
 
-### Frontend Architecture
-- **Framework**: React 18 with TypeScript
-- **Build Tool**: Vite for fast development and optimized builds
-- **UI Framework**: Shadcn/ui components built on Radix UI primitives
-- **Styling**: TailwindCSS with custom HydroDive brand colors and themes
-- **State Management**: TanStack React Query for server state and caching
-- **Routing**: Wouter for lightweight client-side routing
-- **Form Handling**: React Hook Form with Zod validation
+**Data Storage** relies on PostgreSQL (Neon serverless) with Drizzle ORM for type-safe operations and Drizzle Kit for schema management.
 
-### Backend Architecture
-- **Runtime**: Node.js with Express.js server
-- **Language**: TypeScript with ESM modules
-- **API Pattern**: RESTful endpoints with WebSocket support for real-time communication
-- **File Handling**: Multer for multipart file uploads with metadata tracking
-- **Session Management**: Express sessions with PostgreSQL store
-
-### Data Storage Solutions
-- **Primary Database**: PostgreSQL with Neon serverless hosting
-- **ORM**: Drizzle ORM for type-safe database operations
-- **Schema Management**: Drizzle Kit for migrations and schema versioning
-- **Connection**: Neon serverless with WebSocket support for edge environments
-
-## Key Components
-
-### Emergency Response System
-- **Bronze-Silver-Gold Hierarchy**: Multi-tier command structure for offshore operations
-- **Dynamic Incident Management**: AI-powered checklist generation based on incident type and severity
-- **Real-time Communication**: WebSocket-based messaging with urgency prioritization
-- **Photo Documentation**: Timestamped photo uploads with GPS metadata for evidence collection
-
-### AI Integration
-- **OpenAI GPT-4o Integration**: Latest model for intelligent response generation
-- **Dynamic Checklist Generation**: Context-aware emergency procedures
-- **Risk Assessment**: Automated threat evaluation and mitigation strategies
-- **Decision Support**: IAPOAR model implementation (Information, Assessment, Powers, Options, Action, Review)
-
-### User Management
-- **Role-based Access Control**: Bronze (On-Scene), Silver (Tactical), Gold (Strategic) permissions
-- **Project Assignment System**: Users assigned to specific offshore projects with role flexibility
-- **Activity Tracking**: Last seen timestamps and active status monitoring
-
-### Project Management
-- **Multi-project Support**: Designed for concurrent offshore operations
-- **Client Integration**: Shell SPDC Forcados project as primary use case
-- **Emergency Contacts**: Verified contact database with response time tracking
-- **Asset Management**: Equipment and resource tracking with JSON storage
-
-## Data Flow
-
-### Incident Lifecycle
-1. **Detection**: Incident creation through manual reporting or system alerts
-2. **Assessment**: AI-powered risk analysis and priority assignment
-3. **Response**: Dynamic checklist generation based on incident type and user role
-4. **Communication**: Real-time updates through WebSocket connections
-5. **Documentation**: Photo uploads and action logging for audit compliance
-6. **Resolution**: Status tracking and post-incident review
-
-### Real-time Communication
-- WebSocket connections for instant messaging and status updates
-- Message prioritization with urgency flags
-- Broadcast capabilities for system-wide alerts
-- Persistent message storage with sender identification
-
-### File Management
-- Secure upload handling with size limits (10MB)
-- Metadata extraction including timestamp, GPS coordinates, device info
-- Storage organization by project and incident
-- Audit trail for all file operations
+Key functional components include:
+- **Emergency Response System**: Implements a Bronze-Silver-Gold command hierarchy, AI-powered dynamic checklist generation, real-time WebSocket communication, and timestamped photo documentation with GPS metadata.
+- **AI Integration**: Leverages OpenAI GPT-4o for intelligent response generation, dynamic checklist creation, automated risk assessment, and decision support following the IAPOAR model.
+- **User Management**: Features role-based access control (Bronze, Silver, Gold), project assignment, and activity tracking.
+- **Project Management**: Supports multi-project operations, client integration (e.g., Shell SPDC), emergency contact management, and asset tracking.
+- **Data Flow**: Manages the incident lifecycle from detection to resolution, real-time communication via WebSockets, and secure file handling with metadata extraction.
+- **Visuals**: Incorporates a futuristic visual effects system with glassy backgrounds, neon borders, animated glows, and sci-fi styling, including role-based color coding (Gold: yellow, Silver: blue, Bronze: orange).
 
 ## External Dependencies
 
-### Database Services
-- **Neon PostgreSQL**: Serverless PostgreSQL hosting with automatic scaling
-- **Connection Pooling**: Built-in connection management for high availability
-
-### AI Services
-- **OpenAI API**: GPT-4o model for intelligent response generation
-- **API Key Management**: Environment variable configuration with fallback handling
-
-### Development Tools
-- **Replit Integration**: Development environment with automatic deployment
-- **Vite Plugins**: Runtime error overlay and development cartographer
-- **TypeScript**: Full type safety across frontend and backend
-
-### UI Components
-- **Radix UI**: Accessible component primitives
-- **Lucide Icons**: Consistent iconography throughout the application
-- **Date-fns**: Date manipulation and formatting utilities
-
-## Deployment Strategy
-
-### Development Environment
-- **Replit Hosting**: Integrated development and deployment platform
-- **Hot Module Replacement**: Instant code updates during development
-- **Environment Variables**: Secure configuration management
-
-### Production Configuration
-- **Build Process**: Vite for frontend, esbuild for backend bundling
-- **Static Asset Serving**: Express static middleware for production builds
-- **Port Configuration**: Auto-scaling deployment with external port 80
-
-### Database Management
-- **Schema Migrations**: Drizzle Kit for version-controlled database changes
-- **Connection Security**: SSL-enabled connections with environment-based URLs
-- **Backup Strategy**: Neon automatic backups and point-in-time recovery
-
-## Changelog
-
-Changelog:
-- June 19, 2025. Initial setup
-- June 19, 2025. Implemented real-time activity tracking system with WebSocket connections
-- June 19, 2025. Added clickable emergency contacts with direct phone call functionality
-- June 19, 2025. Fixed database foreign key constraints and accessibility warnings
-- June 19, 2025. Completed comprehensive authentication system with email/password, Google, and Apple login options
-- June 19, 2025. Fixed emergency contact update functionality and changed button text to "Add/Update Contact" with proper form state management
-- June 19, 2025. Created comprehensive Asset Verification system with photo upload, timestamp tracking, and comment functionality for offshore asset management
-- June 19, 2025. Optimized Asset Verification page layout for better space utilization with left-aligned content and responsive grid layouts
-- June 19, 2025. Resolved app startup issues by fixing port conflicts and JavaScript errors in communication hub component
-- June 19, 2025. Simplified navigation by implementing dropdown menus for Assets and Reports sections to reduce interface complexity and improve user experience
-- June 19, 2025. Implemented modern HydroSafe design system with role-based color coding (Gold: yellow, Silver: blue, Bronze: orange), status-aware card styling, and professional visual hierarchy for enhanced trust and usability
-- June 19, 2025. Implemented comprehensive project management system with role-based access control allowing Gold users to create/edit projects while Silver/Bronze users have view-only access to assigned projects with seamless project switching functionality
-- June 19, 2025. Created AI Audit Referee system with real-time compliance monitoring using OpenAI GPT-4o to review all actions against IMCA, IOGP, and HydroDive safety protocols with automatic violation detection and action blocking
-- June 19, 2025. Implemented comprehensive AI-powered compliance documentation system with structured protocol extraction from IMCA, IOGP, Shell SPDC, and HydroDive emergency response plans enabling automated generation of legally defensible audit reports, compliance PDFs, and legal defense packages
-- June 19, 2025. Added comprehensive Client Management system with full CRUD operations, role-based permissions (Gold/Silver users can create/edit, Bronze view-only), integrated audit logging, and professional card-based interface with search functionality for managing client organizations and contact information
-- June 19, 2025. Implemented comprehensive Command Hierarchy management system with Gold/Silver/Bronze role structure, Gold code (000) authentication for elevated permissions, team member CRUD operations with automatic role-based sorting, professional card-based interface showing activity status, and integrated audit logging for all team management actions
-- June 20, 2025. Consolidated command hierarchy into unified Team Management interface following best practices - single page with visual hierarchy representation, role-based color coding, command structure summary sidebar, and Gold Command authorization controls for better user experience
-- June 20, 2025. Implemented persistent navigation bar with fixed positioning, active page highlighting, mobile-responsive design, and user profile menu following modern UX practices for seamless navigation across all pages
-- June 20, 2025. Added project context header displaying current project details, client information, user command status, and operation status for complete situational awareness following modern SaaS design patterns
-- June 20, 2025. Removed redundant bottom navigation menu completely, maintaining only the persistent top navigation bar for cleaner, more professional interface design following user feedback
-- June 20, 2025. Implemented Firebase-integrated profile management system with avatar dropdown menu, comprehensive profile page showing account details, authentication provider info, and security settings with both desktop and mobile support
-- June 20, 2025. Enhanced Team Management with Gold Command authentication system using "000" unlock code - replaced role-based permissions with secure code-based access control where all users can view team structure but only those with Gold Command code can add, edit, or remove team members
-- June 20, 2025. Fixed critical asset verification system bug that was causing "Failed to create asset verification" errors by implementing proper date string to Date object conversion in backend API endpoints, ensuring PostgreSQL timestamp fields receive correctly formatted data
-- June 23, 2025. Implemented comprehensive ERP Knowledge Base system with structured emergency response protocols from HydroDive's official Emergency Response Plan, integrated into AI audit system for enhanced protocol-based guidance and decision support with searchable emergency procedures, command hierarchy protocols, and critical safety requirements
-- June 23, 2025. Added detailed ERP Scenarios system with live search capabilities providing incident-specific emergency response protocols including medical emergencies, fire response, diving incidents, security threats, and marine operations with severity-based filtering, real-time search functionality, and AI-enhanced compliance guidance
-- June 23, 2025. Implemented comprehensive AI Q&A system with 25+ emergency response questions and answers covering medical emergencies, fire response, marine incidents, diving operations, security threats, weather conditions, and command hierarchy protocols enabling intelligent emergency guidance through natural language queries with confidence scoring and related scenario suggestions
-- June 26, 2025. Integrated comprehensive AI-Driven Incident Management Logic system providing automatic severity classification (Tier 0-3), intelligent corrective action suggestions following HydroDive ERP protocols, documentation completeness validation, and Bronze-Silver-Gold command hierarchy escalation with real-time AI analysis panel in incidents interface featuring severity visualization, recommended actions display, and compliance checking for offshore emergency response operations
-- July 22, 2025. Enhanced desktop UI responsiveness with larger modal sizes, improved spacing, and better typography scaling for professional desktop experience while maintaining mobile compatibility - updated all modals (ERP, contact, asset, project) with desktop-specific sizing and spacing enhancements
-- July 22, 2025. Fixed critical Firebase import errors in EmergencyMusterModal.tsx by correcting import paths from '../firebase' to './src/firebase' and created missing useActiveEmergency hook for real-time emergency monitoring functionality
-- July 25, 2025. Implemented comprehensive QR Code Asset Management system where QR codes generate direct URLs to specific asset pages within the HydroSafe app enabling field teams to scan codes and immediately access asset details, maintenance records, inspection forms, and update capabilities for efficient offshore asset management workflow
-- July 30, 2025. Created comprehensive online tracking system (/src/lib/onlineTracking.ts) with real-time user status monitoring, activity detection, idle/offline state management, and React hooks for tracking individual and team online presence with Firebase integration for persistent status storage
-- July 31, 2025. Implemented 2099 futuristic visual effects system with comprehensive glassy backgrounds, neon borders, animated glows, and sci-fi styling throughout the application including custom CSS classes (.glassy-bg, .glassy-card, .animate-glow, .neon-border, .neon-text, .holographic, .grid-pattern) with enhanced keyframe animations and gradient shifts for a modern cyberpunk aesthetic
-- July 31, 2025. Enhanced TeamHeadcountMap component with advanced analytics dashboard featuring holographic text effects, animated metrics displays, GPS tracking visualization, fastest responder identification, and comprehensive replay functionality with speed controls for incident analysis and emergency response training scenarios
-- August 5, 2025. Implemented comprehensive per-incident acknowledgment tracking system with proper data isolation ensuring each emergency records and stores all acknowledgments independently. Added initiator tracking to emergency creation capturing user name and ID for full accountability. Enhanced Analytics Dashboard with incident-specific replay capabilities, per-incident performance metrics, fastest responder identification, and complete historical data analysis. System now supports investor-grade accuracy with robust per-incident statistics, response time breakdowns, and audit-ready incident replay functionality ensuring no acknowledgments are lost or overwritten between incidents.
-
-## User Preferences
-
-Preferred communication style: Simple, everyday language.
-Navigation preferences: Single dropdown menu to avoid congestion - prefer one "Management" dropdown containing Assets and Reports options rather than multiple separate dropdowns.
+- **Database Services**: Neon PostgreSQL (serverless hosting with automatic scaling and connection pooling).
+- **AI Services**: OpenAI API (GPT-4o model for intelligent response generation).
+- **UI Components**: Radix UI (accessible component primitives), Lucide Icons (consistent iconography), Date-fns (date manipulation).
+- **Development Tools**: Replit (integrated development and deployment), Vite (frontend build tool), TypeScript (language).
