@@ -766,99 +766,102 @@ const ProjectAnalyticsDashboard: React.FC<{ projectId: string }> = ({ projectId 
                           </Card>
                           )}
 
-                          {/* --- Additional Charts --- */}
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-                          {/* Observation Type Pie */}
-                          <Card>
-                          <CardHeader>
-                          <CardTitle className="flex gap-2 items-center text-base font-bold">
-                          <PieChartIcon className="w-5 h-5 text-blue-600" />
-                          Observation Type Distribution
-                          </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                          <div className="h-80">
-                          {obsTypeData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                          <Pie
-                          data={obsTypeData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={true}
-                          outerRadius={80}
-                          fill="#2563eb"
-                          dataKey="value"
-                          nameKey="name"
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          >
-                          {obsTypeData.map((entry, idx) => (
-                            <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
-                          ))}
-                          </Pie>
-                          <Tooltip />
-                          <Legend />
-                          </PieChart>
-                          </ResponsiveContainer>
-                          ) : (
-                          <div className="flex items-center justify-center h-full text-slate-400">
-                          <div className="text-center">
-                          <PieChartIcon className="h-12 w-12 mx-auto mb-2 text-slate-300" />
-                          <p>No observation data available</p>
-                          </div>
-                          </div>
-                          )}
-                          </div>
-                          </CardContent>
-                          </Card>
+{/* --- Additional Charts --- */}
+{selectedView !== "replay" && (
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+    {/* Observation Type Pie */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex gap-2 items-center text-base font-bold">
+          <PieChartIcon className="w-5 h-5 text-blue-600" />
+          Observation Type Distribution
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-80">
+          {obsTypeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={obsTypeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={true}
+                  outerRadius={80}
+                  fill="#2563eb"
+                  dataKey="value"
+                  nameKey="name"
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                >
+                  {obsTypeData.map((entry, idx) => (
+                    <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-slate-400">
+              <div className="text-center">
+                <PieChartIcon className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+                <p>No observation data available</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
 
-                          {/* Incident Type Bar */}
-                          <Card>
-                          <CardHeader>
-                          <CardTitle className="flex gap-2 items-center text-base font-bold">
-                          <BarChart3 className="w-5 h-5 text-red-400" />
-                          Incident Type Distribution
-                          </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                          <div className="h-80">
-                          {incTypeData.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                          <BarChart
-                          data={incTypeData}
-                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                          >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
-                          <XAxis
-                          dataKey="name"
-                          angle={-45}
-                          textAnchor="end"
-                          height={60}
-                          stroke="#64748b"
-                          />
-                          <YAxis stroke="#64748b" />
-                          <Tooltip />
-                          <Bar dataKey="value" name="Count" fill="#ef4444">
-                          <LabelList dataKey="value" position="top" />
-                          </Bar>
-                          </BarChart>
-                          </ResponsiveContainer>
-                          ) : (
-                          <div className="flex items-center justify-center h-full text-slate-400">
-                          <div className="text-center">
-                          <BarChart3 className="h-12 w-12 mx-auto mb-2 text-slate-300" />
-                          <p>No incident data available</p>
-                          </div>
-                          </div>
-                          )}
-                          </div>
-                          </CardContent>
-                          </Card>
-                          </div>
-                          </>
-                          )}
-                          </div>
-                          );
-                          };
+    {/* Incident Type Bar */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex gap-2 items-center text-base font-bold">
+          <BarChart3 className="w-5 h-5 text-red-400" />
+          Incident Type Distribution
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="h-80">
+          {incTypeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={incTypeData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  stroke="#64748b"
+                />
+                <YAxis stroke="#64748b" />
+                <Tooltip />
+                <Bar dataKey="value" name="Count" fill="#ef4444">
+                  <LabelList dataKey="value" position="top" />
+                </Bar>
+                <Legend />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-full text-slate-400">
+              <div className="text-center">
+                <BarChart3 className="h-12 w-12 mx-auto mb-2 text-slate-300" />
+                <p>No incident data available</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+)}
+</>
+)}
+</div>
+);
+};
 
-                          export default ProjectAnalyticsDashboard;
+export default ProjectAnalyticsDashboard;

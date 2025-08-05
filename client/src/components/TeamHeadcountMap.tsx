@@ -469,43 +469,7 @@ export default function TeamHeadcountMap({
               </div>
             )}
 
-            {/* Advanced Muster Analytics */}
-            <div className="mt-4 glassy-card px-4 py-3 text-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="holographic text-2xl font-bold">
-                  {onlineTeam.length > 0
-                    ? Math.round((filteredAcks.length / onlineTeam.length) * 100)
-                    : 0}%
-                </div>
-                <div className="neon-text text-xs">Mustered</div>
-                <div className="text-gray-400 text-xs">
-                  {filteredAcks.length}/{onlineTeam.length}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-cyan-400 text-2xl font-bold animate-glow">
-                  {avgResponse > 0 ? `${avgResponse}s` : "—"}
-                </div>
-                <div className="neon-text text-xs">Avg. Response</div>
-                <div className="text-gray-400 text-xs">Time</div>
-              </div>
-              <div className="text-center">
-                <div className="text-green-400 text-lg font-bold">
-                  {fastestAck ? getUserInitials(fastestAck.name) : "—"}
-                </div>
-                <div className="neon-text text-xs">Fastest</div>
-                <div className="text-gray-400 text-xs">
-                  {fastestAck?.acknowledgedAt ? formatSeconds(fastestAck.time || new Date(fastestAck.acknowledgedAt).getTime(), minTime) : "—"}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-purple-400 text-xl font-bold">
-                  {acksWithLocation.length}
-                </div>
-                <div className="neon-text text-xs">GPS Tracked</div>
-                <div className="text-gray-400 text-xs">Locations</div>
-              </div>
-            </div>
+            
             </div>
             );
             }
