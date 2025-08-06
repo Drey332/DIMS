@@ -168,7 +168,8 @@ export function CommandDashboard() {
       // Filter out Near Miss items client-side to avoid complex Firestore queries
       const filteredObs = allObs.filter(obs => {
         const types = obs.type || [];
-        return !types.includes("Near-miss");
+        return !types.includes("Near-miss") && !types.includes("NEAR_MISS") && 
+               !(obs.status && obs.status.toUpperCase() === "NEAR MISS");
       });
       
       setObservations(filteredObs);
@@ -189,10 +190,11 @@ export function CommandDashboard() {
       const snapshot = await getDocs(q);
       const allObs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation));
       
-      // Filter for Near Miss items client-side
+      // Filter for Near Miss items client-side (check both "Near-miss" and "NEAR_MISS")
       const nearMissObs = allObs.filter(obs => {
         const types = obs.type || [];
-        return types.includes("Near-miss");
+        return types.includes("Near-miss") || types.includes("NEAR_MISS") || 
+               (obs.status && obs.status.toUpperCase() === "NEAR MISS");
       });
       
       setNearMisses(nearMissObs);
@@ -538,12 +540,17 @@ export function CommandDashboard() {
                                     </div>
                                   )}
                                   <div className="text-xs text-gray-500 mt-2">
-                                    <span>Reported by: {nearMiss.reporter || nearMiss.name || "Anonymous"}</span>
+                                    <span>Reported by: {nearMiss.submitterName || nearMiss.reporter || nearMiss.name || "Anonymous"}</span>
                                     {nearMiss.createdAt && (
                                       <>
                                         {" | "}
                                         <span>Time: {new Date(nearMiss.createdAt).toLocaleTimeString()}</span>
                                       </>
+                                    )}
+                                    {nearMiss.submitterEmail && (
+                                      <div className="text-xs text-gray-500">
+                                        Email: {nearMiss.submitterEmail}
+                                      </div>
                                     )}
                                   </div>
                                 </div>
@@ -639,67 +646,7 @@ export function CommandDashboard() {
                       </CardContent>
                       </Card>
 
-                      {/* --- NEAR MISSES --- */}
-                      <Card className="hydro-card bg-yellow-50 mt-6 border-yellow-300 border-2">
-                      <CardHeader>
-                      <CardTitle className="text-xl font-bold text-yellow-900 flex items-center">
-                      <AlertTriangle className="text-yellow-500 mr-3 h-5 w-5" />
-                      Near Misses
-                      </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                      <div className="space-y-4">
-                      {nearMissesLoading ? (
-                      <div className="text-center py-8">Loading near misses...</div>
-                      ) : nearMisses.length === 0 ? (
-                      <div className="text-center py-8 text-yellow-700">No near misses found.</div>
-                      ) : (
-                      nearMisses.map((miss) => (
-                      <div key={miss.id} className="rounded-xl p-5 border border-yellow-300 bg-yellow-100">
-                      <div className="flex items-center justify-between mb-3">
-                      <div>
-                      <span className="font-semibold text-yellow-800">{miss.type?.join(", ")}</span>
-                      <span className="ml-2 text-sm text-yellow-900">{miss.location}</span>
-                      </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-300 text-yellow-900">
-                      NEAR MISS
-                      </span>
-                      </div>
-                      <div className="text-yellow-900 text-sm mb-1">
-                      <strong>Near Miss:</strong> {miss.observation}
-                      </div>
-                      {miss.corrective && (
-                      <div className="text-xs text-green-800 mb-1">
-                      <b>Corrective:</b> {miss.corrective}
-                      </div>
-                      )}
-                      {miss.recommendation && (
-                      <div className="text-xs text-blue-900 mb-1">
-                      <b>Recommendation:</b> {miss.recommendation}
-                      </div>
-                      )}
-                      <div className="text-xs text-yellow-800 mt-2">
-                      <span>By: {miss.name || "Anonymous"}</span>
-                      {" | "}
-                      <span>Date: {miss.date}</span>
-                      </div>
-                      <div className="flex gap-2 mt-3">
-                      <Button
-                      size="sm"
-                      variant="outline"
-                      className="bg-yellow-600 text-white hover:bg-yellow-800"
-                      onClick={() => setViewObservation(miss)}
-                      >
-                      <Eye className="w-3 h-3 mr-1" />
-                      View
-                      </Button>
-                      </div>
-                      </div>
-                      ))
-                      )}
-                      </div>
-                      </CardContent>
-                      </Card>
+
                       </div>
 
                       {/* --- Command Team Status + Muster Analytics --- */}
