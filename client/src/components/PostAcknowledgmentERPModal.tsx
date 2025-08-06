@@ -96,9 +96,10 @@ export function PostAcknowledgmentERPModal({
   if (!open) return null;
 
   // Convert notifiedContacts to the format expected by the UI
-  const notifyContacts = notifiedContacts.map(member => ({
-    roleKey: member.role,
-    name: `${member.firstName} ${member.lastName}`,
+  // Handle both saved contact format (with 'name') and TeamMember format (with firstName/lastName)
+  const notifyContacts = notifiedContacts.map((member: any) => ({
+    roleKey: member.roleKey || member.role,
+    name: member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim(),
     phone: member.phone,
     title: member.title
   }));
@@ -142,9 +143,56 @@ export function PostAcknowledgmentERPModal({
                 {erp.type} Protocol
               </h3>
               <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                  {erp.protocol}
-                </div>
+                <ol style={{ margin: 0, padding: 0, listStyle: "none", marginTop: 6 }}>
+                  {(erp.protocol || "")
+                    .split(/\s*\d+\.\s+/)
+                    .filter(Boolean)
+                    .map((step, idx) => (
+                      <li
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 14,
+                          background: "#fff",
+                          borderLeft: "5px solid #1e40af",
+                          boxShadow: "0 2px 9px 0 rgba(30,64,175,0.08)",
+                          borderRadius: 10,
+                          marginBottom: 12,
+                          padding: "12px 15px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            minWidth: 33,
+                            minHeight: 33,
+                            background: "#1e40af",
+                            color: "#fff",
+                            fontWeight: 800,
+                            borderRadius: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 17,
+                            boxShadow: "0 2px 8px 0 #1e40af20",
+                            marginTop: 2,
+                          }}
+                        >
+                          {idx + 1}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 15.5,
+                            color: "#21244a",
+                            fontWeight: 600,
+                            lineHeight: 1.62,
+                          }}
+                        >
+                          {step.trim()}
+                        </span>
+                      </li>
+                    ))}
+                </ol>
               </div>
             </div>
           ) : (
