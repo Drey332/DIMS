@@ -411,13 +411,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         zIndex: 1200,
       }}
     >
-      {/* --- Emergency Alarm Modal Placeholder (Assuming it exists) --- */}
-      {alarmOpen && (
-        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1300, padding: 20, background: 'white', borderRadius: 10 }}>
-          <p>Emergency Alarm Modal would be here. Incident ID: {newIncidentId}</p>
-          <button onClick={() => { setAlarmOpen(false); setNewIncidentId(null); onClose(); }}>Acknowledge</button>
-        </div>
-      )}
+
 
       <div
         style={{
@@ -429,8 +423,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
           overflowY: "auto",
           maxHeight: "96vh",
           minHeight: 0,
-          filter: alarmOpen ? "blur(1.5px)" : undefined,
-          pointerEvents: alarmOpen ? "none" : undefined,
+
         }}
       >
         {/* --- Tab Switches --- */}
@@ -444,10 +437,9 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
               color: activeTab === "emergency" ? "#b30000" : "#222",
               fontWeight: 600,
               fontSize: 17,
-              cursor: alarmOpen ? "not-allowed" : "pointer",
+              cursor: "pointer",
             }}
-            onClick={() => !alarmOpen && setActiveTab("emergency")}
-            disabled={alarmOpen}
+            onClick={() => setActiveTab("emergency")}
           >
             Emergency
           </button>
@@ -460,10 +452,9 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
               color: activeTab === "nearMiss" ? "#b59f05" : "#7a7215",
               fontWeight: 600,
               fontSize: 17,
-              cursor: alarmOpen ? "not-allowed" : "pointer",
+              cursor: "pointer",
             }}
-            onClick={() => !alarmOpen && setActiveTab("nearMiss")}
-            disabled={alarmOpen}
+            onClick={() => setActiveTab("nearMiss")}
           >
             Near Miss
           </button>
@@ -476,10 +467,9 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
               color: activeTab === "observation" ? "#036" : "#222",
               fontWeight: 600,
               fontSize: 17,
-              cursor: alarmOpen ? "not-allowed" : "pointer",
+              cursor: "pointer",
             }}
-            onClick={() => !alarmOpen && setActiveTab("observation")}
-            disabled={alarmOpen}
+            onClick={() => setActiveTab("observation")}
           >
             Observation Card
           </button>
@@ -498,7 +488,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                 required
                 placeholder="e.g. Diver unconscious, fire, loss of comms, etc."
                 style={textareaStyle}
-                disabled={alarmOpen}
               />
             </div>
             {match ? (
@@ -702,9 +691,8 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                     fontWeight: 600,
                     border: "none",
                     fontSize: 15,
-                    cursor: alarmOpen ? "not-allowed" : "pointer",
+                    cursor: "pointer",
                     }}
-                    disabled={alarmOpen}
                     >
                     Submit Emergency
                     </button>
@@ -712,7 +700,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                     type="button"
                     onClick={() => {
                     onClose();
-                    setAlarmOpen(false);
                     setNewIncidentId(null);
                     resetLocationState();
                     }}
@@ -726,7 +713,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                     fontSize: 15,
                     cursor: "pointer",
                     }}
-                    disabled={alarmOpen}
                     >
                     Cancel
                     </button>
@@ -1114,7 +1100,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                         fontSize: 15,
                         cursor: "pointer",
                       }}
-                      disabled={alarmOpen}
                       >
                       Submit Observation
                       </button>
@@ -1122,7 +1107,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                       type="button"
                       onClick={() => {
                         onClose();
-                        setAlarmOpen(false);
                         resetLocationState();
                       }}
                       style={{
@@ -1135,7 +1119,6 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
                         fontSize: 15,
                         cursor: "pointer",
                       }}
-                      disabled={alarmOpen}
                       >
                       Cancel
                       </button>
