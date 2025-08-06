@@ -530,7 +530,7 @@ export function CommandDashboard() {
                               <div className="text-center py-8">Loading near misses...</div>
                             ) : nearMisses.length === 0 ? (
                               <div className="text-center py-8 text-gray-500">
-                                No near misses reported. (Debug: Array length: {nearMisses.length}, Array: {JSON.stringify(nearMisses.map(nm => nm.id))})
+                                No near misses reported.
                               </div>
                             ) : (
                               nearMisses.map((nearMiss) => (

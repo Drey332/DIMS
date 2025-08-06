@@ -167,6 +167,7 @@ function Router() {
     ackList,        // <-- List of all acknowledgers (for modal, team map, dashboard, etc.)
     acknowledge,
     ackInProgress,
+    clearEmergency,
   } = useProjectEmergencyAlarm({ 
     projectId: "1",
     onAlarm: (emergency) => {
@@ -248,7 +249,12 @@ function Router() {
       {/* --- Post-Acknowledgment ERP Modal --- */}
       <PostAcknowledgmentERPModal
         open={showERPModal}
-        onClose={() => setShowERPModal(false)}
+        onClose={() => {
+          setShowERPModal(false);
+          setAcknowledgedEmergency(null);
+          // Clear the emergency data completely after ERP modal is closed
+          if (clearEmergency) clearEmergency();
+        }}
         emergencyId={acknowledgedEmergency?.id || ""}
         emergencyTitle={acknowledgedEmergency?.title || acknowledgedEmergency?.description || ""}
         emergencyLocation={acknowledgedEmergency?.location}

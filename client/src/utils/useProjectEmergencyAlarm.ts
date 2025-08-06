@@ -233,10 +233,10 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
         { merge: true }
       );
 
-      // Close modal and clear state for this user
+      // Close alarm modal but keep emergency data for ERP modal
       setAckInProgress(false);
       setIsModalOpen(false);
-      setActiveEmergency(null);
+      // NOTE: Keep activeEmergency available for ERP modal - don't clear it yet
       
       console.log(`✅ Emergency ${activeEmergency.id} acknowledged successfully by ${user.uid}`);
       
@@ -257,5 +257,6 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
     acknowledge,
     ackInProgress,
     showERPAfterAck: false, // Will be enhanced to show ERP modal after acknowledgment
+    clearEmergency: () => setActiveEmergency(null), // Function to clear emergency after ERP modal is closed
   };
 }
