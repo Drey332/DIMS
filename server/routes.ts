@@ -32,6 +32,7 @@ import {
 import { getDoc, doc } from "firebase/firestore";
 import { askAssetAI } from "./ai-asset-agent";
 import { db } from "@/firebase"; // or wherever your Firestore instance is
+import { aiAnalyticsService } from "./ai-analytics";
 
 import * as aiAssetAgent from "./ai-asset-agent"; // Use unique, clear names // Import all your asset agent functions
 
@@ -1683,6 +1684,43 @@ Be specific, practical, and safety-focused in your response.`;
       res.json({ answer: aiAnswer });
     } catch (err: any) {
       res.status(500).json({ error: err.message || "AI Assistant error" });
+    }
+  });
+
+  // AI PROJECT ANALYTICS - Comprehensive Safety Data Analysis
+  app.post('/api/ai-project-analytics', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { projectId } = req.body;
+      
+      if (!projectId) {
+        return res.status(400).json({ error: "Missing projectId in request body" });
+      }
+
+      if (!req.user) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      console.log(`🤖 Starting AI analytics for project ${projectId}`);
+      
+      // Generate comprehensive AI analytics
+      const analyticsResult = await aiAnalyticsService.generateAnalytics(projectId);
+      
+      console.log(`✅ AI analytics completed for project ${projectId}`);
+      
+      res.json({
+        status: "success",
+        message: "AI project analytics generated successfully",
+        timestamp: new Date().toISOString(),
+        projectId,
+        analytics: analyticsResult
+      });
+
+    } catch (error) {
+      console.error("❌ Error in AI project analytics:", error);
+      res.status(500).json({ 
+        error: "Failed to generate AI project analytics",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
   

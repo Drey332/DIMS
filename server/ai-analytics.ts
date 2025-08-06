@@ -105,22 +105,22 @@ export class AIAnalyticsService {
       const observations = observationsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       // Separate near misses from general observations
-      const nearMisses = observations.filter(obs => 
-        Array.isArray(obs.type) && obs.type.includes("Near-miss") || obs.status === "NEAR_MISS"
+      const nearMisses = observations.filter((obs: any) => 
+        (Array.isArray(obs.type) && obs.type.includes("Near-miss")) || obs.status === "NEAR_MISS"
       );
-      const generalObservations = observations.filter(obs => 
-        !Array.isArray(obs.type) || !obs.type.includes("Near-miss")
+      const generalObservations = observations.filter((obs: any) => 
+        !(Array.isArray(obs.type) && obs.type.includes("Near-miss")) && obs.status !== "NEAR_MISS"
       );
 
       // Fetch all emergency acknowledgments for headcount analysis
-      const headcountData = [];
+      const headcountData: any[] = [];
       for (const emergency of emergencies) {
-        const acksRef = collection(db, "emergencies", emergency.id, "acks");
+        const acksRef = collection(db, "emergencies", (emergency as any).id, "acks");
         const acksSnapshot = await getDocs(acksRef);
         const acks = acksSnapshot.docs.map(doc => ({ 
-          emergencyId: emergency.id, 
-          emergencyType: emergency.type,
-          emergencyTime: emergency.startTime,
+          emergencyId: (emergency as any).id, 
+          emergencyType: (emergency as any).type,
+          emergencyTime: (emergency as any).startTime,
           ...doc.data() 
         }));
         headcountData.push(...acks);

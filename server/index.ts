@@ -55,6 +55,9 @@ app.use((req, res, next) => {
 // ====== AI ERP ADVISOR ENDPOINT (Plug-and-Play for AI ERP Routing) ======
 app.use("/api/ai-erp-advisor", aiErpAdvisor);
 
+// ====== AI PROJECT ANALYTICS ENDPOINT ======
+// Note: The new TypeScript implementation is integrated directly in routes.ts
+
 // ====== Register App’s API and Page Routes ======
 (async () => {
   // Attach REST routes and all other project endpoints
