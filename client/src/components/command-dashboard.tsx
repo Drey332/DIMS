@@ -168,8 +168,14 @@ export function CommandDashboard() {
       // Filter out Near Miss items client-side to avoid complex Firestore queries
       const filteredObs = allObs.filter(obs => {
         const types = obs.type || [];
-        return !types.includes("Near-miss") && !types.includes("NEAR_MISS") && 
-               !(obs.status && obs.status.toUpperCase() === "NEAR MISS");
+        const hasNearMissType = types.includes("Near-miss") || 
+                               types.includes("NEAR_MISS") || 
+                               types.includes("near-miss") ||
+                               types.some(t => t && t.toLowerCase().includes("near"));
+        
+        const hasNearMissStatus = obs.status && obs.status.toLowerCase().includes("near");
+        
+        return !hasNearMissType && !hasNearMissStatus;
       });
       
       setObservations(filteredObs);
@@ -182,22 +188,44 @@ export function CommandDashboard() {
   useEffect(() => {
     async function fetchNearMisses() {
       setNearMissesLoading(true);
-      // Get all observations and filter client-side
-      const q = query(
-        collection(db, "observations"),
-        orderBy("createdAt", "desc")
-      );
-      const snapshot = await getDocs(q);
-      const allObs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation));
-      
-      // Filter for Near Miss items client-side (check both "Near-miss" and "NEAR_MISS")
-      const nearMissObs = allObs.filter(obs => {
-        const types = obs.type || [];
-        return types.includes("Near-miss") || types.includes("NEAR_MISS") || 
-               (obs.status && obs.status.toUpperCase() === "NEAR MISS");
-      });
-      
-      setNearMisses(nearMissObs);
+      try {
+        // Get all observations and filter client-side
+        const q = query(
+          collection(db, "observations"),
+          orderBy("createdAt", "desc")
+        );
+        const snapshot = await getDocs(q);
+        const allObs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation));
+        
+        console.log("All observations fetched:", allObs.length);
+        console.log("Sample observation:", allObs[0]);
+        
+        // Filter for Near Miss items client-side (check multiple variations)
+        const nearMissObs = allObs.filter(obs => {
+          const types = obs.type || [];
+          const hasNearMissType = types.includes("Near-miss") || 
+                                 types.includes("NEAR_MISS") || 
+                                 types.includes("near-miss") ||
+                                 types.some(t => t && t.toLowerCase().includes("near"));
+          
+          const hasNearMissStatus = obs.status && obs.status.toLowerCase().includes("near");
+          
+          console.log(`Checking obs ${obs.id}:`, {
+            types,
+            status: obs.status,
+            hasNearMissType,
+            hasNearMissStatus
+          });
+          
+          return hasNearMissType || hasNearMissStatus;
+        });
+        
+        console.log("Filtered Near Miss observations:", nearMissObs);
+        setNearMisses(nearMissObs);
+      } catch (error) {
+        console.error("Error fetching near misses:", error);
+        setNearMisses([]);
+      }
       setNearMissesLoading(false);
     }
     fetchNearMisses();
@@ -513,11 +541,14 @@ export function CommandDashboard() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-4">
+                            <div className="text-xs text-gray-400 mb-2">
+                              Debug Info: Loading={nearMissesLoading.toString()}, Count={nearMisses.length}
+                            </div>
                             {nearMissesLoading ? (
                               <div className="text-center py-8">Loading near misses...</div>
                             ) : nearMisses.length === 0 ? (
                               <div className="text-center py-8 text-gray-500">
-                                No near misses reported.
+                                No near misses reported. (Debug: {nearMisses.length} found)
                               </div>
                             ) : (
                               nearMisses.map((nearMiss) => (
@@ -550,6 +581,11 @@ export function CommandDashboard() {
                                     {nearMiss.submitterEmail && (
                                       <div className="text-xs text-gray-500">
                                         Email: {nearMiss.submitterEmail}
+                                      </div>
+                                    )}
+                                    {nearMiss.date && (
+                                      <div className="text-xs text-gray-500">
+                                        Date: {nearMiss.date}
                                       </div>
                                     )}
                                   </div>
