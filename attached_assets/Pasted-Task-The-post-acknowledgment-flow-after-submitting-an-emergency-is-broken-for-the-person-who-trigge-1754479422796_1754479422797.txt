@@ -1,0 +1,41 @@
+Task:
+The post-acknowledgment flow after submitting an emergency is broken for the person who triggered the emergency:
+
+Current Bugs:
+	•	After submitting and acknowledging an emergency, the person who triggered it sees TWO modals:
+	1.	A blurred overlay/modal of the next steps
+	2.	The actual PostAcknowledgmentERPModal is in the background
+	•	Also, in PostAcknowledgmentERPModal, the ERP steps are not matched properly—it only shows the contact list, but fails to display the correct ERP steps like EmergencyModal does.
+
+⸻
+
+What needs to happen (requirements):
+	1.	Modal Layering:
+	•	After a user submits and acknowledges an emergency, ONLY PostAcknowledgmentERPModal should be visible—remove/hide/close any blurred overlay/modal or duplicate of next steps.
+	2.	ERP Matching Consistency:
+	•	In PostAcknowledgmentERPModal, use the same ERP matching logic as EmergencyModal:
+	•	When a user submits an emergency and the ERP is matched (via keywords/type/fuse.js etc.), SAVE the matched ERP id and/or full ERP object (erpId, erpContent) directly inside the created emergency Firestore doc.
+	•	PostAcknowledgmentERPModal should FIRST try to display the ERP protocol from the saved erpId or erpContent in the emergency doc, not by trying to re-match on type/title (which can break).
+	•	Only if those are missing (for old records), fallback to the matching logic.
+	3.	Post-Acknowledgment UX:
+	•	For all users including the initiator, once the alarm is acknowledged and their location is logged, immediately display the PostAcknowledgmentERPModal with:
+	•	The correct ERP steps (“Next Steps”)
+	•	The correct list of people to contact (as currently works)
+	4.	No Double Modals:
+	•	After submit/acknowledge, make sure EmergencyModal (or its overlay) is closed or removed for the submitter so it doesn’t appear on top of PostAcknowledgmentERPModal.
+
+⸻
+
+Code context/examples:
+	•	The ERP matching logic in EmergencyModal uses fuse.js and saves the matched ERP.
+	•	In PostAcknowledgmentERPModal, you are currently only matching by type/title, which fails if the ERP type is not an exact string match.
+
+Deliverable:
+	•	Fix the modals so only PostAcknowledgmentERPModal appears for the submitter after acknowledge.
+	•	Update PostAcknowledgmentERPModal to use the exact same ERP matching and always display the correct protocol steps for every emergency (for all users).
+	•	Make sure contacts are shown as currently works.
+
+⸻
+
+TL;DR:
+Fix the modal layering after acknowledge and guarantee the ERP steps shown in PostAcknowledgmentERPModal match exactly what was matched on submission. No double modals, no missed steps.

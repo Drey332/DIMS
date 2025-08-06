@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { getDocs, collection, query, where } from "firebase/firestore";
+import { getDocs, collection, query, where, doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import ERPModal from "./ERPModal";
+import { User, Phone, AlertTriangle, MapPin, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type ERPProtocol = {
   id?: string;
@@ -11,117 +13,200 @@ type ERPProtocol = {
   protocol: string;
 };
 
-type EmergencyContact = {
-  id?: string;
-  name: string;
+type TeamMember = {
+  id: string;
+  firstName: string;
+  lastName: string;
   role: string;
-  phone: string;
+  title?: string;
+  phone?: string;
   email?: string;
-  type: "INTERNAL" | "EXTERNAL" | "EMERGENCY_SERVICE";
 };
 
 type PostAcknowledgmentERPModalProps = {
   open: boolean;
   onClose: () => void;
-  emergencyId: string;
+  emergencyType?: string; // The matched ERP protocol type from EmergencyModal
   emergencyTitle: string;
   emergencyLocation?: string;
-  emergencyType?: string;
-  notifiedContacts?: any[];
+  notifiedContacts?: TeamMember[];
   projectId?: string;
+  emergencyId: string; // Add emergency ID to fetch the saved ERP data
 };
 
 export function PostAcknowledgmentERPModal({
   open,
   onClose,
-  emergencyId,
+  emergencyType,
   emergencyTitle,
   emergencyLocation,
-  emergencyType,
   notifiedContacts = [],
-  projectId = "hydrosafe-5d245"
+  projectId = "hydrosafe-5d245",
+  emergencyId,
 }: PostAcknowledgmentERPModalProps) {
-  const [erpProtocol, setErpProtocol] = useState<ERPProtocol | null>(null);
-  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [erp, setErp] = useState<ERPProtocol | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Fetch ERP protocols and emergency contacts when modal opens
   useEffect(() => {
-    if (!open || !emergencyType) return;
+    if (!open || !emergencyId) return;
+    setLoading(true);
 
-    async function fetchERPData() {
-      setLoading(true);
+    async function fetchERP() {
       try {
-        // Fetch matching ERP protocol
-        const erpQuery = query(
-          collection(db, "projects", projectId, "erpProtocols"),
-          where("type", "==", emergencyType)
-        );
-        const erpSnapshot = await getDocs(erpQuery);
+        // First try to get the saved ERP from the emergency document
+        const emergencyRef = doc(db, "emergencies", emergencyId);
+        const emergencySnap = await getDoc(emergencyRef);
         
-        if (!erpSnapshot.empty) {
-          const erpData = erpSnapshot.docs[0].data() as ERPProtocol;
-          setErpProtocol({ ...erpData, id: erpSnapshot.docs[0].id });
-        } else {
-          // Fallback: try to find by keywords
-          const allErpQuery = collection(db, "projects", projectId, "erpProtocols");
-          const allErpSnapshot = await getDocs(allErpQuery);
+        if (emergencySnap.exists()) {
+          const emergencyData = emergencySnap.data();
+          const savedERP = emergencyData.matchedERP;
           
-          for (const doc of allErpSnapshot.docs) {
-            const data = doc.data() as ERPProtocol;
-            const keywords = (data.keywords || "").toLowerCase().split(",");
-            const titleLower = emergencyTitle.toLowerCase();
-            
-            if (keywords.some(keyword => titleLower.includes(keyword.trim()))) {
-              setErpProtocol({ ...data, id: doc.id });
-              break;
-            }
+          if (savedERP && savedERP.protocol) {
+            // Use the saved ERP data - this ensures consistency with what was matched during submission
+            setErp(savedERP as ERPProtocol);
+            setLoading(false);
+            return;
           }
         }
-
-        // Fetch emergency contacts
-        const contactsQuery = collection(db, "projects", projectId, "emergencyContacts");
-        const contactsSnapshot = await getDocs(contactsQuery);
-        const contacts = contactsSnapshot.docs.map(doc => ({
-          ...doc.data(),
-          id: doc.id
-        } as EmergencyContact));
-        setEmergencyContacts(contacts);
-
+        
+        // Fallback: try to match by emergencyType (for older emergency records without saved ERP)
+        if (emergencyType) {
+          const q = query(
+            collection(db, "projects", projectId, "erpProtocols"),
+            where("type", "==", emergencyType)
+          );
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            setErp({ ...snapshot.docs[0].data(), id: snapshot.docs[0].id } as ERPProtocol);
+          } else {
+            setErp(null);
+          }
+        } else {
+          setErp(null);
+        }
       } catch (error) {
-        console.error("Failed to fetch ERP data:", error);
+        console.error("Error fetching ERP:", error);
+        setErp(null);
       }
       setLoading(false);
     }
-
-    fetchERPData();
-  }, [open, emergencyType, emergencyTitle, projectId]);
+    fetchERP();
+  }, [open, emergencyId, emergencyType, projectId]);
 
   if (!open) return null;
-  
-  if (loading) {
-    return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl p-8 max-w-md">
-          <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading emergency protocols...</p>
+
+  // Convert notifiedContacts to the format expected by the UI
+  const notifyContacts = notifiedContacts.map(member => ({
+    roleKey: member.role,
+    name: `${member.firstName} ${member.lastName}`,
+    phone: member.phone,
+    title: member.title
+  }));
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" style={{ backdropFilter: "blur(4px)" }}>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] relative overflow-hidden">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-red-600 z-10"
+        >
+          <X className="w-6 h-6" />
+        </button>
+        
+        <div className="p-6 overflow-y-auto max-h-[90vh]">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-red-700 mb-2 flex items-center">
+              <AlertTriangle className="text-red-500 mr-3 w-8 h-8" />
+              Emergency Response Protocol
+            </h2>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <p className="font-semibold text-red-800">{emergencyTitle}</p>
+              {emergencyLocation && (
+                <p className="text-red-600 text-sm mt-1 flex items-center">
+                  <MapPin className="w-4 h-4 mr-1" />
+                  Location: {emergencyLocation}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ERP Protocol */}
+          {loading ? (
+            <div className="mb-8">
+              <div className="text-center py-8 text-gray-500">Loading protocol...</div>
+            </div>
+          ) : erp ? (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center">
+                <AlertTriangle className="text-blue-600 mr-2 w-6 h-6" />
+                {erp.type} Protocol
+              </h3>
+              <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
+                  {erp.protocol}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="mb-8">
+              <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                <p className="text-yellow-800">
+                  No specific protocol found. Follow general emergency procedures.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Command Team Contacts */}
+          {notifyContacts.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center">
+                <User className="text-green-600 mr-2 w-6 h-6" />
+                Command Team to Notify
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {notifyContacts.map((contact, idx) => (
+                  <div key={idx} className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <div className="font-bold text-green-800">{contact.name}</div>
+                    {contact.title && (
+                      <div className="text-sm text-green-700 mb-2">{contact.title}</div>
+                    )}
+                    <Badge className={`mb-2 ${
+                      contact.roleKey === 'GOLD' 
+                        ? 'bg-yellow-500 text-yellow-900 font-bold' 
+                        : contact.roleKey === 'SILVER'
+                        ? 'bg-gray-500 text-white font-bold'
+                        : contact.roleKey === 'BRONZE'
+                        ? 'bg-orange-500 text-orange-900 font-bold'
+                        : 'bg-green-600 text-white'
+                    }`}>
+                      {contact.roleKey}
+                    </Badge>
+                    {contact.phone && (
+                      <div className="flex items-center text-sm text-gray-700">
+                        <Phone className="w-4 h-4 mr-1" />
+                        <a href={`tel:${contact.phone}`} className="hover:underline">
+                          {contact.phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-center">
+            <Button 
+              onClick={onClose}
+              className="bg-gray-600 text-white hover:bg-gray-700 px-8 py-3"
+            >
+              Close Protocol
+            </Button>
           </div>
         </div>
       </div>
-    );
-  }
-
-  return (
-    <ERPModal
-      open={open}
-      onClose={onClose}
-      erpProtocol={erpProtocol}
-      notifyContacts={notifiedContacts}
-      emergencyContacts={emergencyContacts}
-      emergencyTitle={emergencyTitle}
-      emergencyLocation={emergencyLocation}
-    />
+    </div>
   );
 }
 

@@ -259,6 +259,15 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         initiatorName: user?.displayName || user?.email || "Unknown User",
         initiatorEmail: user?.email || "",
         projectId: activeProject?.id || "default",
+        // Save the full matched ERP data for PostAcknowledgmentERPModal
+        matchedERP: match ? {
+          id: match.id,
+          keywords: match.keywords,
+          type: match.type,
+          notify: match.notify,
+          protocol: match.protocol,
+          matchedKeyword: match.matchedKeyword
+        } : null,
       });
       setNewIncidentId(docRef.id);
       setAlarmOpen(true);
