@@ -526,10 +526,6 @@ export function CommandDashboard() {
                         </CardHeader>
                         <CardContent>
                           <div className="space-y-4">
-                            <div className="text-xs text-gray-400 mb-2">
-                              Debug Info: Loading={nearMissesLoading.toString()}, Count={nearMisses.length}
-                              <br/>Data sample: {nearMisses[0] ? nearMisses[0].observation : 'No data'}
-                            </div>
                             {nearMissesLoading ? (
                               <div className="text-center py-8">Loading near misses...</div>
                             ) : nearMisses.length === 0 ? (
