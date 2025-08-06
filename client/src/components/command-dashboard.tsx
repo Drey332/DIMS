@@ -153,35 +153,49 @@ export function CommandDashboard() {
       if (obsView === "ALL") {
         q = query(
           collection(db, "observations"),
-          where("type", "not-in", [["Near-miss"]]),
           orderBy("createdAt", "desc")
         );
       } else {
         q = query(
           collection(db, "observations"),
           where("status", "==", obsView),
-          where("type", "not-in", [["Near-miss"]]),
           orderBy("createdAt", "desc")
         );
       }
       const snapshot = await getDocs(q);
-      setObservations(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation)));
+      const allObs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation));
+      
+      // Filter out Near Miss items client-side to avoid complex Firestore queries
+      const filteredObs = allObs.filter(obs => {
+        const types = obs.type || [];
+        return !types.includes("Near-miss");
+      });
+      
+      setObservations(filteredObs);
       setObsLoading(false);
     }
     fetchObservations();
   }, [obsView, showModal]);
 
-  // Fetch Near Misses separately
+  // Fetch Near Misses separately with simpler query
   useEffect(() => {
     async function fetchNearMisses() {
       setNearMissesLoading(true);
+      // Get all observations and filter client-side
       const q = query(
         collection(db, "observations"),
-        where("type", "array-contains", "Near-miss"),
         orderBy("createdAt", "desc")
       );
       const snapshot = await getDocs(q);
-      setNearMisses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation)));
+      const allObs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation));
+      
+      // Filter for Near Miss items client-side
+      const nearMissObs = allObs.filter(obs => {
+        const types = obs.type || [];
+        return types.includes("Near-miss");
+      });
+      
+      setNearMisses(nearMissObs);
       setNearMissesLoading(false);
     }
     fetchNearMisses();
