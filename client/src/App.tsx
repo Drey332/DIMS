@@ -16,6 +16,7 @@ import { useOnlineTracking } from "@/lib/onlineTracking";
 // --- Emergency alarm hook and modal ---
 import { useProjectEmergencyAlarm } from "@/utils/useProjectEmergencyAlarm";
 import EmergencyAlarmModal from "@/components/EmergencyAlarmModal";
+import PostAcknowledgmentERPModal from "@/components/PostAcknowledgmentERPModal";
 
 // Pages...
 import Dashboard from "@/pages/dashboard";
@@ -154,6 +155,10 @@ function Router() {
     }
   }, []);
 
+  // Post-acknowledgment ERP modal state
+  const [showERPModal, setShowERPModal] = useState(false);
+  const [acknowledgedEmergency, setAcknowledgedEmergency] = useState<any>(null);
+
   // --- GLOBAL EMERGENCY ALARM SYSTEM ---
   // This ensures ALL devices/browsers get emergency notifications instantly
   const {
@@ -197,6 +202,20 @@ function Router() {
     }
   });
 
+  // Enhanced acknowledgment function that shows ERP modal
+  const handleEmergencyAcknowledge = async () => {
+    try {
+      await acknowledge();
+      // After successful acknowledgment, show ERP modal
+      if (emergency) {
+        setAcknowledgedEmergency(emergency);
+        setShowERPModal(true);
+      }
+    } catch (error) {
+      console.error("Failed to acknowledge emergency:", error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -219,11 +238,23 @@ function Router() {
       {/* --- Emergency Alarm Modal for ALL users (if not acknowledged) --- */}
       <EmergencyAlarmModal
         open={isModalOpen}
-        onAcknowledge={acknowledge}
+        onAcknowledge={handleEmergencyAcknowledge}
         message={emergency?.description}
         incidentId={emergency?.id ?? null}
         ackList={ackList}
         ackInProgress={ackInProgress}
+      />
+
+      {/* --- Post-Acknowledgment ERP Modal --- */}
+      <PostAcknowledgmentERPModal
+        open={showERPModal}
+        onClose={() => setShowERPModal(false)}
+        emergencyId={acknowledgedEmergency?.id || ""}
+        emergencyTitle={acknowledgedEmergency?.title || acknowledgedEmergency?.description || ""}
+        emergencyLocation={acknowledgedEmergency?.location}
+        emergencyType={acknowledgedEmergency?.type}
+        notifiedContacts={acknowledgedEmergency?.notifiedContacts || []}
+        projectId="hydrosafe-5d245"
       />
 
       {/* --- Main UI --- */}

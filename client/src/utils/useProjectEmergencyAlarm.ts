@@ -21,6 +21,10 @@ export interface EmergencyInfo {
   priority: string;
   startTime: string;
   acknowledged: boolean;
+  title?: string;
+  location?: string;
+  type?: string;
+  notifiedContacts?: any[];
 }
 
 export interface AckInfo {
@@ -99,6 +103,10 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
             priority: emergencyData.priority || "HIGH",
             startTime: emergencyData.startTime,
             acknowledged: false,
+            title: emergencyData.title || emergencyData.description,
+            location: emergencyData.location,
+            type: emergencyData.type,
+            notifiedContacts: emergencyData.notifiedContacts || [],
           };
 
           setActiveEmergency(emergency);
@@ -248,5 +256,6 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
     ackList,
     acknowledge,
     ackInProgress,
+    showERPAfterAck: false, // Will be enhanced to show ERP modal after acknowledgment
   };
 }
