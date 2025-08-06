@@ -210,18 +210,14 @@ export function CommandDashboard() {
           
           const hasNearMissStatus = obs.status && obs.status.toLowerCase().includes("near");
           
-          console.log(`Checking obs ${obs.id}:`, {
-            types,
-            status: obs.status,
-            hasNearMissType,
-            hasNearMissStatus
-          });
-          
           return hasNearMissType || hasNearMissStatus;
         });
         
         console.log("Filtered Near Miss observations:", nearMissObs);
-        setNearMisses(nearMissObs);
+        console.log("About to set nearMisses state with:", nearMissObs.length, "items");
+        // Force a fresh array reference to trigger React re-render
+        setNearMisses([...nearMissObs]);
+        console.log("State updated, nearMissesLoading set to false");
       } catch (error) {
         console.error("Error fetching near misses:", error);
         setNearMisses([]);
@@ -229,20 +225,9 @@ export function CommandDashboard() {
       setNearMissesLoading(false);
     }
     fetchNearMisses();
-  }, [showModal]);
+  }, []);
 
-  // --- NEAR MISS FETCH ---
-  useEffect(() => {
-    async function fetchNearMisses() {
-      setNearMissesLoading(true);
-      // If Near Misses are stored in "nearMisses"
-      const q = query(collection(db, "nearMisses"), orderBy("createdAt", "desc"));
-      const snapshot = await getDocs(q);
-      setNearMisses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Observation)));
-      setNearMissesLoading(false);
-    }
-    fetchNearMisses();
-  }, [showModal]);
+
 
   // --- ACKS for all incidents (per-incident isolation) ---
   useEffect(() => {
@@ -543,12 +528,13 @@ export function CommandDashboard() {
                           <div className="space-y-4">
                             <div className="text-xs text-gray-400 mb-2">
                               Debug Info: Loading={nearMissesLoading.toString()}, Count={nearMisses.length}
+                              <br/>Data sample: {nearMisses[0] ? nearMisses[0].observation : 'No data'}
                             </div>
                             {nearMissesLoading ? (
                               <div className="text-center py-8">Loading near misses...</div>
                             ) : nearMisses.length === 0 ? (
                               <div className="text-center py-8 text-gray-500">
-                                No near misses reported. (Debug: {nearMisses.length} found)
+                                No near misses reported. (Debug: Array length: {nearMisses.length}, Array: {JSON.stringify(nearMisses.map(nm => nm.id))})
                               </div>
                             ) : (
                               nearMisses.map((nearMiss) => (
