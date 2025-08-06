@@ -402,13 +402,7 @@ const EmergencyModal: React.FC<EmergencyModalProps> = ({
         zIndex: 1200,
       }}
     >
-      {/* --- Emergency Alarm Modal Placeholder (Assuming it exists) --- */}
-      {alarmOpen && (
-        <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1300, padding: 20, background: 'white', borderRadius: 10 }}>
-          <p>Emergency Alarm Modal would be here. Incident ID: {newIncidentId}</p>
-          <button onClick={() => { setAlarmOpen(false); setNewIncidentId(null); onClose(); }}>Acknowledge</button>
-        </div>
-      )}
+      
 
       <div
         style={{
