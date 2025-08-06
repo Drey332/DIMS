@@ -56,6 +56,7 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
   const [ackInProgress, setAckInProgress] = useState(false);
   const [ackList, setAckList] = useState<AckInfo[]>([]);
   const alarmedEmergencies = useRef<Set<string>>(new Set());
+  const acknowledgedEmergencies = useRef<Set<string>>(new Set()); // Track emergencies we've acknowledged
 
   // Listen for ACTIVE emergencies under project
   useEffect(() => {
@@ -94,8 +95,8 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
         const ackRef = doc(db, "emergencies", emergencyId, "acks", user.uid);
         const ackSnap = await getDoc(ackRef);
         
-        if (!ackSnap.exists()) {
-          // Not acknowledged - this is a new emergency for this user
+        if (!ackSnap.exists() && !acknowledgedEmergencies.current.has(emergencyId)) {
+          // Not acknowledged and we haven't processed acknowledgment for this emergency yet
           const emergency = {
             id: emergencyId,
             description: emergencyData.description || "EMERGENCY! Muster required.",
@@ -233,6 +234,9 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
         { merge: true }
       );
 
+      // Mark this emergency as acknowledged to prevent re-triggering the alarm
+      acknowledgedEmergencies.current.add(activeEmergency.id);
+      
       // Close alarm modal but keep emergency data for ERP modal
       setAckInProgress(false);
       setIsModalOpen(false);
@@ -257,6 +261,10 @@ export function useProjectEmergencyAlarm(options: UseProjectEmergencyAlarmOption
     acknowledge,
     ackInProgress,
     showERPAfterAck: false, // Will be enhanced to show ERP modal after acknowledgment
-    clearEmergency: () => setActiveEmergency(null), // Function to clear emergency after ERP modal is closed
+    clearEmergency: () => {
+      setActiveEmergency(null);
+      // Reset acknowledged emergencies tracking when manually clearing
+      acknowledgedEmergencies.current.clear();
+    }, // Function to clear emergency after ERP modal is closed
   };
 }

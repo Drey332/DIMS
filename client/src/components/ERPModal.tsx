@@ -104,7 +104,17 @@ export function ERPModal({
                     {contact.title && (
                       <div className="text-sm text-green-700 mb-2">{contact.title}</div>
                     )}
-                    <Badge className="bg-green-600 text-white mb-2">{contact.roleKey}</Badge>
+                    <Badge className={`mb-2 ${
+                      contact.roleKey === 'GOLD' 
+                        ? 'bg-yellow-500 text-yellow-900 font-bold' 
+                        : contact.roleKey === 'SILVER'
+                        ? 'bg-gray-500 text-white font-bold'
+                        : contact.roleKey === 'BRONZE'
+                        ? 'bg-orange-500 text-orange-900 font-bold'
+                        : 'bg-green-600 text-white'
+                    }`}>
+                      {contact.roleKey}
+                    </Badge>
                     {contact.phone && (
                       <div className="flex items-center text-sm text-gray-700">
                         <Phone className="w-4 h-4 mr-1" />
