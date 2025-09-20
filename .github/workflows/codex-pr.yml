@@ -4,8 +4,8 @@ on:
   workflow_dispatch:    # run manually from Actions tab
 
 permissions:
-  contents: write       # allow pushing commits
-  pull-requests: write  # allow opening PRs
+  contents: write
+  pull-requests: write
 
 jobs:
   codex_codegen_pr:
@@ -23,13 +23,17 @@ jobs:
           echo "BRANCH_NAME=$BR" >> $GITHUB_ENV
           git switch -c "$BR"
 
-      # 👉 Replace/extend this step to actually produce file changes.
       - name: Run OpenAI Codex (generator)
         uses: lemonberrylabs/openai-codex-action@v0.3.0
-        # with:
-        #   openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-        #   prompt: "Refactor X, add Y tests, update Z..."
-        #   paths: "client/src/**"
+        with:
+          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          prompt: |
+            Review the TypeScript/React code in client/ and server/.
+            Suggest safe improvements, better error handling, and add doc comments.
+            Keep builds passing and don’t expose secrets.
+          paths: |
+            client/**
+            server/**
 
       - name: Detect changes
         id: changes
@@ -60,6 +64,10 @@ jobs:
           title: "Codex: automated suggestions"
           body: |
             This PR was opened automatically by Codex.
+            Please review the generated changes before merging.
+          branch: ${{ env.BRANCH_NAME }}
+          base: main
+          labels: codex, automated
             Please review the generated changes before merging.
           branch: ${{ env.BRANCH_NAME }}
           base: main
