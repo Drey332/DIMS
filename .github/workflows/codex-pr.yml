@@ -1,1 +1,66 @@
-# Codex PR workflow
+name: Codex Codegen PR
+
+on:
+  workflow_dispatch:    # run manually from Actions tab
+
+permissions:
+  contents: write       # allow pushing commits
+  pull-requests: write  # allow opening PRs
+
+jobs:
+  codex_codegen_pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create working branch
+        run: |
+          BR="codex/update-$(date +%Y%m%d-%H%M%S)"
+          echo "BRANCH_NAME=$BR" >> $GITHUB_ENV
+          git switch -c "$BR"
+
+      # 👉 Replace/extend this step to actually produce file changes.
+      - name: Run OpenAI Codex (generator)
+        uses: lemonberrylabs/openai-codex-action@v0.3.0
+        # with:
+        #   openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+        #   prompt: "Refactor X, add Y tests, update Z..."
+        #   paths: "client/src/**"
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git status --porcelain | grep .; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name  "codex-bot"
+          git config user.email "codex-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "codex: apply automated suggestions"
+
+      - name: Push branch
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git push --set-upstream origin "$BRANCH_NAME"
+
+      - name: Open Pull Request
+        if: steps.changes.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "Codex: automated suggestions"
+          body: |
+            This PR was opened automatically by Codex.
+            Please review the generated changes before merging.
+          branch: ${{ env.BRANCH_NAME }}
+          base: main
+          labels: codex, automated
