@@ -11,8 +11,13 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "No ERP draft submitted" });
   }
 
+  // --- Lock down original notify field ---
+  const originalNotify = erpDraft.notify;
+
   try {
     const aiPrompt = `
+IMPORTANT: You must NEVER modify the "notify" field or suggest changes to who should be notified. Only the user can set who to notify. If you believe there is a problem, add a comment in industryNotes, but DO NOT change the notify field in corrections or improved fields.
+
 You are an offshore safety Emergency Response Protocol (ERP) advisor.
 Your guidance MUST align with these global standards: IMCA, IOGP, OSHA, ISO 45001, NORSOK, ISGOTT, FEMA.
 ALSO, apply FMECA (Failure Modes, Effects, and Criticality Analysis) to review gaps.
@@ -35,7 +40,7 @@ Your job:
 Return ONLY a single valid JSON object. DO NOT include any commentary, Markdown, or text before or after the JSON. Output only JSON, nothing else.
 
 {
-  corrections: {...},           // corrections to type, keywords, notify, protocol (always fill, even if 'none')
+  corrections: {...},           // corrections to type, keywords, protocol (NEVER notify), always fill even if 'none'
   improvedKeywords: "...",      // exhaustive, typo-proof, scenario-specific
   improvedProtocol: "...",      // a much improved protocol step-by-step, even if just minor tweaks or added details
   modelReference: "...",        // best-practice template
@@ -70,7 +75,7 @@ Never say you "cannot provide suggestions". Always do your best to give practica
       aiResult = JSON.parse(cleaned);
     } catch (err1) {
       // Extract *largest* JSON object/array block (robust fallback)
-      const jsonMatch = cleaned.match(/({[^]*})|(\[[^]*\])/);
+      const jsonMatch = cleaned.match(/({[^]*})|($begin:math:display$[^]*$end:math:display$)/);
       if (jsonMatch) {
         try {
           aiResult = JSON.parse(jsonMatch[0]);
@@ -93,15 +98,27 @@ Never say you "cannot provide suggestions". Always do your best to give practica
       console.error("RAW AI OUTPUT:\n", content);
     }
 
-    // After parsing, always fill defaults:
+    // --- Always lock back original notify field ---
     if (!aiResult.error) {
       aiResult.corrections = aiResult.corrections ?? {};
+      // Remove any AI modification of notify
+      if ("notify" in aiResult.corrections) {
+        aiResult.corrections.notify = originalNotify;
+      }
+      // You could also fully delete the field to make sure:
+      // delete aiResult.corrections.notify;
+
       aiResult.improvedKeywords = aiResult.improvedKeywords ?? "No additional keywords found. Protocol is robust.";
       aiResult.improvedProtocol = aiResult.improvedProtocol ?? "No improvements necessary. Protocol meets global best practice.";
       aiResult.modelReference = aiResult.modelReference ?? "See IMCA/ISO45001 for reference protocols.";
       aiResult.missingSteps = aiResult.missingSteps ?? "All key steps present. Review for site-specific needs.";
       aiResult.industryNotes = aiResult.industryNotes ?? "Protocol aligns with current global guidance.";
       aiResult.fmecaTable = Array.isArray(aiResult.fmecaTable) ? aiResult.fmecaTable : [];
+    }
+
+    // Add one last guarantee (the top-level notify, just in case)
+    if (aiResult.notify !== undefined) {
+      aiResult.notify = originalNotify;
     }
 
     res.json(aiResult);
