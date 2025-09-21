@@ -1,11 +1,11 @@
 name: Codex Codegen PR
 
 on:
-  workflow_dispatch:    # run manually from Actions tab
+  workflow_dispatch:  # run manually from the Actions tab
 
 permissions:
-  contents: write       # allow pushing commits
-  pull-requests: write  # allow opening PRs
+  contents: write        # allow pushing commits
+  pull-requests: write   # allow opening PRs
 
 jobs:
   codex_codegen_pr:
@@ -23,17 +23,25 @@ jobs:
           echo "BRANCH_NAME=$BR" >> $GITHUB_ENV
           git switch -c "$BR"
 
+      # === Run the Codex Action (this is the generator) ===
       - name: Run OpenAI Codex (generator)
+        id: codex
         uses: lemonberrylabs/openai-codex-action@v0.3.0
         with:
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}     # required by the action
+          provider: openai
+          provider_api_key: ${{ secrets.OPENAI_API_KEY }}  # you already added this secret
+          model: gpt-4o-mini
+          branch_name: ${{ env.BRANCH_NAME }}
+          approval_mode: auto
           prompt: |
             Review the TypeScript/React code in client/ and server/.
-            Suggest safe improvements, better error handling, and add doc comments.
-            Keep builds passing and don’t expose secrets.
-          paths: |
-            client/**
-            server/**
+            Propose small, safe improvements (readability, error handling, comments),
+            and make minimal direct edits if clearly safe.
+            Keep builds passing; do not expose secrets.
+            Focus on paths:
+              - client/**
+              - server/**
 
       - name: Detect changes
         id: changes
@@ -50,7 +58,7 @@ jobs:
           git config user.name  "codex-bot"
           git config user.email "codex-bot@users.noreply.github.com"
           git add -A
-          git commit -m "codex: apply automated suggestions"
+          git commit -m "codex: automated suggestions"
 
       - name: Push branch
         if: steps.changes.outputs.has_changes == 'true'
@@ -61,6 +69,7 @@ jobs:
         if: steps.changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           title: "Codex: automated suggestions"
           body: |
             This PR was opened automatically by Codex.
@@ -68,4 +77,3 @@ jobs:
           branch: ${{ env.BRANCH_NAME }}
           base: main
           labels: codex, automated
-          
