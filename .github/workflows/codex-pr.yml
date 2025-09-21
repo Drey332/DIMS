@@ -4,8 +4,8 @@ on:
   workflow_dispatch:    # run manually from Actions tab
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write       # allow pushing commits
+  pull-requests: write  # allow opening PRs
 
 jobs:
   codex_codegen_pr:
@@ -68,7 +68,4 @@ jobs:
           branch: ${{ env.BRANCH_NAME }}
           base: main
           labels: codex, automated
-            Please review the generated changes before merging.
-          branch: ${{ env.BRANCH_NAME }}
-          base: main
-          labels: codex, automated
+          
