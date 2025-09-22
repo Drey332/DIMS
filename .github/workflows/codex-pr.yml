@@ -1,40 +1,48 @@
 name: Codex Codegen PR
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # run manually from the Actions tab
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: write        # allow pushing commits
+  pull-requests: write   # allow opening PRs
 
 jobs:
   codex_codegen_pr:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-     - name: Create working branch
-  run: |
-    BRANCH_NAME="codex/update-$(date +%Y%m%d-%H%M%S)"
-    echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-    git switch -c "$BRANCH_NAME"
+      - name: Create working branch
+        run: |
+          set -e
+          BR="codex/update-$(date +%Y%m%d-%H%M%S)"
+          echo "BRANCH_NAME=$BR" >> $GITHUB_ENV
+          git switch -c "$BR"
 
+      # === Run the Codex Action (this is the generator) ===
       - name: Run OpenAI Codex (generator)
+        id: codex
         uses: lemonberrylabs/openai-codex-action@v0.3.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           provider: openai
           provider_api_key: ${{ secrets.OPENAI_API_KEY }}
-          # Optional but recommended:
           model: gpt-4o-mini
           branch_name: ${{ env.BRANCH_NAME }}
+          approval_mode: auto
           prompt: |
-            Review the TypeScript/React and Node code in client/ and server/.
-            Propose small, safe improvements (error handling, docs, small refactors).
-            Keep builds passing and do not leak secrets.
+            Review the TypeScript/React code in client/ and server/.
+            Propose small, safe improvements (readability, error handling, comments),
+            and make minimal direct edits if clearly safe.
+            Keep builds passing; do not expose secrets.
+            Focus on paths:
+              - client/**
+              - server/**
 
       - name: Detect changes
         id: changes
@@ -51,7 +59,7 @@ jobs:
           git config user.name  "codex-bot"
           git config user.email "codex-bot@users.noreply.github.com"
           git add -A
-          git commit -m "codex: apply automated suggestions"
+          git commit -m "codex: automated suggestions"
 
       - name: Push branch
         if: steps.changes.outputs.has_changes == 'true'
