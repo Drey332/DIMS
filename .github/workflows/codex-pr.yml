@@ -1,11 +1,12 @@
+# .github/workflows/codex-pr.yml
 name: Codex Codegen PR
 
 on:
-  workflow_dispatch:  # run manually from the Actions tab
+  workflow_dispatch:
 
 permissions:
-  contents: write        # allow pushing commits
-  pull-requests: write   # allow opening PRs
+  contents: write
+  pull-requests: write
 
 jobs:
   codex_codegen_pr:
@@ -17,41 +18,40 @@ jobs:
         with:
           fetch-depth: 0
 
+      # 1) Create & PUSH a working branch so the remote can see it
       - name: Create working branch
         run: |
           BR="codex/update-$(date +%Y%m%d-%H%M%S)"
-          echo "BRANCH_NAME=$BR" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$BR" >> "$GITHUB_ENV"
           git switch -c "$BR"
+          # Push immediately so later steps that refer to it won't fail
+          git push --set-upstream origin "$BR"
 
-      # === Run the Codex Action (this is the generator) ===
+      # 2) Run the Codex action (use only supported inputs)
+      #    The action's warning listed valid keys: branch_name, prompt,
+      #    approval_mode, github_token, model, provider_api_key, provider, provider_base_url
       - name: Run OpenAI Codex (generator)
-        id: codex
         uses: lemonberrylabs/openai-codex-action@v0.3.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}     # required by the action
-          provider: openai
-          provider_api_key: ${{ secrets.OPENAI_API_KEY }}  # you already added this secret
-          model: gpt-4o-mini
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           branch_name: ${{ env.BRANCH_NAME }}
-          approval_mode: auto
+          # free to change this prompt; keep it specific to your repo
           prompt: |
-            Review the TypeScript/React code in client/ and server/.
-            Propose small, safe improvements (readability, error handling, comments),
-            and make minimal direct edits if clearly safe.
-            Keep builds passing; do not expose secrets.
-            Focus on paths:
-              - client/**
-              - server/**
+            Review the TypeScript/React and Node code in client/ and server/.
+            Propose small, safe improvements: better error handling and doc comments.
+            Keep builds passing and do not leak secrets.
 
+      # 3) See if anything actually changed
       - name: Detect changes
         id: changes
         run: |
           if git status --porcelain | grep .; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # 4) Commit any generated changes
       - name: Commit changes
         if: steps.changes.outputs.has_changes == 'true'
         run: |
@@ -60,20 +60,22 @@ jobs:
           git add -A
           git commit -m "codex: automated suggestions"
 
+      # 5) Push the branch with changes
       - name: Push branch
         if: steps.changes.outputs.has_changes == 'true'
         run: |
-          git push --set-upstream origin "$BRANCH_NAME"
+          git push
 
+      # 6) Open a PR
       - name: Open Pull Request
         if: steps.changes.outputs.has_changes == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ env.BRANCH_NAME }}
+          base: main
           title: "Codex: automated suggestions"
           body: |
             This PR was opened automatically by Codex.
             Please review the generated changes before merging.
-          branch: ${{ env.BRANCH_NAME }}
-          base: main
           labels: codex, automated
