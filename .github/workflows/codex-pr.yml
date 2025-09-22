@@ -16,11 +16,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create working branch
-        run: |
-          BR="codex/update-$(date +%Y%m%d-%H%M%S)"
-          echo "BRANCH_NAME=$BR" >> $GITHUB_ENV
-          git switch -c "$BR"
+     - name: Create working branch
+  run: |
+    BRANCH_NAME="codex/update-$(date +%Y%m%d-%H%M%S)"
+    echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+    git switch -c "$BRANCH_NAME"
 
       - name: Run OpenAI Codex (generator)
         uses: lemonberrylabs/openai-codex-action@v0.3.0
