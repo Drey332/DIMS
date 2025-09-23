@@ -1,8 +1,7 @@
-# .github/workflows/codex-pr.yml
 name: Codex Codegen PR
 
 on:
-  workflow_dispatch:   # run manually from the Actions tab
+  workflow_dispatch:  # run manually from Actions tab
 
 permissions:
   contents: write        # allow pushing commits
@@ -16,54 +15,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # full history so new branch points to current HEAD
+          fetch-depth: 0
 
-      - name: Create & publish working branch
-        id: branch
-        shell: bash
+      - name: Create working branch
         run: |
-          set -euo pipefail
+          set -e
           BR="codex/update-$(date +%Y%m%d-%H%M%S)"
-          echo "BRANCH_NAME=$BR" >> "$GITHUB_ENV"
-
-          # create branch from current HEAD
+          echo "BRANCH_NAME=$BR" >> $GITHUB_ENV
           git switch -c "$BR"
 
-          # publish it to origin *now* so the next action can find it
-          git push --set-upstream origin "$BR"
-
-      # --- Run Codex (generator) on that branch ---
+      # ✅ Only the action is used; no raw CLI args (so no -q anywhere).
       - name: Run OpenAI Codex (generator)
+        id: codex
         uses: lemonberrylabs/openai-codex-action@v0.3.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}     # required by the action
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           provider: openai
-          provider_api_key: ${{ secrets.OPENAI_API_KEY }}  # you added this in Settings → Secrets
+          provider_api_key: ${{ secrets.OPENAI_API_KEY }}
           model: gpt-4o-mini
-          branch_name: ${{ env.BRANCH_NAME }}           # the branch we just pushed
+          branch_name: ${{ env.BRANCH_NAME }}
           approval_mode: auto
           prompt: |
             Review the TypeScript/React and Node code in client/ and server/.
             Make small, safe improvements (readability, error handling, doc comments).
             Keep builds passing and do not expose secrets.
-          # Optional: restrict scope if you like
-          # paths: |
-          #   client/**
-          #   server/**
+            Focus on:
+              - client/**
+              - server/**
 
       - name: Detect changes
         id: changes
-        shell: bash
         run: |
           if git status --porcelain | grep .; then
-            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
           else
-            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Commit changes
         if: steps.changes.outputs.has_changes == 'true'
-        shell: bash
         run: |
           git config user.name  "codex-bot"
           git config user.email "codex-bot@users.noreply.github.com"
@@ -72,9 +62,8 @@ jobs:
 
       - name: Push branch
         if: steps.changes.outputs.has_changes == 'true'
-        shell: bash
         run: |
-          git push
+          git push --set-upstream origin "$BRANCH_NAME"
 
       - name: Open Pull Request
         if: steps.changes.outputs.has_changes == 'true'
