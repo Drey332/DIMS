@@ -1,7 +1,8 @@
+# .github/workflows/codex-pr.yml
 name: Codex Codegen PR
 
 on:
-  workflow_dispatch:  # run manually from the Actions tab
+  workflow_dispatch:   # run manually from the Actions tab
 
 permissions:
   contents: write        # allow pushing commits
@@ -15,46 +16,54 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0   # full history so new branch points to current HEAD
 
-      - name: Create working branch
+      - name: Create & publish working branch
+        id: branch
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
           BR="codex/update-$(date +%Y%m%d-%H%M%S)"
-          echo "BRANCH_NAME=$BR" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$BR" >> "$GITHUB_ENV"
+
+          # create branch from current HEAD
           git switch -c "$BR"
 
-      # === Run the Codex Action (this is the generator) ===
+          # publish it to origin *now* so the next action can find it
+          git push --set-upstream origin "$BR"
+
+      # --- Run Codex (generator) on that branch ---
       - name: Run OpenAI Codex (generator)
-        id: codex
         uses: lemonberrylabs/openai-codex-action@v0.3.0
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}     # required by the action
           provider: openai
-          provider_api_key: ${{ secrets.OPENAI_API_KEY }}
+          provider_api_key: ${{ secrets.OPENAI_API_KEY }}  # you added this in Settings → Secrets
           model: gpt-4o-mini
-          branch_name: ${{ env.BRANCH_NAME }}
+          branch_name: ${{ env.BRANCH_NAME }}           # the branch we just pushed
           approval_mode: auto
           prompt: |
-            Review the TypeScript/React code in client/ and server/.
-            Propose small, safe improvements (readability, error handling, comments),
-            and make minimal direct edits if clearly safe.
-            Keep builds passing; do not expose secrets.
-            Focus on paths:
-              - client/**
-              - server/**
+            Review the TypeScript/React and Node code in client/ and server/.
+            Make small, safe improvements (readability, error handling, doc comments).
+            Keep builds passing and do not expose secrets.
+          # Optional: restrict scope if you like
+          # paths: |
+          #   client/**
+          #   server/**
 
       - name: Detect changes
         id: changes
+        shell: bash
         run: |
           if git status --porcelain | grep .; then
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Commit changes
         if: steps.changes.outputs.has_changes == 'true'
+        shell: bash
         run: |
           git config user.name  "codex-bot"
           git config user.email "codex-bot@users.noreply.github.com"
@@ -63,8 +72,9 @@ jobs:
 
       - name: Push branch
         if: steps.changes.outputs.has_changes == 'true'
+        shell: bash
         run: |
-          git push --set-upstream origin "$BRANCH_NAME"
+          git push
 
       - name: Open Pull Request
         if: steps.changes.outputs.has_changes == 'true'
