@@ -25,18 +25,18 @@ socket.on('connect_error', (error) => {
 });
 
 // Export helper functions for common operations
-export const joinProject = (projectId) => {
+export const joinProject = (projectId: string | number) => {
   socket.emit('join-project', projectId);
 };
 
-export const leaveProject = (projectId) => {
+export const leaveProject = (projectId: string | number) => {
   socket.emit('leave-project', projectId);
 };
 
-export const emitTeamUpdate = (data) => {
+export const emitTeamUpdate = (data: unknown) => {
   socket.emit('team-update', data);
 };
 
-export const emitIncidentUpdate = (data) => {
+export const emitIncidentUpdate = (data: unknown) => {
   socket.emit('incident-update', data);
 };
