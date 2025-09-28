@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
+import { broadcastAuthStateChange } from '@/lib/auth-events';
 import { User, LogOut } from 'lucide-react';
 
 export default function ProfileMenu() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [open, setOpen] = useState(false);
   const [, setLocation] = useLocation();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -36,6 +37,7 @@ export default function ProfileMenu() {
       await signOut(auth);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      broadcastAuthStateChange();
       setOpen(false);
       setLocation('/login');
     } catch (error) {
