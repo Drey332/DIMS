@@ -31,7 +31,11 @@ export function EmergencyContacts() {
     try {
       const coll = collection(db, "projects", PROJECT_ID, "contacts");
       const unsub = onSnapshot(coll, (snap) => {
-        setContacts(snap.docs.map((d) => ({ ...d.data(), id: d.id }) as EmergencyContact));
+        const mappedContacts = snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<EmergencyContact, "id">),
+        }));
+        setContacts(mappedContacts as EmergencyContact[]);
         setIsLoading(false);
       }, (err) => {
         setError("Could not fetch contacts. Please check your connection.");
