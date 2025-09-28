@@ -355,20 +355,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAuditLogs(filters?: { userId?: number; projectId?: number; incidentId?: number }): Promise<AuditLog[]> {
-    let query = db.select().from(auditLogs);
-    
-    if (filters) {
-      const conditions = [];
-      if (filters.userId) conditions.push(eq(auditLogs.userId, filters.userId));
-      if (filters.projectId) conditions.push(eq(auditLogs.projectId, filters.projectId));
-      if (filters.incidentId) conditions.push(eq(auditLogs.incidentId, filters.incidentId));
-      
-      if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-      }
+    const conditions: Parameters<typeof and> = [];
+
+    if (filters?.userId) conditions.push(eq(auditLogs.userId, filters.userId));
+    if (filters?.projectId) conditions.push(eq(auditLogs.projectId, filters.projectId));
+    if (filters?.incidentId) conditions.push(eq(auditLogs.incidentId, filters.incidentId));
+
+    const baseQuery = db.select().from(auditLogs);
+
+    if (conditions.length > 0) {
+      return await baseQuery.where(and(...conditions)).orderBy(desc(auditLogs.createdAt));
     }
-    
-    return await query.orderBy(desc(auditLogs.createdAt));
+
+    return await baseQuery.orderBy(desc(auditLogs.createdAt));
   }
 
   async createEmergencyContact(insertContact: InsertEmergencyContact): Promise<EmergencyContact> {
