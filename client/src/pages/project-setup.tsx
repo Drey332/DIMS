@@ -2010,7 +2010,12 @@ export default function ProjectSetup() {
           
           {/* ---ANALYTICS --- */}
           <TabsContent value="analytics">
-            <ProjectAnalyticsDashboard projectId={projectInfo?.id ?? "default"} />
+            <ProjectAnalyticsDashboard
+              projectId={projectInfo?.id ?? "default"}
+              projectName={projectInfo?.name}
+              projectLocation={projectInfo?.location}
+              projectNumber={projectInfo?.number}
+            />
           </TabsContent>
 {/* --- Add your other tabs here ... --- */}
         </Tabs>
