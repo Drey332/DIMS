@@ -81,8 +81,8 @@ export interface ChecklistItem {
 }
 
 export interface EmergencyContact {
-  id: number;
-  projectId: number;
+  id: number | string;
+  projectId: number | string;
   contactType: string;
   name: string;
   phone: string;
