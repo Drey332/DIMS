@@ -31,9 +31,7 @@ import {
   Download,
   FileText,
   MapPin,
-  Shield,
   DollarSign,
-  Timer,
   BarChart3,
   PieChart as PieChartIcon,
   Zap,
@@ -41,8 +39,8 @@ import {
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import html2canvas from "html2canvas";
-import TeamHeadcountMap from "@/components/TeamHeadcountMap"; // adjust path if needed
-import AIProjectAnalyticsTab from "@/components/AIProjectAnalyticsTab"; // <-- import the AI tab!
+import TeamHeadcountMap from "@/components/TeamHeadcountMap";
+import AIProjectAnalyticsTab from "@/components/AIProjectAnalyticsTab";
 import { EnvironmentalContextCard } from "@/components/environmental-context-card";
 import { EarthNullschoolGlobe } from "@/components/EarthNullschoolGlobe";
 
@@ -194,10 +192,9 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
   // --- UI State ---
   const [selectedView, setSelectedView] = useState<ViewType>("live");
   const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
-  const [fastestResponders, setFastestResponders] = useState<Record<
-    string,
-    { name: string; time: number; incident: string }
-  >>({});
+  const [fastestResponders, setFastestResponders] = useState<
+    Record<string, { name: string; time: number; incident: string }>
+  >({});
 
   // --- Fetch Data ---
   useEffect(() => {
@@ -251,13 +248,13 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
             if (ackData.length > 0) {
               const incidentStartTime = new Date(inc.startTime).getTime();
               const fastest = ackData.reduce(
-                (fastest, ack) => {
+                (curr, ack) => {
                   const responseTime =
                     (ack.time || new Date(ack.acknowledgedAt).getTime()) -
                     incidentStartTime;
-                  return responseTime < fastest.time
+                  return responseTime < curr.time
                     ? { name: ack.name, time: responseTime, incident: inc.id }
-                    : fastest;
+                    : curr;
                 },
                 { name: "", time: Infinity, incident: inc.id }
               );
@@ -275,7 +272,6 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
     }
     setupAckListeners();
 
-    // Simulate a loading period
     setTimeout(() => setLoading(false), 800);
     return () => {
       unsubIncidents();
@@ -366,7 +362,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
         ackList.forEach((ack) => {
           const ackTime = ack.time || new Date(ack.acknowledgedAt).getTime();
           if (Number.isFinite(ackTime) && ackTime > start) {
-            const responseTime = (ackTime - start) / 60000; // Convert to minutes
+            const responseTime = (ackTime - start) / 60000; // minutes
             incidentTimes.push(responseTime);
             times.push(responseTime);
             responses.push({
@@ -504,13 +500,16 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
         </div>
         <div className="flex gap-2">
           <Button onClick={exportToPDF} variant="outline">
-            <FileText className="w-4 h-4 mr-2" />Export PDF
+            <FileText className="w-4 h-4 mr-2" />
+            Export PDF
           </Button>
           <Button onClick={exportToExcel} variant="outline">
-            <Download className="w-4 h-4 mr-2" />Export Excel
+            <Download className="w-4 h-4 mr-2" />
+            Export Excel
           </Button>
           <Button onClick={exportMapTableToPDF} variant="outline">
-            <Download className="w-4 h-4 mr-2" />Download Report
+            <Download className="w-4 h-4 mr-2" />
+            Download Report
           </Button>
         </div>
       </div>
@@ -578,7 +577,9 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                     <Clock className="w-5 h-5 text-purple-400" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{responseTimeMetrics.average.toFixed(1)}m</div>
+                    <div className="text-2xl font-bold">
+                      {responseTimeMetrics.average.toFixed(1)}m
+                    </div>
                     <div className="text-xs text-slate-500">To first acknowledgment</div>
                   </CardContent>
                 </Card>
@@ -701,7 +702,8 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                       >
                         {incidents.map((inc) => (
                           <option key={inc.id} value={inc.id}>
-                            {inc.title} - {new Date(inc.startTime).toLocaleDateString()} ({(acks[inc.id] || []).length} responses)
+                            {inc.title} - {new Date(inc.startTime).toLocaleDateString()} (
+                            {(acks[inc.id] || []).length} responses)
                           </option>
                         ))}
                       </select>
@@ -714,22 +716,31 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                           <h3 className="font-bold text-blue-900">Incident Details</h3>
                           <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
                             <div>
-                              <strong>Started:</strong> {new Date(incidents.find((i) => i.id === selectedIncident)!.startTime).toLocaleString()}
+                              <strong>Started:</strong>{" "}
+                              {new Date(
+                                incidents.find((i) => i.id === selectedIncident)!.startTime
+                              ).toLocaleString()}
                             </div>
                             <div>
-                              <strong>Type:</strong> {incidents.find((i) => i.id === selectedIncident)!.type}
+                              <strong>Type:</strong>{" "}
+                              {incidents.find((i) => i.id === selectedIncident)!.type}
                             </div>
                             <div>
-                              <strong>Priority:</strong> {incidents.find((i) => i.id === selectedIncident)!.priority}
+                              <strong>Priority:</strong>{" "}
+                              {incidents.find((i) => i.id === selectedIncident)!.priority}
                             </div>
                             <div>
-                              <strong>Status:</strong> {incidents.find((i) => i.id === selectedIncident)!.status}
+                              <strong>Status:</strong>{" "}
+                              {incidents.find((i) => i.id === selectedIncident)!.status}
                             </div>
                             <div>
-                              <strong>Initiated by:</strong> {incidents.find((i) => i.id === selectedIncident)!.initiatorName || "Unknown"}
+                              <strong>Initiated by:</strong>{" "}
+                              {incidents.find((i) => i.id === selectedIncident)!.initiatorName ||
+                                "Unknown"}
                             </div>
                             <div>
-                              <strong>Total Responses:</strong> {(acks[selectedIncident] || []).length}
+                              <strong>Total Responses:</strong>{" "}
+                              {(acks[selectedIncident] || []).length}
                             </div>
                           </div>
                         </div>
@@ -740,23 +751,28 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                             <h3 className="font-bold text-green-900">Response Performance</h3>
                             <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
                               <div>
-                                <strong>Fastest:</strong> {responseTimeMetrics.byIncident[selectedIncident].fastest.toFixed(1)}m
+                                <strong>Fastest:</strong>{" "}
+                                {responseTimeMetrics.byIncident[selectedIncident].fastest.toFixed(1)}m
                               </div>
                               <div>
-                                <strong>Average:</strong> {responseTimeMetrics.byIncident[selectedIncident].average.toFixed(1)}m
+                                <strong>Average:</strong>{" "}
+                                {responseTimeMetrics.byIncident[selectedIncident].average.toFixed(1)}m
                               </div>
                               <div>
-                                <strong>Slowest:</strong> {responseTimeMetrics.byIncident[selectedIncident].slowest.toFixed(1)}m
+                                <strong>Slowest:</strong>{" "}
+                                {responseTimeMetrics.byIncident[selectedIncident].slowest.toFixed(1)}m
                               </div>
                             </div>
                             <div className="mt-3">
                               <h4 className="font-semibold">Response Order:</h4>
                               <div className="max-h-32 overflow-y-auto">
-                                {responseTimeMetrics.byIncident[selectedIncident].responses.map((resp, idx) => (
-                                  <div key={resp.userId} className="text-xs py-1 border-b">
-                                    #{idx + 1}: {resp.name} - {resp.time.toFixed(1)}m
-                                  </div>
-                                ))}
+                                {responseTimeMetrics.byIncident[selectedIncident].responses.map(
+                                  (resp, idx) => (
+                                    <div key={resp.userId} className="text-xs py-1 border-b">
+                                      #{idx + 1}: {resp.name} - {resp.time.toFixed(1)}m
+                                    </div>
+                                  )
+                                )}
                               </div>
                             </div>
                           </div>
@@ -767,9 +783,11 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                           <TeamHeadcountMap
                             acks={enrichAcksForMap(acks[selectedIncident] || [], teamMembers)}
                             teamMembers={teamMembers}
-                            incidentStartTime={new Date(
-                              incidents.find((i) => i.id === selectedIncident)!.startTime
-                            ).getTime()}
+                            incidentStartTime={
+                              new Date(
+                                incidents.find((i) => i.id === selectedIncident)!.startTime
+                              ).getTime()
+                            }
                             enableReplay={true}
                             replayWindow={5 * 60 * 1000}
                           />
@@ -821,7 +839,8 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                         (responseTimeMetrics.total /
                           (incidents.length * teamMembers.length || 1)) *
                           100
-                      )}%
+                      )}
+                      %
                     </div>
                     <div className="text-xs text-slate-500">Response rate per incident</div>
                   </CardContent>
@@ -860,9 +879,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                               <td className="p-2 text-green-600">
                                 {perf?.fastest.toFixed(1) || "—"}m
                               </td>
-                              <td className="p-2">
-                                {perf?.average.toFixed(1) || "—"}m
-                              </td>
+                              <td className="p-2">{perf?.average.toFixed(1) || "—"}m</td>
                               <td className="p-2">
                                 {fastest ? (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
@@ -1008,7 +1025,10 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                   <div className="h-80">
                     {incTypeData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={incTypeData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                        <BarChart
+                          data={incTypeData}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                        >
                           <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
                           <XAxis
                             dataKey="name"

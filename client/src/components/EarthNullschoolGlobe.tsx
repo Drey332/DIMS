@@ -20,6 +20,11 @@ interface EarthNullschoolGlobeProps {
   locationName?: string;
 }
 
+function formatCoordinate(value: number, type: "lat" | "lon") {
+  const suffix = type === "lat" ? (value >= 0 ? "N" : "S") : value >= 0 ? "E" : "W";
+  return `${Math.abs(value).toFixed(2)}°${suffix}`;
+}
+
 type AnimationSetting = "on" | "off";
 type ProjectionSetting =
   | "orthographic"
@@ -175,28 +180,20 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
     if (dateMode === "current") {
       return "current";
     }
-
     const [year, month, day] = customDate.split("-");
-    if (!year || !month || !day) {
-      return "current";
-    }
-
+    if (!year || !month || !day) return "current";
     const time = customTime || "00:00";
     const numericTime = time.replace(":", "");
-
     return `${year}/${month}/${day}/${numericTime}Z`;
   }, [dateMode, customDate, customTime]);
 
   const baseUrl = useMemo(() => {
-    return locale === "en"
-      ? "https://earth.nullschool.net"
-      : `https://earth.nullschool.net/${locale}`;
+    return locale === "en" ? "https://earth.nullschool.net" : `https://earth.nullschool.net/${locale}`;
   }, [locale]);
 
   const mapSrc = useMemo(() => {
     const lon = parsedLongitude.toFixed(3);
     const lat = parsedLatitude.toFixed(3);
-
     return `${baseUrl}/#${timestampSegment}/${domain}/${surface}/${field}/anim=${animation}/overlay=${overlay}/${projection}/loc=${lon},${lat}`;
   }, [
     baseUrl,
@@ -234,6 +231,11 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
     setLongitudeInput(DEFAULT_LONGITUDE.toFixed(3));
   };
 
+  const coordinateBadge = `${formatCoordinate(parsedLatitude, "lat")} · ${formatCoordinate(
+    parsedLongitude,
+    "lon"
+  )}`;
+
   return (
     <Card className="border-blue-200 bg-white/70">
       <CardHeader className="space-y-2">
@@ -260,12 +262,17 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
             </Button>
           </div>
         </div>
-        {locationName && (
-          <div className="flex items-center gap-2 text-xs font-medium text-blue-900">
-            <MapPin className="h-3.5 w-3.5" />
-            {locationName}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-blue-900">
+          {locationName && (
+            <span className="inline-flex items-center gap-1">
+              <MapPin className="h-3.5 w-3.5" />
+              {locationName}
+            </span>
+          )}
+          <span className="rounded border border-blue-200 bg-blue-50/60 px-2 py-0.5 uppercase tracking-wide">
+            {coordinateBadge}
+          </span>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
@@ -485,3 +492,4 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
 }
 
 export default EarthNullschoolGlobe;
+
