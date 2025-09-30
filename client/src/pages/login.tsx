@@ -6,21 +6,22 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { 
-  signInWithPopup, 
-  signInWithEmailAndPassword, 
+import {
+  signInWithPopup,
+  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signOut,
   type User
 } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
+import { broadcastAuthStateChange } from '@/lib/auth-events';
 import { Shield, Anchor, Chrome, Mail, Lock, User as UserIcon, UserPlus, LogOut } from 'lucide-react';
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [firebaseUser, setFirebaseUser] = useState<any>(null);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -47,15 +48,16 @@ export default function LoginPage() {
   }, []);
 
   // Sync Firebase user with backend
-  const syncWithBackend = async (user: any) => {
+  const syncWithBackend = async (user: User) => {
     try {
+      const providerId = user.providerData?.[0]?.providerId ?? 'password';
       const response = await fetch('/api/auth/firebase-oauth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: user.email,
           displayName: user.displayName,
-          provider: 'google',
+          provider: providerId,
           uid: user.uid
         })
       });
@@ -64,12 +66,30 @@ export default function LoginPage() {
         const data = await response.json();
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
+        broadcastAuthStateChange();
         toast({
           title: 'Success',
           description: 'Successfully authenticated'
         });
         setLocation('/dashboard');
+        return;
       }
+
+      const rawMessage = await response.text();
+      let parsedMessage = rawMessage;
+      try {
+        const parsed = JSON.parse(rawMessage);
+        parsedMessage = parsed?.message || parsed?.error || rawMessage;
+      } catch {
+        // ignore JSON parsing errors
+      }
+
+      setError(parsedMessage || 'Unable to complete authentication.');
+      toast({
+        title: 'Authentication error',
+        description: parsedMessage || 'Please try again.',
+        variant: 'destructive'
+      });
     } catch (error: any) {
       console.error('Backend sync error:', error);
       toast({
@@ -155,6 +175,7 @@ export default function LoginPage() {
       await signOut(auth);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      broadcastAuthStateChange();
       setFirebaseUser(null);
       toast({
         title: 'Success',

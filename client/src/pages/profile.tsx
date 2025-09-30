@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useLocation } from 'wouter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { User, Mail, Shield, Calendar, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { broadcastAuthStateChange } from '@/lib/auth-events';
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -28,6 +29,7 @@ export default function ProfilePage() {
       await signOut(auth);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      broadcastAuthStateChange();
       toast({
         title: 'Success',
         description: 'Successfully signed out'

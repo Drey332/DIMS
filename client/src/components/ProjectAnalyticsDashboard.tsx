@@ -18,6 +18,9 @@ import * as XLSX from "xlsx";
 import html2canvas from "html2canvas";
 import TeamHeadcountMap from "@/components/TeamHeadcountMap"; // adjust path if needed
 import AIProjectAnalyticsTab from "@/components/AIProjectAnalyticsTab"; // <-- import the AI tab!
+import { EnvironmentalContextCard } from "@/components/environmental-context-card";
+import { SpaceWeatherWidget } from "@/components/space-weather-widget";
+import { EarthNullschoolGlobe } from "@/components/EarthNullschoolGlobe";
 
 type Incident = {
   id: string;
@@ -93,13 +96,63 @@ const VIEWS = [
 ] as const;
 type ViewType = typeof VIEWS[number]["key"];
 
-const ProjectAnalyticsDashboard: React.FC<{ projectId: string }> = ({ projectId }) => {
+interface ProjectAnalyticsDashboardProps {
+  projectId: string;
+  projectName?: string;
+  projectLocation?: string;
+  projectNumber?: string;
+}
+
+const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
+  projectId,
+  projectName,
+  projectLocation,
+  projectNumber,
+}) => {
   // --- Data State ---
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [acks, setAcks] = useState<Record<string, Ack[]>>({});
   const [loading, setLoading] = useState(true);
+
+  const environmentLocationName = useMemo(() => {
+    if (projectLocation && projectLocation.trim().length > 0) {
+      return projectLocation.trim();
+    }
+    const observationWithLocation = observations.find(
+      (obs) => typeof obs.location === "string" && obs.location.trim().length > 0
+    );
+    return observationWithLocation?.location.trim();
+  }, [projectLocation, observations]);
+
+  const environmentCoordinates = useMemo(() => {
+    for (const obs of observations) {
+      if (
+        typeof obs.lat === "number" &&
+        typeof obs.lng === "number" &&
+        Number.isFinite(obs.lat) &&
+        Number.isFinite(obs.lng)
+      ) {
+        return { latitude: obs.lat, longitude: obs.lng };
+      }
+    }
+
+    for (const ackList of Object.values(acks)) {
+      for (const ack of ackList) {
+        if (
+          typeof ack.lat === "number" &&
+          typeof ack.lng === "number" &&
+          Number.isFinite(ack.lat) &&
+          Number.isFinite(ack.lng)
+        ) {
+          return { latitude: ack.lat, longitude: ack.lng };
+        }
+      }
+    }
+
+    return undefined;
+  }, [observations, acks]);
 
   // --- UI State ---
   const [selectedView, setSelectedView] = useState<ViewType>("live");
@@ -367,7 +420,17 @@ const ProjectAnalyticsDashboard: React.FC<{ projectId: string }> = ({ projectId 
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800">HydroSafe Analytics Dashboard</h1>
-          <div className="text-gray-500 text-sm mt-1">Project-wide safety & performance insights</div>
+          <div className="text-gray-500 text-sm mt-1">
+            {projectName
+              ? `Insights for ${projectName}${projectNumber ? ` (${projectNumber})` : ""}`
+              : "Project-wide safety & performance insights"}
+          </div>
+          {environmentLocationName && (
+            <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+              <MapPin className="h-3.5 w-3.5 text-blue-500" />
+              <span>{environmentLocationName}</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-2">
           <Button onClick={exportToPDF} variant="outline"><FileText className="w-4 h-4 mr-2" />Export PDF</Button>
@@ -398,7 +461,25 @@ const ProjectAnalyticsDashboard: React.FC<{ projectId: string }> = ({ projectId 
         <>
           {/* --- LIVE TAB --- */}
           {selectedView === "live" && (
-            <>
+            <div className="space-y-8">
+              <EnvironmentalContextCard
+                locationName={environmentLocationName}
+                latitude={environmentCoordinates?.latitude}
+                longitude={environmentCoordinates?.longitude}
+              />
+
+              <SpaceWeatherWidget
+                locationName={environmentLocationName}
+                latitude={environmentCoordinates?.latitude}
+                longitude={environmentCoordinates?.longitude}
+              />
+
+              <EarthNullschoolGlobe
+                locationName={environmentLocationName}
+                latitude={environmentCoordinates?.latitude}
+                longitude={environmentCoordinates?.longitude}
+              />
+
               {/* Key Metrics */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <Card>
@@ -421,64 +502,64 @@ const ProjectAnalyticsDashboard: React.FC<{ projectId: string }> = ({ projectId 
                     <div className="text-xs text-slate-500">Safety observations</div>
                   </CardContent>
                 </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-base font-medium">Avg. Response Time</CardTitle>
-                        <Clock className="w-5 h-5 text-purple-400" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{responseTimeMetrics.average.toFixed(1)}m</div>
-                        <div className="text-xs text-slate-500">To first acknowledgment</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-base font-medium">Closure Rate</CardTitle>
-                        <CheckCircle className="w-5 h-5 text-amber-400" />
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">{closureRate}</div>
-                        <div className="text-xs text-slate-500">Actions completed</div>
-                      </CardContent>
-                    </Card>
-                    </div>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-base font-medium">Avg. Response Time</CardTitle>
+                    <Clock className="w-5 h-5 text-purple-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{responseTimeMetrics.average.toFixed(1)}m</div>
+                    <div className="text-xs text-slate-500">To first acknowledgment</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-base font-medium">Closure Rate</CardTitle>
+                    <CheckCircle className="w-5 h-5 text-amber-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{closureRate}</div>
+                    <div className="text-xs text-slate-500">Actions completed</div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                    {/* Trends Area Chart */}
-                    <Card className="mt-8">
-                    <CardHeader>
-                      <CardTitle className="flex gap-2 items-center text-lg font-bold">
-                        <TrendingUp className="w-5 h-5 text-blue-500" />
-                        Incident & Observation Trends
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={trendData}>
-                            <defs>
-                              <linearGradient id="c1" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.9} />
-                                <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
-                              </linearGradient>
-                              <linearGradient id="c2" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8} />
-                                <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
-                            <XAxis dataKey="date" stroke="#64748b" />
-                            <YAxis stroke="#64748b" />
-                            <Tooltip />
-                            <Legend />
-                            <Area type="monotone" dataKey="incidents" stroke="#2563eb" fill="url(#c1)" />
-                            <Area type="monotone" dataKey="observations" stroke="#22d3ee" fill="url(#c2)" />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      </div>
-                    </CardContent>
-                    </Card>
-                    </>
-                    )}
+              {/* Trends Area Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex gap-2 items-center text-lg font-bold">
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
+                    Incident & Observation Trends
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={trendData}>
+                        <defs>
+                          <linearGradient id="c1" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.9} />
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="c2" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+                        <XAxis dataKey="date" stroke="#64748b" />
+                        <YAxis stroke="#64748b" />
+                        <Tooltip />
+                        <Legend />
+                        <Area type="monotone" dataKey="incidents" stroke="#2563eb" fill="url(#c1)" />
+                        <Area type="monotone" dataKey="observations" stroke="#22d3ee" fill="url(#c2)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
                     {/* --- HISTORY TAB --- */}
                     {selectedView === "history" && (
