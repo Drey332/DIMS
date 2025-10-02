@@ -33,6 +33,10 @@ import { getDoc, doc } from "firebase/firestore";
 import { askAssetAI } from "./ai-asset-agent";
 import { db } from "@/firebase"; // or wherever your Firestore instance is
 import { aiAnalyticsService } from "./ai-analytics";
+import { getAuroraEnvironmentalContext } from "./environment";
+import { getEnvContext } from "./env-intel";
+import { envStreamManager } from "./env-stream";
+import { lookupLocationIntel, DEFAULT_OPERATION_COORDINATES } from "@shared/environment/locationIntel";
 
 import * as aiAssetAgent from "./ai-asset-agent"; // Use unique, clear names // Import all your asset agent functions
 
@@ -56,7 +60,59 @@ interface AuthenticatedRequest extends Request {
     role: string;
     firstName: string;
     lastName: string;
-  };
+};
+}
+
+function parseNumericQueryParam(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  if (Array.isArray(value)) {
+    for (const element of value) {
+      const parsed = parseNumericQueryParam(element);
+      if (parsed !== undefined) {
+        return parsed;
+      }
+    }
+    return undefined;
+  }
+  if (value && typeof value === 'object') {
+    const entries = Object.values(value as Record<string, unknown>);
+    for (const entry of entries) {
+      const parsed = parseNumericQueryParam(entry);
+      if (parsed !== undefined) {
+        return parsed;
+      }
+    }
+  }
+  return undefined;
+}
+
+function extractStringQueryParam(value: unknown): string | undefined {
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    for (const element of value) {
+      const extracted = extractStringQueryParam(element);
+      if (extracted) {
+        return extracted;
+      }
+    }
+  }
+  if (value && typeof value === 'object') {
+    for (const element of Object.values(value as Record<string, unknown>)) {
+      const extracted = extractStringQueryParam(element);
+      if (extracted) {
+        return extracted;
+      }
+    }
+  }
+  return undefined;
 }
 
 // Simple session-based authentication middleware (replace with proper auth)
@@ -88,6 +144,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Apply authentication middleware to protected API routes
   app.use('/api', authenticateUser);
+
+  // Environmental context routes
+  app.get('/api/environment/aurora', async (req, res) => {
+    try {
+      const latitude = parseNumericQueryParam(req.query.lat);
+      const longitude = parseNumericQueryParam(req.query.lon);
+      const locationQuery = extractStringQueryParam(req.query.location);
+      const locationIntel = lookupLocationIntel(locationQuery);
+
+      const resolvedLatitude = latitude ?? locationIntel?.latitude ?? DEFAULT_OPERATION_COORDINATES.latitude;
+      const resolvedLongitude = longitude ?? locationIntel?.longitude ?? DEFAULT_OPERATION_COORDINATES.longitude;
+
+      const context = await getAuroraEnvironmentalContext({
+        latitude: resolvedLatitude,
+        longitude: resolvedLongitude,
+      });
+
+      res.setHeader('Cache-Control', 'public, max-age=300');
+      res.json(context);
+    } catch (error) {
+      console.error('Error fetching aurora environmental context:', error);
+      res.status(500).json({ message: 'Failed to load aurora environmental context' });
+    }
+  });
+
+  app.get('/api/env-context', async (req, res) => {
+    const latitude = parseNumericQueryParam(req.query.lat);
+    const longitude = parseNumericQueryParam(req.query.lon);
+
+    if (latitude === undefined || longitude === undefined) {
+      return res.status(400).json({ message: 'lat and lon query params are required' });
+    }
+
+    try {
+      const context = await getEnvContext(latitude, longitude);
+      res.setHeader('Cache-Control', 'public, max-age=60');
+      res.json(context);
+    } catch (error) {
+      console.error('Error building environment context:', error);
+      res.status(500).json({ message: 'Failed to build environmental context' });
+    }
+  });
+
+  app.get('/api/env-context/stream', (req, res) => {
+    const latitude = parseNumericQueryParam(req.query.lat);
+    const longitude = parseNumericQueryParam(req.query.lon);
+    const radius = parseNumericQueryParam(req.query.radius_km);
+
+    if (latitude === undefined || longitude === undefined) {
+      res.status(400).json({ message: 'lat and lon query params are required' });
+      return;
+    }
+
+    const radiusKm = Number.isFinite(radius) ? Number(radius) : Number(process.env.QUAKE_RADIUS_KM ?? 250);
+
+    envStreamManager.handleStream(req, res, {
+      lat: latitude,
+      lon: longitude,
+      radiusKm,
+    });
+  });
 
   // User routes
   app.get('/api/user/profile', async (req: AuthenticatedRequest, res) => {

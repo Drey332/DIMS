@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 
-export function AssetAIChat({ assetId, assetName }: { assetId: string, assetName?: string }) {
+type AssetAIChatProps = {
+  assetId: string;
+  assetName?: string;
+};
+
+export function AssetAIChat({ assetId, assetName }: AssetAIChatProps) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,7 +70,7 @@ export function AssetAIChat({ assetId, assetName }: { assetId: string, assetName
   );
 }
 // At the bottom of your file, or in AssetAIChat.tsx if you prefer
-const AssetAIChatWidget = () => (
+export const AssetAIChatWidget = ({ assetId, assetName }: AssetAIChatProps) => (
   <div
     style={{
       position: "fixed",
@@ -77,6 +82,6 @@ const AssetAIChatWidget = () => (
     }}
     className="shadow-2xl rounded-xl bg-white border border-gray-200"
   >
-    <AssetAIChat/>
+    <AssetAIChat assetId={assetId} assetName={assetName} />
   </div>
 );

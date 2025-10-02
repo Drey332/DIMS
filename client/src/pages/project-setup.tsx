@@ -194,7 +194,7 @@ export default function ProjectSetup() {
 
   // Get user IDs for online tracking
   const userIds = teamMembers.map(m => m.id); // Or whatever field is the userId (sometimes it's m.userId)
-  const { teamActivity } = useTeamOnlineStatus(userIds); // INSERT HERE
+  const teamActivity = useTeamOnlineStatus(userIds); // INSERT HERE
 
 
   
@@ -2010,7 +2010,12 @@ export default function ProjectSetup() {
           
           {/* ---ANALYTICS --- */}
           <TabsContent value="analytics">
-            <ProjectAnalyticsDashboard projectId={projectInfo?.id ?? "default"} />
+            <ProjectAnalyticsDashboard
+              projectId={projectInfo?.id ?? "default"}
+              projectName={projectInfo?.name}
+              projectLocation={projectInfo?.location}
+              projectNumber={projectInfo?.number}
+            />
           </TabsContent>
 {/* --- Add your other tabs here ... --- */}
         </Tabs>

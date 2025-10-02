@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Brain, MessageSquare, Send, Loader2, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ERPScenarioSearch } from '@/components/erp-scenario-search';
+import { EnvironmentalContextCard } from '@/components/environmental-context-card';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { lookupLocationIntel, DEFAULT_OPERATION_COORDINATES } from '@shared/environment/locationIntel';
+import { type AuroraEnvironmentalContext } from '@shared/environment/types';
+import { useEnvIntelContext } from '@/hooks/use-env-intel';
 
 interface AIResponse {
   answer: string;
@@ -16,11 +22,57 @@ interface AIResponse {
   source?: string;
 }
 
+interface ProjectSummary {
+  id: number;
+  name: string;
+  location: string;
+  client: string;
+  number?: string;
+}
+
 export default function EmergencyProtocols() {
   const [question, setQuestion] = useState('');
   const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: projectsData, isLoading: projectsLoading } = useQuery<ProjectSummary[]>({
+    queryKey: ['/api/user/projects'],
+    queryFn: async () => {
+      const response = await fetch('/api/user/projects');
+      if (!response.ok) {
+        throw new Error('Failed to load assigned projects');
+      }
+      return response.json();
+    }
+  });
+
+  const projects = projectsData ?? [];
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!projectsLoading && projects.length > 0 && selectedProjectId === null) {
+      setSelectedProjectId(projects[0].id);
+    }
+  }, [projects, projectsLoading, selectedProjectId]);
+
+  const activeProject = useMemo(() => {
+    if (projects.length === 0) return undefined;
+    if (selectedProjectId === null) {
+      return projects[0];
+    }
+    return projects.find((project) => project.id === selectedProjectId) ?? projects[0];
+  }, [projects, selectedProjectId]);
+
+  const locationIntel = useMemo(() => lookupLocationIntel(activeProject?.location), [activeProject?.location]);
+  const resolvedLatitude = locationIntel?.latitude ?? DEFAULT_OPERATION_COORDINATES.latitude;
+  const resolvedLongitude = locationIntel?.longitude ?? DEFAULT_OPERATION_COORDINATES.longitude;
+  const environmentQueryKey = useMemo(
+    () => ['environmental-context', Number(resolvedLatitude.toFixed(3)), Number(resolvedLongitude.toFixed(3))] as const,
+    [resolvedLatitude, resolvedLongitude]
+  );
+  const { context: liveEnvIntel } = useEnvIntelContext(resolvedLatitude, resolvedLongitude);
 
   const handleAskAI = async () => {
     if (!question.trim()) {
@@ -34,12 +86,52 @@ export default function EmergencyProtocols() {
 
     setIsLoading(true);
     try {
+      const contextSegments: string[] = [];
+      if (activeProject) {
+        contextSegments.push(
+          `Project: ${activeProject.name} (${activeProject.number ?? 'no project number assigned'}), Client: ${activeProject.client}. Location: ${activeProject.location}.`
+        );
+      }
+
+      if (locationIntel) {
+        const riskBullet = locationIntel.riskFactors.slice(0, 3).join('; ');
+        const mitigationBullet = locationIntel.protectiveMeasures.slice(0, 2).join('; ');
+        contextSegments.push(
+          `Operational intelligence: Risk level ${locationIntel.riskLevel.toUpperCase()} (${locationIntel.confidence.toUpperCase()} confidence). Key factors: ${riskBullet || 'No catalogued risk factors.'} Mitigation focus: ${mitigationBullet || 'Confirm mitigations with site leadership.'}`
+        );
+      } else if (activeProject?.location) {
+        contextSegments.push(`Operational intelligence: No catalogued risk profile for ${activeProject.location}. Treat as medium risk until briefed.`);
+      }
+
+      const environmentContext = queryClient.getQueryData<AuroraEnvironmentalContext>(environmentQueryKey);
+      if (environmentContext) {
+        const kpValue = environmentContext.estimatedKp.value !== null && environmentContext.estimatedKp.value !== undefined
+          ? environmentContext.estimatedKp.value.toFixed(1)
+          : 'unknown';
+        const localProbability = environmentContext.localEstimate?.probability !== null && environmentContext.localEstimate?.probability !== undefined
+          ? `${environmentContext.localEstimate.probability.toFixed(1)}%`
+          : 'no local probability data';
+        const topAnalysis = environmentContext.analysis[0] ?? '';
+        contextSegments.push(
+          `Space weather posture: ${environmentContext.estimatedKp.description} (Kp ${kpValue}). Local auroral probability ${localProbability}. ${topAnalysis}`.trim()
+        );
+      }
+
+      if (liveEnvIntel) {
+        contextSegments.push(`Operational environment summary:\n${liveEnvIntel.erp_note_md}`);
+      }
+
+      const compiledContext = contextSegments.filter(Boolean).join('\n\n');
+
       const response = await fetch('/api/erp/ask-ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ question: question.trim() }),
+        body: JSON.stringify({
+          question: question.trim(),
+          context: compiledContext || undefined,
+        }),
       });
 
       if (!response.ok) {
@@ -96,6 +188,49 @@ export default function EmergencyProtocols() {
         <p className="text-gray-600 mt-2">
           Access HydroDive's comprehensive emergency response procedures and AI-powered guidance
         </p>
+      </div>
+
+      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50/40 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-blue-900">Align intelligence to your active project</p>
+            <p className="text-xs text-blue-800">Select the deployment you&apos;re drafting ERPs for so HydroSafe can surface the right location risks.</p>
+          </div>
+          <div className="w-full sm:w-[320px]">
+            {projectsLoading ? (
+              <div className="text-sm text-blue-700">Loading assigned projects…</div>
+            ) : projects.length > 0 ? (
+              <Select
+                value={selectedProjectId !== null ? String(selectedProjectId) : String(projects[0].id)}
+                onValueChange={(value) => setSelectedProjectId(Number(value))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={String(project.id)}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-medium">{project.name}</span>
+                        <span className="text-xs text-muted-foreground">{project.location}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="text-sm text-blue-700">No assigned projects. Showing global environmental defaults.</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <EnvironmentalContextCard
+          locationName={activeProject?.location}
+          latitude={locationIntel?.latitude}
+          longitude={locationIntel?.longitude}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">

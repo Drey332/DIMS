@@ -9,6 +9,7 @@ import { PersistentNav } from "@/components/persistent-nav";
 import { ProjectHeader } from "@/components/project-header";
 import { useEnableOfflineSync } from "@shared/useOfflineSync";
 import { socket } from "./socket.js";
+import { AUTH_STATE_EVENT } from "@/lib/auth-events";
 import { db } from "@/firebase";
 import { doc, collection, onSnapshot } from "firebase/firestore";
 import { useOnlineTracking } from "@/lib/onlineTracking";
@@ -135,24 +136,49 @@ function Router() {
 
   // Auth, user, socket setup
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (token && user) {
-      setIsAuthenticated(true);
-      setUserData(JSON.parse(user));
-    } else {
-      setIsAuthenticated(false);
-      setUserData(null);
-    }
-    setIsLoading(false);
+    let lastAnnouncedUser: { id?: string | number } | null = null;
 
-    if (token) {
-      socket.connect();
-      const userObj = JSON.parse(user || '{}');
-      if (userObj.id) {
-        socket.emit('user-online', userObj.id);
+    const syncAuthState = () => {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+
+      if (token && storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setIsAuthenticated(true);
+        setUserData(parsedUser);
+
+        if (!socket.connected) {
+          socket.connect();
+        }
+
+        if (parsedUser?.id) {
+          socket.emit('user-online', parsedUser.id);
+          lastAnnouncedUser = { id: parsedUser.id };
+        }
+      } else {
+        if (lastAnnouncedUser?.id) {
+          socket.emit('user-offline', lastAnnouncedUser.id);
+        }
+        if (socket.connected) {
+          socket.disconnect();
+        }
+        lastAnnouncedUser = null;
+        setIsAuthenticated(false);
+        setUserData(null);
       }
-    }
+
+      setIsLoading(false);
+    };
+
+    syncAuthState();
+
+    window.addEventListener('storage', syncAuthState);
+    window.addEventListener(AUTH_STATE_EVENT, syncAuthState);
+
+    return () => {
+      window.removeEventListener('storage', syncAuthState);
+      window.removeEventListener(AUTH_STATE_EVENT, syncAuthState);
+    };
   }, []);
 
   // Post-acknowledgment ERP modal state

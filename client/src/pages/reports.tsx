@@ -22,6 +22,7 @@ import {
   Search
 } from "lucide-react";
 import { AuditLog } from "@shared/schema";
+import { DashboardStats } from "@/types";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 // import { AIChatAssistant } from "@/components/ai-chat-assistant";
@@ -36,52 +37,95 @@ export default function Reports() {
     queryKey: ["/api/dashboard/stats", { projectId: 1 }],
   });
 
-  const { data: auditLogs = [] } = useQuery<AuditLog[]>({
+  type AuditLogWithUser = AuditLog & {
+    user?: {
+      firstName?: string | null;
+      lastName?: string | null;
+      role?: string | null;
+    } | null;
+  };
+
+  const { data: auditLogs = [] } = useQuery<AuditLogWithUser[]>({
     queryKey: ["/api/audit-logs", { projectId: 1 }],
   });
 
   // Default audit logs for demo
-  const defaultLogs = [
+  const defaultLogs: AuditLogWithUser[] = [
     {
       id: 1,
+      projectId: 1,
+      incidentId: null,
+      userId: 4,
       actionType: "INCIDENT_CREATED",
       description: "Equipment inspection overdue incident created",
-      createdAt: "2025-01-24T14:30:00Z",
-      userId: 4,
-      user: { firstName: "Nick", lastName: "Roddy", role: "BRONZE" }
+      oldData: null,
+      newData: null,
+      ipAddress: null,
+      userAgent: null,
+      sessionId: null,
+      createdAt: new Date("2025-01-24T14:30:00Z"),
+      user: { firstName: "Nick", lastName: "Roddy", role: "BRONZE" },
     },
     {
       id: 2,
+      projectId: 1,
+      incidentId: null,
+      userId: 4,
       actionType: "FILE_UPLOADED",
       description: "Inspection photos uploaded for dive vessel",
-      createdAt: "2025-01-24T14:25:00Z",
-      userId: 4,
-      user: { firstName: "Nick", lastName: "Roddy", role: "BRONZE" }
+      oldData: null,
+      newData: null,
+      ipAddress: null,
+      userAgent: null,
+      sessionId: null,
+      createdAt: new Date("2025-01-24T14:25:00Z"),
+      user: { firstName: "Nick", lastName: "Roddy", role: "BRONZE" },
     },
     {
       id: 3,
+      projectId: 1,
+      incidentId: null,
+      userId: 1,
       actionType: "DECISION_MADE",
       description: "Weather window extension approved",
-      createdAt: "2025-01-24T14:20:00Z",
-      userId: 1,
-      user: { firstName: "David", lastName: "Mooney", role: "GOLD" }
+      oldData: null,
+      newData: null,
+      ipAddress: null,
+      userAgent: null,
+      sessionId: null,
+      createdAt: new Date("2025-01-24T14:20:00Z"),
+      user: { firstName: "David", lastName: "Mooney", role: "GOLD" },
     },
     {
       id: 4,
+      projectId: 1,
+      incidentId: null,
+      userId: 3,
       actionType: "INCIDENT_UPDATED",
       description: "Safety drill completed successfully",
-      createdAt: "2025-01-24T12:45:00Z",
-      userId: 3,
-      user: { firstName: "Kene", lastName: "Anyabolu", role: "SILVER" }
+      oldData: null,
+      newData: null,
+      ipAddress: null,
+      userAgent: null,
+      sessionId: null,
+      createdAt: new Date("2025-01-24T12:45:00Z"),
+      user: { firstName: "Kene", lastName: "Anyabolu", role: "SILVER" },
     },
     {
       id: 5,
+      projectId: 1,
+      incidentId: null,
+      userId: 2,
       actionType: "CONTACT_VERIFIED",
       description: "Emergency contacts verification completed",
-      createdAt: "2025-01-24T10:15:00Z",
-      userId: 2,
-      user: { firstName: "Dean", lastName: "Golding", role: "SILVER" }
-    }
+      oldData: null,
+      newData: null,
+      ipAddress: null,
+      userAgent: null,
+      sessionId: null,
+      createdAt: new Date("2025-01-24T10:15:00Z"),
+      user: { firstName: "Dean", lastName: "Golding", role: "SILVER" },
+    },
   ];
 
   const displayLogs = auditLogs.length > 0 ? auditLogs : defaultLogs;
@@ -254,36 +298,39 @@ export default function Reports() {
               <CardContent>
                 <ScrollArea className="h-96">
                   <div className="space-y-3">
-                    {filteredLogs.map((log) => (
-                      <div key={log.id} className={cn("p-3 rounded-lg border", getActionColor(log.actionType))}>
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-3 flex-1">
-                            {getActionIcon(log.actionType)}
-                            <div className="flex-1">
-                              <h4 className="font-medium text-sm">{log.description}</h4>
-                              <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                                <div className="flex items-center">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {new Date(log.createdAt).toLocaleString()}
-                                </div>
-                                <div className="flex items-center">
-                                  <User className="w-3 h-3 mr-1" />
-                                  {log.user?.firstName} {log.user?.lastName}
+                    {filteredLogs.map((log) => {
+                      const createdAt = log.createdAt ? new Date(log.createdAt) : null;
+                      return (
+                        <div key={log.id} className={cn("p-3 rounded-lg border", getActionColor(log.actionType))}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start space-x-3 flex-1">
+                              {getActionIcon(log.actionType)}
+                              <div className="flex-1">
+                                <h4 className="font-medium text-sm">{log.description}</h4>
+                                <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                                  <div className="flex items-center">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {createdAt ? createdAt.toLocaleString() : "Unknown"}
+                                  </div>
+                                  <div className="flex items-center">
+                                    <User className="w-3 h-3 mr-1" />
+                                    {log.user?.firstName} {log.user?.lastName}
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge className={cn("text-xs", getRoleColor(log.user?.role || "BRONZE"))}>
-                              {log.user?.role}
-                            </Badge>
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
-                              <Eye className="w-3 h-3" />
-                            </Button>
+                            <div className="flex items-center space-x-2">
+                              <Badge className={cn("text-xs", getRoleColor(log.user?.role || "BRONZE"))}>
+                                {log.user?.role}
+                              </Badge>
+                              <Button size="sm" variant="ghost" className="h-6 w-6 p-0">
+                                <Eye className="w-3 h-3" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </ScrollArea>
               </CardContent>
