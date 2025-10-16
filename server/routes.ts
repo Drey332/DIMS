@@ -1309,7 +1309,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI Q&A API endpoint for emergency response questions
   app.post('/api/erp/ask-ai', authenticateUser, async (req: AuthenticatedRequest, res) => {
     try {
-      const { question, context } = req.body;
+      const { question, context, projectContext } = req.body;
       
       if (!question || typeof question !== 'string') {
         return res.status(400).json({ message: "Question is required" });
@@ -1321,6 +1321,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { ERPKnowledgeService } = await import('./erpKnowledge');
       const knowledgeContext = ERPKnowledgeService.getContextForAI(question);
 
+      // Fire Intelligence: Get matched historical incidents
+      const { computeIncidentMatches } = await import('./fire-intel/matcher');
+      const { toKnowledgeText } = await import('./fire-intel/ingest');
+      const { fireIntelStorage } = await import('./fire-intel/storage');
+      
+      let matchedIncidents: any[] = [];
+      let oneLiner = "";
+      let fireIntelContext = "";
+
+      try {
+        // Extract project info from context
+        const locationMatch = context?.match(/Location: ([^\n]+)/);
+        const phaseMatch = context?.match(/Phase: (\w+)/);
+        const location = locationMatch?.[1] || projectContext?.location;
+        const phase = phaseMatch?.[1] || projectContext?.operationPhase || "production";
+
+        const matchResult = await computeIncidentMatches({
+          query: question,
+          location,
+          phase: phase as any,
+          whenUtc: new Date().toISOString()
+        });
+
+        matchedIncidents = matchResult.matches;
+
+        // Generate one-liner preface
+        if (matchedIncidents.length > 0 && matchedIncidents[0]) {
+          const topMatch = matchedIncidents[0];
+          const lessonPreview = topMatch.lessons?.[0] ? `; key lesson: ${topMatch.lessons[0]}` : "";
+          oneLiner = `⚠️ Because your context resembles **${topMatch.title}** conditions (${phase}${lessonPreview}), apply the following controls first.`;
+        } else {
+          oneLiner = `✓ Applying fire best-practice controls for ${phase} phase first.`;
+        }
+
+        // Build fire intelligence context
+        const topIncidents = matchedIncidents.slice(0, 2);
+        for (const match of topIncidents) {
+          const incident = await fireIntelStorage.getIncident(match.id);
+          if (incident) {
+            fireIntelContext += `\n---\n${toKnowledgeText(incident)}`;
+          }
+        }
+      } catch (err) {
+        console.error("Fire intelligence matching failed (non-fatal):", err);
+      }
+
       // Use OpenAI to provide intelligent response
       if (process.env.OPENAI_API_KEY) {
         const { OpenAI } = await import('openai');
@@ -1331,7 +1377,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const prompt = `You are HydroSafe's AI Emergency Response Assistant with comprehensive knowledge of offshore safety protocols.
 
 USER QUESTION: ${question}
+
+CONTEXT-BASED PREFACE:
+${oneLiner}
+
 ${context ? `ADDITIONAL CONTEXT: ${context}` : ''}
+
+${fireIntelContext ? `FIRE INCIDENT INTELLIGENCE (Historical Lessons):${fireIntelContext}` : ''}
 
 RELEVANT Q&A FROM ERP DATABASE:
 ${qnaResults.map(qa => `Q: ${qa.question}\nA: ${qa.answer}\n[Urgency: ${qa.urgency}, Command Level: ${qa.commandLevel}]`).join('\n\n')}
@@ -1376,9 +1428,10 @@ Be specific, practical, and safety-focused in your response.`;
         });
 
         res.json({
-          answer: aiAnswer,
+          answer: `${oneLiner}\n\n${aiAnswer}`,
           relatedQuestions: qnaResults.map(qa => qa.question),
           relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
+          matchedIncidents,
           confidence: "high"
         });
       } else {
@@ -1389,6 +1442,7 @@ Be specific, practical, and safety-focused in your response.`;
             answer: bestMatch.answer,
             relatedQuestions: qnaResults.slice(1).map(qa => qa.question),
             relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
+            matchedIncidents,
             confidence: "medium",
             source: "Knowledge Base"
           });
@@ -1397,6 +1451,7 @@ Be specific, practical, and safety-focused in your response.`;
             answer: "I don't have specific information about that question. Please refer to your Emergency Response Plan or contact your Emergency Coordinator for guidance.",
             relatedQuestions: [],
             relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
+            matchedIncidents,
             confidence: "low"
           });
         }
