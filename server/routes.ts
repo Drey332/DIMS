@@ -1495,6 +1495,28 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
+  // Fire Intelligence - Geo-aware incident matching
+  app.get('/api/incidents/match', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { computeIncidentMatches } = await import('./fire-intel/matcher');
+      
+      const matchContext = {
+        query: typeof req.query.q === 'string' ? req.query.q : undefined,
+        location: typeof req.query.location === 'string' ? req.query.location : undefined,
+        lat: req.query.lat ? Number(req.query.lat) : undefined,
+        lon: req.query.lon ? Number(req.query.lon) : undefined,
+        whenUtc: typeof req.query.whenUtc === 'string' ? req.query.whenUtc : undefined,
+        phase: typeof req.query.phase === 'string' ? req.query.phase as any : undefined,
+      };
+
+      const result = await computeIncidentMatches(matchContext);
+      res.json(result);
+    } catch (error) {
+      console.error("Error computing incident matches:", error);
+      res.status(500).json({ message: "Failed to compute incident matches" });
+    }
+  });
+
   const httpServer = createServer(app);
   
   // WebSocket setup for real-time communication
