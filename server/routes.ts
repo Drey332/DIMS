@@ -43,6 +43,16 @@ import { getAuroraEnvironmentalContext } from "./environment";
 import { getEnvContext } from "./env-intel";
 import { envStreamManager } from "./env-stream";
 import { lookupLocationIntel, DEFAULT_OPERATION_COORDINATES } from "@shared/environment/locationIntel";
+import { fireGuardHarvester } from "./fire-guard-harvester";
+import { fireGuardModelService } from "./fire-guard-model";
+import { ensureFireIncidentSeeds, searchFireIncidentContext } from "./fire-intel/ingest";
+import { evaluateFireRisk, type Telemetry } from "./fire-intel/rules";
+import OpenAI from "openai";
+import {
+  registerIncidentMatchRoute,
+  computeIncidentMatches,
+  type IncidentMatch,
+} from "./routes/incidents-match";
 
 import * as aiAssetAgent from "./ai-asset-agent"; // Use unique, clear names // Import all your asset agent functions
 
@@ -58,6 +68,10 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
 });
+
+const erpAssistantOpenAI = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 interface AuthenticatedRequest extends Request {
   user?: {
@@ -136,6 +150,10 @@ const authenticateUser = async (req: AuthenticatedRequest, res: Response, next: 
 };
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  await ensureFireIncidentSeeds().catch((error) => {
+    console.warn("Failed to auto-ingest fire incident seeds:", error);
+  });
+
   // Authentication routes (no auth middleware required)
   app.post("/api/auth/login", loginUser);
   app.post("/api/auth/register", registerUser);
@@ -150,6 +168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Apply authentication middleware to protected API routes
   app.use("/api", authenticateUser);
+
+  registerIncidentMatchRoute(app);
 
   // Environmental context routes
   app.get("/api/environment/aurora", async (req, res) => {
@@ -216,6 +236,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lon: longitude,
       radiusKm,
     });
+  });
+
+  // Fire Guard intelligence ingestion + modeling endpoints
+  app.get("/api/fire-guard/sources", (_req, res) => {
+    res.json({ sources: fireGuardHarvester.listSources() });
+  });
+
+  app.get("/api/fire-guard/latest", async (req, res) => {
+    try {
+      const projectId = extractStringQueryParam(req.query.projectId);
+      const snapshot = await fireGuardHarvester.getLatestSnapshot(projectId);
+      if (!snapshot) {
+        return res.status(404).json({ message: "No Fire Guard harvest found" });
+      }
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Failed to fetch Fire Guard snapshot:", error);
+      res.status(500).json({ message: "Failed to fetch Fire Guard snapshot" });
+    }
+  });
+
+  app.post("/api/fire-guard/harvest", async (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const limit = typeof body.limitPerSource === "number"
+      ? body.limitPerSource
+      : typeof body.limitPerSource === "string"
+        ? Number.parseInt(body.limitPerSource, 10)
+        : undefined;
+    const includeRawFlag = body.includeRaw === true || body.includeRaw === "true";
+    const sources = Array.isArray(body.sources) ? body.sources.map((value) => String(value)) : undefined;
+    const projectId = typeof body.projectId === "string" ? body.projectId : undefined;
+
+    try {
+      const snapshot = await fireGuardHarvester.harvest({
+        sources,
+        limitPerSource: Number.isFinite(limit) ? Number(limit) : undefined,
+        includeRaw: includeRawFlag,
+        projectId,
+      });
+      res.status(201).json(snapshot);
+    } catch (error) {
+      console.error("Fire Guard harvest failed:", error);
+      const message = error instanceof Error ? error.message : "Failed to harvest Fire Guard intelligence";
+      res.status(500).json({ message });
+    }
+  });
+
+  app.post("/api/fire-guard/analyze", async (req, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const maxRecords = typeof body.maxRecords === "number"
+      ? body.maxRecords
+      : typeof body.maxRecords === "string"
+        ? Number.parseInt(body.maxRecords, 10)
+        : undefined;
+    const records = Array.isArray(body.records) ? (body.records as unknown[]) : undefined;
+
+    try {
+      const result = await fireGuardModelService.analyze({
+        projectId: typeof body.projectId === "string" ? body.projectId : undefined,
+        records: records as any,
+        maxRecords: Number.isFinite(maxRecords) ? Number(maxRecords) : undefined,
+      });
+      res.json(result);
+    } catch (error) {
+      console.error("Fire Guard pattern analysis failed:", error);
+      const message = error instanceof Error ? error.message : "Fire Guard analysis failed";
+      res.status(500).json({ message });
+    }
   });
 
   // User routes
@@ -530,6 +618,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/erp/ask-ai", async (req, res) => {
+    try {
+      const { question, context, projectContext } = req.body ?? {};
+      if (typeof question !== "string" || question.trim().length === 0) {
+        return res.status(400).json({ message: "question is required" });
+      }
+
+      const fireContextDocs = await searchFireIncidentContext(question, 4);
+      const snippetParts = fireContextDocs
+        .map((doc) => {
+          const chunk = typeof doc.chunk === "string" ? doc.chunk : "";
+          if (!chunk) {
+            return undefined;
+          }
+          return chunk.length > 800 ? `${chunk.slice(0, 800)}…` : chunk;
+        })
+        .filter((value): value is string => Boolean(value));
+      const fireSnippets = snippetParts.join("\n---\n");
+
+      const activePhase = typeof projectContext?.operationPhase === "string"
+        ? projectContext.operationPhase
+        : "production";
+      const locationName = typeof projectContext?.location === "string" ? projectContext.location : undefined;
+      const whenUtc = new Date().toISOString();
+
+      let matchedIncidents: IncidentMatch[] = [];
+      try {
+        const matchResponse = await computeIncidentMatches({
+          query: question,
+          location: locationName,
+          whenUtc,
+          phase: activePhase,
+        });
+        matchedIncidents = matchResponse.matches;
+      } catch (matchError) {
+        console.warn("Failed to compute incident matches for ERP prompt", matchError);
+      }
+
+      const topMatches = matchedIncidents.slice(0, 2);
+      const leadingLesson = topMatches[0]?.lessons?.[0];
+      const oneLiner = topMatches[0]?.title
+        ? `Because your context resembles **${topMatches[0].title}** conditions (${activePhase}${
+            leadingLesson ? `; key lesson: ${leadingLesson}` : ""
+          }), apply the following controls first.`
+        : `Applying fire best-practice controls for ${activePhase} phase first.`;
+
+      const matchSummaries = topMatches
+        .map((match, index) => {
+          const lessons = Array.isArray(match.lessons) ? match.lessons.slice(0, 2).join("; ") : "";
+          const location = match.location ?? "location unknown";
+          const date = match.dateUtc ? new Date(match.dateUtc).toISOString().slice(0, 10) : "date unknown";
+          return `${index + 1}. ${match.title} — ${location} (${date})${lessons ? ` | Lessons: ${lessons}` : ""}`;
+        })
+        .join("\n");
+
+      const systemPrompt =
+        "You are HydroSafe's AI Emergency Response Assistant. Use historic fire intelligence lessons (Piper Alpha, Macondo, etc.) to ground your advice.";
+      const userPrompt =
+        `USER QUESTION: ${question}\n\n` +
+        `CONTEXT-BASED PREFACE:\n${oneLiner}\n\n` +
+        (context ? `ADDITIONAL CONTEXT:\n${context}\n\n` : "") +
+        `MATCHED INCIDENT SUMMARIES:\n${matchSummaries || "No closely matched incidents identified."}\n\n` +
+        `FIRE INCIDENT INTELLIGENCE (retrieved):\n${fireSnippets || "No matching incidents found."}\n\n` +
+        "Provide actionable guidance, cite specific lessons, and recommend mitigations.";
+
+      let answerBody = "";
+      if (erpAssistantOpenAI) {
+        const completion = await erpAssistantOpenAI.chat.completions.create({
+          model: "gpt-4o",
+          temperature: 0.2,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+        });
+        answerBody = completion.choices[0]?.message?.content?.trim() ?? "";
+      }
+
+      if (!answerBody) {
+        const fallbackLines = [
+          "Fire Guard insights leveraged from historic incidents:",
+          ...topMatches.map((match) => {
+            const lessons = match.lessons.slice(0, 2).join("; ") || "Review official findings for lessons.";
+            return `- ${match.title} — Lessons: ${lessons}`;
+          }),
+        ];
+        if (fallbackLines.length === 1) {
+          fallbackLines.push(
+            "No indexed incidents matched; follow ERP protocols and log new learnings for ingestion."
+          );
+        }
+        answerBody = fallbackLines.join("\n");
+      }
+
+      const answer = `${oneLiner}\n\n${answerBody}`;
+
+      res.json({
+        answer,
+        relatedQuestions: [],
+        relatedScenarios: [],
+        confidence: "high",
+        matchedIncidents: topMatches,
+      });
+    } catch (error) {
+      console.error("Error answering ERP question:", error);
+      res.status(500).json({ message: "Failed to answer ERP question" });
+    }
+  });
+
   app.post("/api/ai/protocol-guidance", async (req, res) => {
     try {
       const { emergencyType, projectContext, currentConditions } = req.body;
@@ -577,6 +774,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating recommendations:", error);
       res.status(500).json({ message: "Failed to generate recommendations" });
+    }
+  });
+
+  app.post("/api/fire/risk", async (req, res) => {
+    try {
+      const { phase, telemetry } = req.body ?? {};
+      const normalizedPhase = typeof phase === "string" ? phase.toLowerCase() : "production";
+      const safePhase = ((): "production" | "drilling" | "completion" | "maintenance" => {
+        switch (normalizedPhase) {
+          case "drilling":
+            return "drilling";
+          case "completion":
+            return "completion";
+          case "maintenance":
+            return "maintenance";
+          default:
+            return "production";
+        }
+      })();
+      const fireRisk = evaluateFireRisk(safePhase, (telemetry ?? {}) as Telemetry);
+      res.json({ fireRisk });
+    } catch (error) {
+      console.error("Error evaluating fire risk:", error);
+      res.status(500).json({ message: "Failed to evaluate fire risk" });
     }
   });
 

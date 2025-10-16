@@ -139,7 +139,7 @@ const presets: Preset[] = [
 ];
 
 const DEFAULT_LATITUDE = 40.793;
-the const DEFAULT_LONGITUDE = -77.863;
+const DEFAULT_LONGITUDE = -77.863;
 
 export function EarthNullschoolGlobe({ latitude, longitude, locationName }: EarthNullschoolGlobeProps) {
   const hasCoordinates = isValidCoordinate(latitude) && isValidCoordinate(longitude);
