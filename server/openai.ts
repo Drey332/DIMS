@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { ERPKnowledgeService } from './erpKnowledge';
 import { ERPScenariosService } from './erpScenarios';
 import { ERPQnAService } from './erpQnA';
+import { evaluateFireRisk, type FireOperationPhase, type Telemetry } from "./fire-intel/rules";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ 
@@ -25,6 +26,11 @@ export interface EmergencyGuidance {
   escalationCriteria: string[];
   protocolReferences: string[];
   riskAssessment: string;
+  fireRisk?: {
+    level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+    score: number;
+    findings: string[];
+  };
 }
 
 // Comprehensive emergency protocol database based on IMCA, IOGP, and HydroDive standards
@@ -155,6 +161,80 @@ const ROLE_BASED_CHECKLISTS = {
   ]
 };
 
+function resolveFirePhase(projectContext: any, emergencyType: string): FireOperationPhase {
+  const candidate = (projectContext?.phase || emergencyType || "").toString().toLowerCase();
+  if (["production", "drilling", "completion", "maintenance"].includes(candidate)) {
+    return candidate as FireOperationPhase;
+  }
+  if (candidate.includes("drill")) {
+    return "drilling";
+  }
+  if (candidate.includes("completion") || candidate.includes("well kill")) {
+    return "completion";
+  }
+  if (candidate.includes("maint")) {
+    return "maintenance";
+  }
+  return "production";
+}
+
+function normalizeTelemetry(input: any): Telemetry {
+  if (!input || typeof input !== "object") {
+    return {};
+  }
+
+  const telemetry: Telemetry = {};
+  const source = input.telemetry && typeof input.telemetry === "object" ? input.telemetry : input;
+
+  const gasValue = source.gasPpm ?? source.gasReading ?? source.gas_ppm;
+  if (typeof gasValue === "number") {
+    telemetry.gasPpm = gasValue;
+  }
+
+  if (typeof source.delugeReady === "boolean") {
+    telemetry.delugeReady = source.delugeReady;
+  } else if (typeof source.delugeStatus === "string") {
+    telemetry.delugeReady = source.delugeStatus.toLowerCase() === "ready" || source.delugeStatus.toLowerCase() === "available";
+  }
+
+  if (typeof source.eStopHealthy === "boolean") {
+    telemetry.eStopHealthy = source.eStopHealthy;
+  } else if (typeof source.eStopStatus === "string") {
+    telemetry.eStopHealthy = source.eStopStatus.toLowerCase() === "healthy" || source.eStopStatus.toLowerCase() === "ok";
+  }
+
+  if (typeof source.bopMode === "string") {
+    const mode = source.bopMode.toLowerCase();
+    telemetry.bopMode = mode === "closed" || mode === "open" ? (mode as "closed" | "open") : "unknown";
+  }
+
+  if (typeof source.negPressureTest === "string") {
+    const normalized = source.negPressureTest.toLowerCase();
+    if (["pass", "fail", "ambiguous", "not_applicable"].includes(normalized)) {
+      telemetry.negPressureTest = normalized as Telemetry["negPressureTest"];
+    }
+  }
+
+  if (typeof source.flareStatus === "string") {
+    const status = source.flareStatus.toLowerCase();
+    telemetry.flareStatus = status === "down" ? "down" : "available";
+  }
+
+  if (typeof source.simultaneousOps === "boolean") {
+    telemetry.simultaneousOps = source.simultaneousOps;
+  }
+
+  if (typeof source.hotWorkActive === "boolean") {
+    telemetry.hotWorkActive = source.hotWorkActive;
+  }
+
+  if (typeof source.permitIsolationVerified === "boolean") {
+    telemetry.permitIsolationVerified = source.permitIsolationVerified;
+  }
+
+  return telemetry;
+}
+
 export async function generateDynamicChecklist(
   scenarioType: string,
   projectDetails: any,
@@ -220,6 +300,10 @@ export async function getEmergencyProtocolGuidance(
   projectContext: any,
   currentConditions: any
 ): Promise<EmergencyGuidance> {
+  const firePhase = resolveFirePhase(projectContext, emergencyType);
+  const telemetry = normalizeTelemetry(currentConditions);
+  const fireRisk = evaluateFireRisk(firePhase, telemetry);
+
   try {
     // First try OpenAI if available
     if (process.env.OPENAI_API_KEY) {
@@ -271,8 +355,8 @@ Return JSON format:
         temperature: 0.2,
       });
 
-      const result = JSON.parse(response.choices[0].message.content || '{}');
-      return result as EmergencyGuidance;
+      const result = JSON.parse(response.choices[0].message.content || '{}') as EmergencyGuidance;
+      return { ...result, fireRisk };
     }
   } catch (error) {
     console.log("OpenAI unavailable, using internal protocols:", String(error));
@@ -281,11 +365,12 @@ Return JSON format:
   // Fallback to internal protocol database
   const protocolKey = emergencyType.toUpperCase() as keyof typeof EMERGENCY_PROTOCOLS;
   const protocol = EMERGENCY_PROTOCOLS[protocolKey] || EMERGENCY_PROTOCOLS.MEDICAL_EMERGENCY;
-  
+
   // Clean risk assessment without verbose JSON
   return {
     ...protocol,
-    riskAssessment: `${protocol.riskAssessment} Project: ${projectContext.projectName || 'Offshore operations'}.`
+    riskAssessment: `${protocol.riskAssessment} Project: ${projectContext?.projectName || 'Offshore operations'}.`,
+    fireRisk,
   };
 }
 

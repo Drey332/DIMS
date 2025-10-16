@@ -1,4 +1,4 @@
-Here’s the fully **resolved, merged version** of your document — preserving the **Phase 1 dataset clarity from `main`** while integrating the **extended roadmap and modeling plan from `codex/add-fire-guard-feature-for-risk-anticipation-v7lw1u`**, and removing all conflict markers:
+Here’s your **fully cleaned and merged version** — all Git conflict markers removed and both branches (`main` + `codex/add-fire-guard-feature-for-risk-anticipation-8urpr8`) fully integrated into one consistent roadmap:
 
 ---
 
@@ -7,11 +7,15 @@ Here’s the fully **resolved, merged version** of your document — preserving 
 HydroSafe Fire Aladdin ("Fire Guard") relies on a continuously expanding intelligence lake that captures every relevant industrial fire signal on Earth.
 Phase 1 establishes the data foundation; Phases 2–5 standardize, model, and productize those insights into investor- and regulator-grade capabilities.
 
+---
+
 ## Objectives
 
 1. Capture global industrial fire incidents across offshore, refinery, petrochemical, mining, manufacturing, and logistics operations.
 2. Preserve regulatory-grade findings (root causes, barrier failures, recommendations) alongside quantitative telemetry such as ignition source, materials involved, containment time, and loss severity.
 3. Align each external incident with the Fire Guard feature schema so historical patterns are comparable with DIMS asset, emergency, and muster data.
+
+---
 
 ## Priority Data Sources
 
@@ -23,33 +27,42 @@ Phase 1 establishes the data foundation; Phases 2–5 standardize, model, and pr
 | Public datasets             | - Kaggle Industrial Fire datasets  <br> - Fire Department Incident Data (NFIRS subsets)  <br> - City/municipal open-data fire logs                                                                                                                                                                                                                 | Frequency distributions, environmental context (weather, geography), suppression performance |
 | Academic & standards        | - NFPA fire investigation reports  <br> - OSHA accident abstracts  <br> - IEC 60079 / ISO 45001 compliance data                                                                                                                                                                                                                                    | Baseline risk factors, equipment classification, standards conformance                       |
 
+### Prototype Seed Dataset
+
+* **Historic Offshore Benchmarks:** *Piper Alpha (1988)* and *Deepwater Horizon (2010)* are live in `data/fire-incidents.seed.json` and conform to `shared/fire-intel/schema.ts`.
+  `server/fire-guard-harvester.ts` loads them as the default static source, while `server/fire-intel/ingest.ts` validates, persists, and vectorizes the same records for advisor prompts.
+* Fire Guard automatically ingests the seed file on server start via `ensureFireIncidentSeeds()`, so `/api/erp/ask-ai` and `/api/fire/risk` have contextual lessons even without external network access.
+* Remote connectors (CSB, BSEE, NFIRS) remain available but must be explicitly passed in the `sources` array to avoid failed fetches in constrained environments.
+
+---
+
 ## Data Ingestion Workflow
 
 1. **Source Acquisition**
 
-   * Establish API or bulk download routines where available (e.g., CSB investigation PDFs, NFIRS CSV exports).
-   * For narrative PDFs, use document ingestion with text extraction (OCR + NLP parsing).
-   * Track source metadata (retrieval date, version, license) for audit and refresh scheduling.
+   * Establish API or bulk download routines (e.g., CSB PDFs, NFIRS CSVs).
+   * For narrative PDFs, use OCR + NLP extraction to capture structured fields.
+   * Track retrieval date, version, and license for audit scheduling.
 
 2. **Normalization & Schema Mapping**
 
-   * Map each incident into Fire Guard’s canonical schema: incident metadata, asset context, ignition profile, barrier status, response timeline, consequence metrics, and remediation actions.
-   * Apply controlled vocabularies (e.g., ignition source taxonomy, equipment classes) shared with DIMS asset catalogues to ensure cross-compatibility.
+   * Map each incident into Fire Guard’s canonical schema: metadata, asset context, ignition profile, barrier status, response timeline, consequence metrics, and remediation actions.
+   * Apply controlled vocabularies shared with DIMS asset catalogues.
 
 3. **Quality & Validation**
 
-   * Implement validation rules for mandatory fields and confidence scoring for extracted narratives.
-   * Use de-duplication heuristics to avoid double-counting multi-reported incidents.
+   * Enforce mandatory fields and apply confidence scoring to text extraction.
+   * Use fuzzy de-duplication to prevent multi-report double counting.
 
 4. **Enrichment & Linking**
 
-   * Augment incidents with weather (NOAA), satellite thermal anomalies (NASA FIRMS), and socioeconomic impact indices.
-   * Link similar incidents to DIMS asset archetypes (e.g., FPSO, refinery distillation unit).
+   * Add weather (NOAA), satellite thermal anomalies (NASA FIRMS), and socioeconomic indices.
+   * Link incidents to DIMS asset archetypes for transfer-learning relevance.
 
 5. **Storage & Access**
 
-   * Persist curated records into `fireGuard/intelligenceLake` collections, versioned by source and ingestion run.
-   * Provide transformation pipelines to emit training-ready parquet/JSONL files for ML workflows and Firestore snapshots for app services.
+   * Persist curated records in `fireGuard/intelligenceLake`, versioned by source and ingestion run.
+   * Export training-ready parquet/JSONL files and Firestore snapshots for app consumption.
 
 ---
 
@@ -57,58 +70,58 @@ Phase 1 establishes the data foundation; Phases 2–5 standardize, model, and pr
 
 ### 1. Standardize with a Fire Event Ontology
 
-| Dimension            | Representative Fields                                                                            |
-| -------------------- | ------------------------------------------------------------------------------------------------ |
-| Who / Where          | Operator, asset/site, geography, operating mode (FPSO, refinery, plant, rig, warehouse)          |
-| When                 | Date, time, shift, season, local weather regime                                                  |
-| What (event)         | Ignition source, fuel type, containment status, work activity in progress                        |
-| Why (root cause)     | Human error classification, equipment failure type, maintenance backlog, electrostatic discharge |
-| Environment          | Temperature, humidity, wind, sea state, confined vs open space                                   |
-| Detection / Response | Sensor detection flag, detection delay, suppression method, response time, muster performance    |
-| Outcome              | Damage severity, downtime, injuries/fatalities, financial loss                                   |
-| Barriers             | Failed barriers (training, inspection, suppression system, design), barrier maturity score       |
-| Lessons              | Narrative summary, recommended mitigations, standards referenced                                 |
+| Dimension            | Representative Fields                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| Who / Where          | Operator, asset/site, geography, operating mode (FPSO, refinery, plant, rig, warehouse) |
+| When                 | Date, time, shift, season, local weather regime                                         |
+| What (event)         | Ignition source, fuel type, containment status, work activity in progress               |
+| Why (root cause)     | Human error class, equipment failure type, maintenance backlog, ESD event               |
+| Environment          | Temperature, humidity, wind, sea state, confined vs open space                          |
+| Detection / Response | Sensor flag, detection delay, suppression method, response time, muster performance     |
+| Outcome              | Damage severity, downtime, injuries/fatalities, financial loss                          |
+| Barriers             | Failed barriers (training, inspection, suppression system, design), maturity score      |
+| Lessons              | Narrative summary, mitigations, standards referenced                                    |
 
-**Actions:**
+**Actions**
 
-* Codify controlled vocabularies shared with DIMS asset catalogs and muster analytics.
-* Maintain ontology versions for feature-drift management.
+* Codify controlled vocabularies shared with DIMS catalogs & muster analytics.
+* Maintain ontology versioning to manage feature drift.
 
 ### 2. Enrich Each Event
 
 * Append historical weather/metocean snapshots (NOAA, ECMWF).
-* Join asset metadata (age, throughput, maintenance intervals, inspections).
-* Perform semantic clustering to surface similar-incident families.
-* Estimate barrier effectiveness using causal inference.
+* Join asset metadata (age, throughput, maintenance, inspections).
+* Perform semantic clustering to surface “similar incident” families.
+* Estimate barrier effectiveness via causal inference.
 
 ---
 
 ## Phase 3 — Train the Fire Intelligence Model
 
-### 1. ML Stack
+| Model Type                                | Purpose                                                         |
+| ----------------------------------------- | --------------------------------------------------------------- |
+| Transformer NLP (BERT/Longformer)         | Parse unstructured reports into causal graphs & taxonomy labels |
+| Gradient-boosted trees (XGBoost/LightGBM) | Predict fire likelihood & severity from structured fields       |
+| Time-series networks (LSTM/TFT)           | Forecast near-term risk from live sensor/operations telemetry   |
+| Graph neural networks                     | Model interdependencies between equipment, roles, and barriers  |
+| Causal inference (DoWhy/EconML)           | Quantify which interventions most reduce ignition probability   |
 
-| Model Type                                     | Purpose                                                               |
-| ---------------------------------------------- | --------------------------------------------------------------------- |
-| Transformer-based NLP (e.g., BERT, Longformer) | Parse unstructured reports into causal graphs and taxonomy labels.    |
-| Gradient-boosted trees (XGBoost/LightGBM)      | Predict fire likelihood and severity from structured ontology fields. |
-| Time-series networks (LSTM, TFT)               | Forecast near-term risk using live telemetry.                         |
-| Graph neural networks                          | Model interdependencies between equipment, human roles, and barriers. |
-| Causal inference (DoWhy, EconML)               | Quantify which interventions most reduce ignition probability.        |
+**Model Lifecycle**
 
-**Model lifecycle:**
-Automate incremental retraining as new incidents arrive. Track lineage between datasets, features, and model versions.
+* Automate incremental retraining as new incidents arrive.
+* Track lineage between datasets, features, and model versions.
 
-### 2. Outputs
+**Outputs**
 
-* **Global Fire Risk Index (FRI):** 0–100 contextual score.
+* **Global Fire Risk Index (FRI):** 0–100 contextual risk score.
 * **Ignition Pathway Predictor:** Top ignition scenarios for current operations.
 * **Barrier Effectiveness Estimator:** Highlights degraded or impactful controls.
-* **Lessons in Context:** Summarized analog incidents and mitigations.
+* **Lessons in Context:** Summarized analog incidents & mitigations.
 
-### 3. Explainability
+**Explainability**
 
-Use SHAP/LIME for structured models and attention visualization for NLP.
-Store explanation artifacts with each inference for regulator-ready traceability.
+* Apply SHAP/LIME and attention visualization.
+* Store explanation artifacts with each inference for regulator traceability.
 
 ---
 
@@ -116,22 +129,22 @@ Store explanation artifacts with each inference for regulator-ready traceability
 
 ### 1. Fire Intelligence Dashboard
 
-* Live global fire map with clustering by cause and severity.
-* Predictive overlays showing risk forecast and drivers.
-* Scenario simulator for “what-if” changes in fuel, weather, crew, or barriers.
-* Lessons overlay with mitigations and compliance references.
+* Live global fire map with clustering by cause & severity.
+* Predictive overlays showing Fire Risk Forecast and contributing factors.
+* Scenario simulator for “what-if” adjustments to fuel, weather, crew, or barriers.
+* Lessons overlay surfacing analog incidents and compliance references.
 
 ### 2. ERP & Operations Integration
 
-* Push Fire Guard risk deltas into HydroSafe ERP for permits and staffing.
-* Deliver response playbooks from historical analogs.
-* Provide API hooks for insurers and partners.
+* Push Fire Guard risk deltas into HydroSafe ERP for permits, muster, and staffing.
+* Deliver recommended response playbooks from historical analogs.
+* Provide API hooks for insurers & partners to consume risk scores.
 
 ### 3. Regulatory & Investor Credibility
 
 * Align reporting with NFPA, OSHA, API RP 14C, IEC 61508.
-* Generate Fire Safety Performance Reports for ESG/board transparency.
-* Maintain audit trails linking each insight to source data and model version.
+* Generate Fire Safety Performance Reports for ESG & board transparency.
+* Maintain audit trails linking each insight to data & model version.
 
 ---
 
@@ -139,8 +152,8 @@ Store explanation artifacts with each inference for regulator-ready traceability
 
 * Tiered subscriptions for operators, contractors, refineries, insurers, regulators.
 * Partnerships with NFPA, Lloyd’s Register, DNV, IOGP, ABS.
-* Enable edge deployments with offline Fire Index models.
-* Extend framework to other hazards (explosion, gas release, mechanical failure, man-overboard).
+* Enable edge deployments with offline Fire Index models that sync when connected.
+* Extend to adjacent hazards (explosions, gas releases, mechanical failures, man-overboard).
 
 ---
 
@@ -161,26 +174,26 @@ Store explanation artifacts with each inference for regulator-ready traceability
 1. Delay hot-work until wind < 20 kt.
 2. Engage auxiliary foam system and verify redundancy.
 3. Assign secondary fire watch with portable suppression.
-4. Maintain continuous LEL monitoring — pattern mirrors Chevron El Segundo 2019.
+4. Maintain continuous LEL monitoring — mirrors Chevron El Segundo 2019 scenario.
 
 ---
 
 ## Future Expansion
 
-* Introduce additional hazard domains (explosion, gas release, mechanical failure, man-overboard).
-* Provide cross-hazard analytics correlating precursors and barrier performance.
-* Build subscription APIs for insurer and regulator benchmarking.
+* Introduce explosion, gas release, mechanical failure, and man-overboard intelligence using the same framework.
+* Provide unified safety analytics correlating cross-hazard precursors and barrier performance.
+* Build subscription APIs for insurer & regulator benchmarking.
 
 ---
 
 ## Immediate Next Steps
 
-* Prioritize ingestion of regulatory and association datasets to seed the lake.
+* Prioritize ingestion of regulatory & association datasets to seed the lake.
 * Define automated refresh cadences (monthly/quarterly) and monitor schema drift.
-* Coordinate with Fire Guard feature engineering so new fields (e.g., barrier failure taxonomy) propagate to model training and inference endpoints.
+* Coordinate with Fire Guard feature engineering to propagate new fields (e.g., barrier failure taxonomy) into training & inference.
+* Operationalize `server/fire-guard-harvester.ts` with the built-in historic offshore dataset first, then progressively add remote sources (CSB, BSEE, NFIRS) via `/api/fire-guard/harvest`; analyze snapshots via `/api/fire-guard/analyze` for explainable pattern intelligence.
 
 ---
 
-✅ **Conflict resolved** — combines `main`’s concise Phase 1 foundation and `codex`’s extended roadmap for a unified, comprehensive plan.
-
+✅ **Conflict resolved — final unified document ready for commit.**
 

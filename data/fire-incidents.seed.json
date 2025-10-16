@@ -1,0 +1,108 @@
+[
+  {
+    "id": "PIPER-ALPHA-1988",
+    "name": "Piper Alpha Platform Explosion & Fire",
+    "dateUtc": "1988-07-06T21:57:00Z",
+    "industry": "offshore_oil_gas",
+    "location": "North Sea, UKCS Block 15/17",
+    "operationPhase": "production",
+    "initiatingEvent": "Gas condensate leak after maintenance left a safety valve removed/isolated on a condensate pump; leaking hydrocarbons ignited leading to catastrophic explosions and fires.",
+    "ignitionSource": "Likely ignition of hydrocarbon vapor after gas leak in module A (exact ignition source undetermined in public summaries).",
+    "fuel": ["condensate", "gas"],
+    "detection": ["operator observation", "alarms/PA (degraded)"],
+    "protectionSystems": {
+      "delugeStatus": "failed",
+      "eStopIsolation": "delayed",
+      "fireWater": "failed",
+      "alarmsPA": "degraded",
+      "blowoutPreventer": "not_applicable"
+    },
+    "humanFactors": [
+      "permit-to-work breakdown across shifts",
+      "emergency response coordination failures"
+    ],
+    "barriersFailed": [
+      "isolation/permit control",
+      "firewater/deluge availability",
+      "blast/fire segregation between modules",
+      "effective evacuation/muster"
+    ],
+    "fatalities": 167,
+    "timeline": [
+      { "t": "1988-07-06 21:57Z", "event": "Initial explosion in gas compression/condensate handling area" },
+      { "t": "~22:04Z", "event": "Escalation to major fires; subsequent explosions from risers" },
+      { "t": "~22:50Z", "event": "Structure collapses; massive loss of life" }
+    ],
+    "officialFindings": [
+      "Catastrophe was preventable; systemic failures in maintenance control and emergency systems",
+      "Cullen Inquiry issued 106 recommendations reshaping UK offshore safety regime"
+    ],
+    "sources": [
+      { "title": "Cullen Report (Offshore Safety Inquiry) – official report (PDF)", "url": "https://www.ogauthority.co.uk/media/10456/piper-alpha-cullen-report.pdf" },
+      { "title": "Encyclopaedia Britannica summary (cause & toll)", "url": "https://www.britannica.com/event/Piper-Alpha-Disaster" },
+      { "title": "European Commission JRC Major Accident Reporting (fatalities 167, overview)", "url": "https://minerva.jrc.ec.europa.eu/en/shorturl/minerva/mars/5578" }
+    ],
+    "lessons": [
+      "Hard separation of high-pressure process and control/safe haven",
+      "Deluge & firewater must be fail-safe and testable under live conditions",
+      "Permit-to-work and shift-hand-over require positive isolation verification",
+      "Emergency response must assume multi-explosion escalation and riser involvement"
+    ],
+    "tags": ["fire", "explosion", "deluge", "permit-to-work", "evacuation", "North Sea"],
+    "latitude": 58.45,
+    "longitude": -1.44
+  },
+  {
+    "id": "MACONDO-DWH-2010",
+    "name": "Macondo Well Blowout & Deepwater Horizon Fire",
+    "dateUtc": "2010-04-20T01:56:00Z",
+    "industry": "offshore_oil_gas",
+    "location": "Gulf of Mexico, Mississippi Canyon 252",
+    "operationPhase": "completion",
+    "initiatingEvent": "Well control loss after failed cement barrier; negative-pressure test misinterpreted; influx (kick) migrated; hydrocarbons reached rig and ignited.",
+    "ignitionSource": "Hydrocarbon release to rig; multiple potential ignition sources on topsides.",
+    "fuel": ["gas", "oil"],
+    "detection": ["well parameters (anomalies)", "gas alarms (partial)", "operator observation"],
+    "protectionSystems": {
+      "blowoutPreventer": "failed",
+      "eStopIsolation": "failed",
+      "fireWater": "available",
+      "alarmsPA": "degraded"
+    },
+    "humanFactors": [
+      "misread negative pressure test",
+      "late shut-in",
+      "organizational drift and risk normalization across multiple companies"
+    ],
+    "barriersFailed": [
+      "primary cement barrier",
+      "operational testing/verification",
+      "BOP shearing and sealing",
+      "gas detection and hazardous area management"
+    ],
+    "fatalities": 11,
+    "timeline": [
+      { "t": "2010-04-20 00:00Z", "event": "Abandonment prep & negative pressure test anomalies" },
+      { "t": "2010-04-20 01:56Z", "event": "Well kicks; hydrocarbons reach rig; explosions and fire" },
+      { "t": "2010-04-22", "event": "Rig sinks; uncontrolled discharge continues" }
+    ],
+    "releaseVolume": ">4 million barrels of oil discharged (estimate ranges by source)",
+    "officialFindings": [
+      "The blowout was preventable; systemic failures in well design, cementing, testing, and safety culture across companies",
+      "BOP failed to seal; human and organizational factors were central contributors"
+    ],
+    "sources": [
+      { "title": "National Commission hearing – preventable, companies made series of cost-cutting decisions (official transcript pages 9–13)", "url": "https://www.govinfo.gov/content/pkg/CHRG-111shrg67612/pdf/CHRG-111shrg67612.pdf" },
+      { "title": "U.S. Chemical Safety Board / National Academies analysis – human & organizational factors", "url": "https://nap.nationalacademies.org/resource/19012/HSS-SEC-CSB.pdf" }
+    ],
+    "lessons": [
+      "Require explicit pass/fail criteria & independent sign-off for negative pressure tests",
+      "Treat simultaneous anomalies (flow, pit gain, pressure) as auto-shut-in triggers",
+      "BOP diagnostics & condition-based maintenance must be continuous and remotely verifiable",
+      "Cross-company command clarity and stop-work authority must be unambiguous"
+    ],
+    "tags": ["fire", "explosion", "BOP", "cement", "human-factors", "Gulf of Mexico"],
+    "latitude": 28.74,
+    "longitude": -88.39
+  }
+]

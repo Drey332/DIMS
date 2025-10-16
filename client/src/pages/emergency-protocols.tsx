@@ -36,14 +36,40 @@ import {
   DEFAULT_OPERATION_COORDINATES,
 } from "@shared/environment/locationIntel";
 import { type AuroraEnvironmentalContext } from "@shared/environment/types";
+import type { EnvContext } from "@shared/types/env";
 import { useEnvIntelContext } from "@/hooks/use-env-intel";
+
+interface IncidentSource {
+  title: string;
+  url: string;
+}
+
+interface BoostContribution {
+  reason: string;
+  delta: number;
+}
+
+interface MatchedIncident {
+  id: string;
+  title: string;
+  location?: string;
+  dateUtc?: string;
+  operationPhase?: string;
+  lessons: string[];
+  officialFindings?: string[];
+  sources?: IncidentSource[];
+  score?: number;
+  similarity?: number;
+  boosts?: BoostContribution[];
+}
 
 interface AIResponse {
   answer: string;
-  relatedQuestions: string[];
-  relatedScenarios: { id: string; title: string; category: string }[];
+  relatedQuestions?: string[];
+  relatedScenarios?: { id: string; title: string; category: string }[];
   confidence: "high" | "medium" | "low";
   source?: string;
+  matchedIncidents?: MatchedIncident[];
 }
 
 interface ProjectSummary {
@@ -58,6 +84,7 @@ export default function EmergencyProtocols() {
   const [question, setQuestion] = useState("");
   const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [expandedMatches, setExpandedMatches] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -117,6 +144,23 @@ export default function EmergencyProtocols() {
     [resolvedLatitude, resolvedLongitude]
   );
 
+  const { data: environmentContext } = useQuery<EnvContext>({
+    queryKey: environmentQueryKey,
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        lat: resolvedLatitude.toString(),
+        lon: resolvedLongitude.toString(),
+      });
+      const response = await fetch(`/api/env-context?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error("Failed to load environmental context");
+      }
+      return response.json();
+    },
+    enabled: Number.isFinite(resolvedLatitude) && Number.isFinite(resolvedLongitude),
+    staleTime: 60_000,
+  });
+
   const handleAskAI = async () => {
     if (!question.trim()) {
       toast({
@@ -132,30 +176,75 @@ export default function EmergencyProtocols() {
       const contextSegments: string[] = [];
 
       // Project header
-      if (activeProject) {
+      if (activeProject?.name) {
         contextSegments.push(
-          `Project: ${activeProject.name} (${
-            activeProject.number ?? "no project number assigned"
-          }), Client: ${activeProject.client}. Location: ${activeProject.location}.`
+          `Project: ${activeProject.name} (${activeProject.number ?? "no project number assigned"})`
         );
       }
+      if (activeProject?.client) {
+        contextSegments.push(`Client: ${activeProject.client}`);
+      }
+      if (activeProject?.location) {
+        contextSegments.push(
+          `Location: ${activeProject.location} [${resolvedLatitude.toFixed(3)}, ${resolvedLongitude.toFixed(3)}]`
+        );
+      }
+      contextSegments.push(`Planning date (UTC): ${new Date().toISOString()}`);
 
       // Static regional intel
       if (locationIntel) {
         const risks = (locationIntel.riskFactors ?? []).slice(0, 3).join("; ");
-        const mitigations = (locationIntel.protectiveMeasures ?? [])
-          .slice(0, 2)
-          .join("; ");
         contextSegments.push(
-          `Operational intelligence: Risk level ${locationIntel.riskLevel.toUpperCase()} (${locationIntel.confidence.toUpperCase()} confidence). Key factors: ${
-            risks || "No catalogued risk factors."
-          } Mitigation focus: ${
-            mitigations || "Confirm mitigations with site leadership."
+          `Regional risk profile: ${locationIntel.riskLevel.toUpperCase()} (${locationIntel.confidence.toUpperCase()} confidence). Factors: ${
+            risks || "n/a"
           }`
         );
       } else if (activeProject?.location) {
         contextSegments.push(
-          `Operational intelligence: No catalogued risk profile for ${activeProject.location}. Treat as medium risk until briefed.`
+          `Regional risk profile: No catalogued intelligence for ${activeProject.location}. Treat as medium risk until briefed.`
+        );
+      }
+
+      if (environmentContext) {
+        const envAny = environmentContext as EnvContext & {
+          wind?: { currentSpeed?: number };
+          marine?: { currentSpeed?: number; waveHeights?: Array<{ height?: number }> };
+        };
+        const wind = envAny.wind?.currentSpeed ?? envAny.marine?.currentSpeed;
+        const waves = envAny.marine?.waveHeights?.[0]?.height;
+        const month = new Date().getUTCMonth() + 1;
+        const north = resolvedLatitude >= 0;
+        const seasonLookupNorth: Record<number, string> = {
+          1: "winter",
+          2: "winter",
+          3: "spring",
+          4: "spring",
+          5: "spring",
+          6: "summer",
+          7: "summer",
+          8: "summer",
+          9: "fall",
+          10: "fall",
+          11: "fall",
+          12: "winter",
+        };
+        const seasonLookupSouth: Record<number, string> = {
+          1: "summer",
+          2: "summer",
+          3: "fall",
+          4: "fall",
+          5: "fall",
+          6: "winter",
+          7: "winter",
+          8: "winter",
+          9: "spring",
+          10: "spring",
+          11: "spring",
+          12: "summer",
+        };
+        const season = north ? seasonLookupNorth[month] : seasonLookupSouth[month];
+        contextSegments.push(
+          `Env snapshot: wind=${wind ?? "n/a"} m/s; waveHeight=${waves ?? "n/a"} m; season=${season}; risk=${environmentContext.risk_level.toUpperCase()}`
         );
       }
 
@@ -194,12 +283,28 @@ export default function EmergencyProtocols() {
         body: JSON.stringify({
           question: question.trim(),
           context: compiledContext || undefined,
+          projectContext: {
+            location: activeProject?.location,
+            operationPhase: "production",
+            project: activeProject
+              ? {
+                  id: activeProject.id,
+                  name: activeProject.name,
+                  number: activeProject.number,
+                }
+              : undefined,
+          },
         }),
       });
 
       if (!resp.ok) throw new Error("Failed to get AI response");
       const data: AIResponse = await resp.json();
-      setAiResponse(data);
+      setAiResponse({
+        ...data,
+        relatedQuestions: data.relatedQuestions ?? [],
+        relatedScenarios: data.relatedScenarios ?? [],
+      });
+      setExpandedMatches({});
     } catch (err) {
       console.error("Error asking AI:", err);
       toast({
@@ -211,6 +316,13 @@ export default function EmergencyProtocols() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const toggleMatchDetails = (id: string) => {
+    setExpandedMatches((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
   };
 
   const getConfidenceColor = (confidence: string) => {
@@ -433,7 +545,109 @@ export default function EmergencyProtocols() {
                   </div>
                 </div>
 
-                {aiResponse.relatedQuestions.length > 0 && (
+                {aiResponse.matchedIncidents && aiResponse.matchedIncidents.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm text-gray-700">
+                      Matched Past Incidents:
+                    </h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {aiResponse.matchedIncidents.map((match) => (
+                        <div
+                          key={match.id}
+                          className="rounded border border-amber-200 bg-amber-50/60 p-3"
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                              <div className="text-sm font-semibold text-amber-900">
+                                {match.title}
+                              </div>
+                              <div className="text-xs text-amber-800">
+                                {match.location ?? "Location unknown"} — {" "}
+                                {match.dateUtc
+                                  ? new Date(match.dateUtc).toUTCString().slice(5, 16)
+                                  : "Date unknown"}
+                                {" "}- Phase: {match.operationPhase ?? "n/a"}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-xs text-amber-700">
+                                Similarity: {(
+                                  match.score ?? match.similarity ?? 0
+                                ).toFixed(2)}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-amber-900 hover:text-amber-700"
+                                onClick={() => toggleMatchDetails(match.id)}
+                              >
+                                {expandedMatches[match.id] ? "Hide reasoning" : "Show reasoning"}
+                              </Button>
+                            </div>
+                          </div>
+                          {match.lessons && match.lessons.length > 0 && (
+                            <ul className="mt-2 list-disc pl-5 text-xs text-amber-900">
+                              {match.lessons.slice(0, 2).map((lesson, idx) => (
+                                <li key={idx}>{lesson}</li>
+                              ))}
+                            </ul>
+                          )}
+                          {match.sources && match.sources.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {match.sources.slice(0, 3).map((source, idx) => (
+                                <a
+                                  key={idx}
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[11px] underline text-amber-900 hover:text-amber-700"
+                                >
+                                  {source.title.length > 42
+                                    ? `${source.title.slice(0, 42)}…`
+                                    : source.title}
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                          {expandedMatches[match.id] && match.boosts && match.boosts.length > 0 && (
+                            <div className="mt-3 rounded border border-amber-200 bg-white/70 p-2 text-[11px] text-amber-900">
+                              <div className="font-semibold uppercase tracking-wide text-amber-800">
+                                Why this match
+                              </div>
+                              <ul className="mt-1 space-y-1">
+                                {match.boosts.map((boost, idx) => (
+                                  <li key={idx}>
+                                    {boost.reason}
+                                    {typeof boost.delta === "number"
+                                      ? ` (+${boost.delta.toFixed(2)})`
+                                      : ""}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {aiResponse.matchedIncidents &&
+                  aiResponse.matchedIncidents[0]?.officialFindings &&
+                  aiResponse.matchedIncidents[0].officialFindings.length > 0 && (
+                    <div className="mt-4 text-xs text-gray-700">
+                      <div className="font-semibold">Official Findings referenced:</div>
+                      <ul className="list-disc pl-5">
+                        {aiResponse.matchedIncidents[0].officialFindings
+                          .slice(0, 3)
+                          .map((finding, idx) => (
+                            <li key={idx}>{finding}</li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
+
+                {aiResponse.relatedQuestions && aiResponse.relatedQuestions.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-gray-700">
                       Related Questions:
@@ -455,7 +669,7 @@ export default function EmergencyProtocols() {
                   </div>
                 )}
 
-                {aiResponse.relatedScenarios.length > 0 && (
+                {aiResponse.relatedScenarios && aiResponse.relatedScenarios.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-gray-700">
                       Related Scenarios:
