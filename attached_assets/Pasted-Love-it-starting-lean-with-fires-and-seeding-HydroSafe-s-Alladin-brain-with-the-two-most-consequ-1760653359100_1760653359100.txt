@@ -1,0 +1,333 @@
+Love it — starting lean with fires and seeding HydroSafe’s “Alladin” brain with the two most consequential offshore disasters is exactly right. Below you’ll get:
+	1.	a minimal but future-proof incident data spec,
+	2.	fully-filled, high-quality records for Piper Alpha (1988) and Macondo/Deepwater Horizon (2010) with citations,
+	3.	drop-in TypeScript code to validate, persist, and index those records (works with the server code you shared), and
+	4.	a tiny rules+ML loop so your ERP and advisors can immediately adapt to context (even before you train a big model).
+
+⸻
+
+1) “Fire Intelligence” incident schema (v0.1)
+
+These fields are consistent with how your API & storage are shaped today and map cleanly to future ML features. Copy as-is into @shared/schema (or keep local).
+
+// src/fire-intel/schema.ts
+import { z } from "zod";
+
+export const FireIncidentZ = z.object({
+  id: z.string(),                                // "PIPER-ALPHA-1988"
+  name: z.string(),
+  dateUtc: z.string(),                           // ISO 8601
+  industry: z.enum(["offshore_oil_gas","mining","onshore_oil_gas","refining","other"]),
+  location: z.string(),
+  operationPhase: z.enum(["production","drilling","completion","workover","maintenance","construction","unknown"]),
+  initiatingEvent: z.string(),                   // free text
+  ignitionSource: z.string().optional(),
+  fuel: z.array(z.string()),                     // e.g. ["condensate","gas","oil"]
+  detection: z.array(z.string()),                // e.g. ["gas detectors","operator observed"]
+  protectionSystems: z.object({
+    delugeStatus: z.enum(["operational","degraded","failed","not_installed"]).optional(),
+    eStopIsolation: z.enum(["effective","delayed","failed","not_attempted"]).optional(),
+    blowoutPreventer: z.enum(["effective","degraded","failed","not_applicable"]).optional(),
+    fireWater: z.enum(["available","insufficient","failed","not_applicable"]).optional(),
+    alarmsPA: z.enum(["effective","degraded","failed","not_applicable"]).optional()
+  }).partial(),
+  humanFactors: z.array(z.string()),             // “permit-to-work lapse”, “misread test”, “training gap”
+  barriersFailed: z.array(z.string()),           // maps to BowTie/Swiss-cheese barriers
+  fatalities: z.number().min(0),
+  injuries: z.number().min(0).optional(),
+  assetLossUSD_2025: z.number().optional(),
+  releaseVolume: z.string().optional(),          // human-friendly (“> 4MM bbl oil spilled”)
+  timeline: z.array(z.object({ t: z.string(), event: z.string() })), // key moments
+  officialFindings: z.array(z.string()),         // short, evidence-based bullets
+  sources: z.array(z.object({ title: z.string(), url: z.string() })),
+  lessons: z.array(z.string()),                  // normalized lessons we’ll use for rules/ML
+  tags: z.array(z.string())                      // quick filters (“fire”, “explosion”, “BOP”, “deluge”)
+});
+export type FireIncident = z.infer<typeof FireIncidentZ>;
+
+
+⸻
+
+2) High-fidelity seeds (with citations)
+
+Piper Alpha (1988)
+
+{
+  "id": "PIPER-ALPHA-1988",
+  "name": "Piper Alpha Platform Explosion & Fire",
+  "dateUtc": "1988-07-06T21:57:00Z",
+  "industry": "offshore_oil_gas",
+  "location": "North Sea, UKCS Block 15/17",
+  "operationPhase": "production",
+  "initiatingEvent": "Gas condensate leak after maintenance left a safety valve removed/isolated on a condensate pump; leaking hydrocarbons ignited leading to catastrophic explosions and fires.",
+  "ignitionSource": "Likely ignition of hydrocarbon vapor after gas leak in module A (exact ignition source undetermined in public summaries).",
+  "fuel": ["condensate","gas"],
+  "detection": ["operator observation","alarms/PA (degraded)"],
+  "protectionSystems": {
+    "delugeStatus": "failed",
+    "eStopIsolation": "delayed",
+    "fireWater": "failed",
+    "alarmsPA": "degraded",
+    "blowoutPreventer": "not_applicable"
+  },
+  "humanFactors": [
+    "permit-to-work breakdown across shifts",
+    "emergency response coordination failures"
+  ],
+  "barriersFailed": [
+    "isolation/permit control",
+    "firewater/deluge availability",
+    "blast/fire segregation between modules",
+    "effective evacuation/muster"
+  ],
+  "fatalities": 167,
+  "timeline": [
+    {"t":"1988-07-06 21:57Z","event":"Initial explosion in gas compression/condensate handling area"},
+    {"t":"~22:04Z","event":"Escalation to major fires; subsequent explosions from risers"},
+    {"t":"~22:50Z","event":"Structure collapses; massive loss of life"}
+  ],
+  "officialFindings": [
+    "Catastrophe was preventable; systemic failures in maintenance control and emergency systems",
+    "Cullen Inquiry issued 106 recommendations reshaping UK offshore safety regime"
+  ],
+  "sources": [
+    {"title":"Cullen Report (Offshore Safety Inquiry) – official report (PDF)","url":"https://www.ogauthority.co.uk/media/10456/piper-alpha-cullen-report.pdf"},
+    {"title":"Encyclopaedia Britannica summary (cause & toll)","url":"https://www.britannica.com/event/Piper-Alpha-Disaster"},
+    {"title":"European Commission JRC Major Accident Reporting (fatalities 167, overview)","url":"https://minerva.jrc.ec.europa.eu/en/shorturl/minerva/mars/5578"}
+  ],
+  "lessons": [
+    "Hard separation of high-pressure process and control/safe haven",
+    "Deluge & firewater must be fail-safe and testable under live conditions",
+    "Permit-to-work and shift-hand-over require positive isolation verification",
+    "Emergency response must assume multi-explosion escalation and riser involvement"
+  ],
+  "tags": ["fire","explosion","deluge","permit-to-work","evacuation","North Sea"]
+}
+
+Citations (load-bearing statements):
+– 167 fatalities and disaster overview (North Sea production platform; catastrophic explosions/fires) ; .
+– Cullen Inquiry as the official investigation with far-reaching recommendations (106 recs). .
+
+⸻
+
+Macondo / Deepwater Horizon (2010)
+
+{
+  "id": "MACONDO-DWH-2010",
+  "name": "Macondo Well Blowout & Deepwater Horizon Fire",
+  "dateUtc": "2010-04-20T01:56:00Z",
+  "industry": "offshore_oil_gas",
+  "location": "Gulf of Mexico, Mississippi Canyon 252",
+  "operationPhase": "completion",
+  "initiatingEvent": "Well control loss after failed cement barrier; negative-pressure test misinterpreted; influx (kick) migrated; hydrocarbons reached rig and ignited.",
+  "ignitionSource": "Hydrocarbon release to rig; multiple potential ignition sources on topsides.",
+  "fuel": ["gas","oil"],
+  "detection": ["well parameters (anomalies)","gas alarms (partial)","operator observation"],
+  "protectionSystems": {
+    "blowoutPreventer": "failed",
+    "eStopIsolation": "failed",
+    "fireWater": "available",
+    "alarmsPA": "degraded"
+  },
+  "humanFactors": [
+    "misread negative pressure test",
+    "late shut-in",
+    "organizational drift and risk normalization across multiple companies"
+  ],
+  "barriersFailed": [
+    "primary cement barrier",
+    "operational testing/verification",
+    "BOP shearing and sealing",
+    "gas detection and hazardous area management"
+  ],
+  "fatalities": 11,
+  "timeline": [
+    {"t":"2010-04-20 00:00Z","event":"Abandonment prep & negative pressure test anomalies"},
+    {"t":"2010-04-20 01:56Z","event":"Well kicks; hydrocarbons reach rig; explosions and fire"},
+    {"t":"2010-04-22","event":"Rig sinks; uncontrolled discharge continues"}
+  ],
+  "releaseVolume": ">4 million barrels of oil discharged (estimate ranges by source)",
+  "officialFindings": [
+    "The blowout was preventable; systemic failures in well design, cementing, testing, and safety culture across companies",
+    "BOP failed to seal; human and organizational factors were central contributors"
+  ],
+  "sources": [
+    {"title":"National Commission hearing – preventable, companies made series of cost-cutting decisions (official transcript pages 9–13)","url":"https://www.govinfo.gov/content/pkg/CHRG-111shrg67612/pdf/CHRG-111shrg67612.pdf"},
+    {"title":"U.S. Chemical Safety Board / National Academies analysis – human & organizational factors","url":"https://nap.nationalacademies.org/resource/19012/HSS-SEC-CSB.pdf"}
+  ],
+  "lessons": [
+    "Require explicit pass/fail criteria & independent sign-off for negative pressure tests",
+    "Treat simultaneous anomalies (flow, pit gain, pressure) as auto-shut-in triggers",
+    "BOP diagnostics & condition-based maintenance must be continuous and remotely verifiable",
+    "Cross-company command clarity and stop-work authority must be unambiguous"
+  ],
+  "tags": ["fire","explosion","BOP","cement","human-factors","Gulf of Mexico"]
+}
+
+Citations (load-bearing statements):
+– “Preventable” and series of decision-making failures: National Commission hearing transcript, pp. 9–13. .
+– Human & organizational factors emphasis (negative test, BOP, systems): CSB/National Academies synthesis. .
+
+⸻
+
+3) Drop-in ingestion & indexing code
+
+a) Put the JSON seeds somewhere in your repo
+
+data/fire-incidents.seed.json with an array of the two objects above.
+
+b) A tiny persistence+indexer you can run once (or on boot)
+
+// src/fire-intel/ingest.ts
+import fs from "fs/promises";
+import path from "path";
+import { FireIncidentZ, type FireIncident } from "./schema";
+import { storage } from "@/server/storage"; // your storage adapter
+import { createEmbedding } from "@/server/ai/embeddings"; // your existing embedding util (OpenAI or local)
+
+function toKnowledgeText(i: FireIncident) {
+  const head = `${i.name} (${i.dateUtc}) — ${i.location}`;
+  const facts = [
+    `Industry: ${i.industry}, Phase: ${i.operationPhase}`,
+    `Initiating event: ${i.initiatingEvent}`,
+    `Ignition: ${i.ignitionSource ?? "unknown"}, Fuel: ${i.fuel.join(", ")}`,
+    `Protection: ${JSON.stringify(i.protectionSystems)}`,
+    `Fatalities: ${i.fatalities}${i.injuries ? `, Injuries: ${i.injuries}` : ""}`,
+    `Barriers failed: ${i.barriersFailed.join("; ")}`,
+    `Lessons: ${i.lessons.join("; ")}`
+  ].join("\n");
+  return `${head}\n${facts}\nTimeline:\n${i.timeline.map(x=>`- ${x.t}: ${x.event}`).join("\n")}\nSources:\n${i.sources.map(s=>`- ${s.title}: ${s.url}`).join("\n")}`;
+}
+
+export async function ingestFireIncidents(seedFile = path.join(process.cwd(), "data", "fire-incidents.seed.json")) {
+  const raw = await fs.readFile(seedFile, "utf-8");
+  const arr = JSON.parse(raw) as unknown[];
+  const valid: FireIncident[] = [];
+
+  for (const rec of arr) {
+    const parsed = FireIncidentZ.safeParse(rec);
+    if (!parsed.success) {
+      console.error("Invalid incident record:", parsed.error.flatten());
+      continue;
+    }
+    valid.push(parsed.data);
+  }
+
+  for (const i of valid) {
+    // 1) persist in your DB (idempotent upsert)
+    await storage.upsertKnowledgeItem({
+      domain: "fire_incident",
+      externalId: i.id,
+      title: i.name,
+      payload: i,
+      tags: i.tags
+    });
+
+    // 2) vectorize for fast retrieval in ERP/Advisor prompts
+    const text = toKnowledgeText(i);
+    const emb = await createEmbedding(text);
+    await storage.upsertVector({
+      externalId: i.id,
+      namespace: "fire_incident:v0",
+      embedding: emb,
+      metadata: { phase: i.operationPhase, fatalities: i.fatalities, tags: i.tags }
+    });
+  }
+
+  console.log(`Ingested ${valid.length} fire incidents → knowledge + vectors`);
+}
+
+If you don’t have storage.upsertKnowledgeItem and upsertVector yet, mirror your existing createFileUpload style — same idea: a table for canonical JSON (jsonb), and a vectors table (pgvector) keyed by externalId.
+
+c) Make the ERP & Q&A actually “context-aware” today
+
+Add the fire-context block to your /api/erp/ask-ai handler right before you build the prompt:
+
+// inside /api/erp/ask-ai just before building the prompt
+const fireContextDocs = await storage.searchVectors({
+  namespace: "fire_incident:v0",
+  query: question,
+  k: 4
+});
+// Pull top lessons and barriers to condition the model
+const fireSnippets = fireContextDocs.map((d: any) => d.chunk || d.metadata?.title || "").join("\n---\n");
+
+const prompt = `You are HydroSafe's AI Emergency Response Assistant...
+
+USER QUESTION: ${question}
+${context ? `ADDITIONAL CONTEXT:\n${context}` : ""}
+
+FIRE INCIDENT INTELLIGENCE (retrieved):
+${fireSnippets}
+
+RELEVANT Q&A...
+...`;
+
+That’s the switch that makes answers adapt to Piper Alpha/Macondo patterns immediately.
+
+⸻
+
+4) Instant “safety thresholds” (rules that work even if APIs fail)
+
+Put this tiny engine in src/fire-intel/rules.ts. It will auto-flag dangerous states using what we learned from the seeds:
+
+export type Telemetry = {
+  gasPpm?: number;                 // fixed detectors
+  delugeReady?: boolean;           // proof-tested
+  eStopHealthy?: boolean;
+  bopMode?: "closed"|"open"|"unknown"; // if drilling/completion
+  negPressureTest?: "pass"|"fail"|"ambiguous"|"not_applicable";
+  flareStatus?: "available"|"down";
+  simultaneousOps?: boolean;
+  hotWorkActive?: boolean;
+  permitIsolationVerified?: boolean;
+};
+
+export function evaluateFireRisk(phase: "production"|"drilling"|"completion"|"maintenance", t: Telemetry) {
+  const findings: string[] = [];
+  let score = 0;
+
+  // Lessons baked into rules (Piper Alpha)
+  if (phase === "production") {
+    if (t.delugeReady === false) { findings.push("Deluge not ready during production (Piper Alpha lesson)"); score += 4; }
+    if (t.hotWorkActive && !t.permitIsolationVerified) { findings.push("Hot work without verified isolation (permit-to-work failure)"); score += 5; }
+    if (t.gasPpm && t.gasPpm > 20) { findings.push("Elevated gas reading >20 ppm — treat as leak until proven safe"); score += 3; }
+  }
+
+  // Lessons (Macondo)
+  if (phase === "completion") {
+    if (t.negPressureTest === "ambiguous" || t.negPressureTest === "fail") {
+      findings.push("Negative pressure test not clearly passing — DO NOT displace, shut in well.");
+      score += 6;
+    }
+    if (t.bopMode !== "closed") { findings.push("BOP not closed during anomaly — shut in immediately"); score += 4; }
+  }
+
+  // Generic
+  if (t.eStopHealthy === false) { findings.push("E-stop / isolation degraded"); score += 3; }
+  if (t.flareStatus === "down") { findings.push("Flare not available — no safe disposal path"); score += 2; }
+  if (t.simultaneousOps) { findings.push("SIMOPS active — raise supervision level"); score += 1; }
+
+  const level = score >= 8 ? "CRITICAL" : score >= 4 ? "HIGH" : score >= 2 ? "MEDIUM" : "LOW";
+  return { level, score, findings };
+}
+
+Wire this into your /api/ai/protocol-guidance (or a new /api/fire/risk) so the UI can show a red/yellow/green risk badge even when external feeds are down.
+
+⸻
+
+Why these two seeds already move the needle
+	•	Piper Alpha hard-codes the must-never-fail barriers for production fires: permit/isolations, deluge/firewater availability, module segregation, and evacuation realism. (167 fatalities, production platform; Cullen Inquiry reshaped UK offshore safety.)
+	•	Macondo/DWH locks in completion/drilling barriers: unequivocal negative pressure test, early shut-in on anomalies, BOP reliability, and organizational clarity. (Commission labeled it preventable; human/organizational factors central.)
+
+⸻
+
+Next 48-hour upgrades (you can do these quickly)
+	1.	UI: In your “AI ERP Advisor Results” modal, add a strip “Matched Past Incidents” that shows top-2 matches with the exact lessons we stored (comes straight from fireSnippets).
+	2.	Prompts: Prepend a one-liner to answers: “Because your context matches Piper-Alpha-class risks (deluge disabled + hot work), do X.”
+	3.	Governance: Store officialFindings and sources exactly as above so every recommendation is auditable (click to evidence).
+	4.	Grow the corpus: Add ~20 more fire/explosion cases (Texas City Refinery 2005; Buncefield 2005; Montara 2009; platform fires in GoM, Brazil, Nigeria). Use the same schema and you’ll see retrieval quality jump.
+
+⸻
+
+If you want, I can package these two records into a ready-to-run fire-incidents.seed.json and a one-shot npm run ingest:fire script, or expand the rule engine with NFPA/IMO/ISO threshold tables (so regulators see your “minimum safe state” is codified, not model-hallucinated).

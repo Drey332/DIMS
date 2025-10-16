@@ -1,0 +1,324 @@
+Awesome—let’s wire HydroSafe so it knows the project’s date & location, pulls live environmental context, and uses those to (1) pick top historical matches, (2) preface the AI answer with a one-liner like “Piper-Alpha-class risk…”, and (3) show an auditable ‘Matched Past Incidents’ strip with sources.
+
+Below are drop-in changes for your backend and frontend. They reuse your existing lookupLocationIntel, getEnvContext, and /api/erp/ask-ai flow.
+
+⸻
+
+Backend
+
+1) Enrich incident vectors with geo/season/env metadata (during ingestion)
+
+If you used the ingestion I provided earlier, add this helper and metadata fields when upserting vectors.
+
+// src/fire-intel/geo.ts
+export function toSeason(dateIso: string, lat: number) {
+  // Simple: Northern vs Southern hemisphere
+  const m = new Date(dateIso).getUTCMonth() + 1;
+  const north = lat >= 0;
+  const seasonMapNorth: Record<number,string> = {1:"winter",2:"winter",3:"spring",4:"spring",5:"spring",6:"summer",7:"summer",8:"summer",9:"fall",10:"fall",11:"fall",12:"winter"};
+  const seasonMapSouth: Record<number,string> = {1:"summer",2:"summer",3:"fall",4:"fall",5:"fall",6:"winter",7:"winter",8:"winter",9:"spring",10:"spring",11:"spring",12:"summer"};
+  return (north ? seasonMapNorth[m] : seasonMapSouth[m]) as "winter"|"spring"|"summer"|"fall";
+}
+
+export function latBand(lat: number) {
+  const a = Math.abs(lat);
+  if (a < 23.5) return "tropical";
+  if (a < 45)   return "subtropical";
+  if (a < 66.5) return "midlat";
+  return "polar";
+}
+
+// very coarse world-ocean basins (tune later)
+export function basin(lat: number, lon: number) {
+  if (lat > 0 && lon > -100 && lon < 20) return "North_Atlantic";
+  if (lat > 0 && lon >= 20 && lon < 180) return "North_Indian_Pacific";
+  if (lat < 0 && lon > -80 && lon < 40) return "South_Atlantic_Indian";
+  return "Pacific_Other";
+}
+
+Update the ingestion index step to include metadata (if your historical incidents don’t have exact lat/lon, put approximate coords per source; for Piper Alpha/UK North Sea you can use ~58.45N, -1.44E; for DWH ~28.74N, -88.39W).
+
+// src/fire-intel/ingest.ts (snippet inside the loop where you upsert vectors)
+import { toSeason, latBand, basin } from "./geo";
+
+const approxLat = (i as any).latitude ?? (i.location.includes("North Sea") ? 58.45 : i.location.includes("Gulf of Mexico") ? 28.74 : 0);
+const approxLon = (i as any).longitude ?? (i.location.includes("North Sea") ? -1.44 : i.location.includes("Gulf of Mexico") ? -88.39 : 0);
+const season = toSeason(i.dateUtc, approxLat);
+const envMeta = { season, latBand: latBand(approxLat), basin: basin(approxLat, approxLon) };
+
+await storage.upsertVector({
+  externalId: i.id,
+  namespace: "fire_incident:v0",
+  embedding: emb,
+  metadata: {
+    phase: i.operationPhase,
+    fatalities: i.fatalities,
+    tags: i.tags,
+    location: i.location,
+    latitude: approxLat,
+    longitude: approxLon,
+    ...envMeta
+  }
+});
+
+2) Add a matching endpoint that blends semantic similarity + geo/season/env boosts
+
+// src/server/routes/incidents-match.ts
+import type { Request, Response } from "express";
+import { storage } from "@/server/storage";
+import { lookupLocationIntel } from "@shared/environment/locationIntel";
+import { getEnvContext } from "@/server/env-intel"; // you have this
+
+type MatchReq = {
+  query?: string;                 // user question (optional)
+  location?: string;              // "Forcados, Nigeria"
+  lat?: number; lon?: number;
+  whenUtc?: string;               // ISO; fallback = now
+  phase?: "production"|"drilling"|"completion"|"maintenance"|"construction"|"unknown";
+};
+
+function seasonFrom(lat: number, iso: string) {
+  const m = new Date(iso).getUTCMonth()+1;
+  const north = lat >= 0;
+  const sn = {1:"winter",2:"winter",3:"spring",4:"spring",5:"spring",6:"summer",7:"summer",8:"summer",9:"fall",10:"fall",11:"fall",12:"winter"} as const;
+  const ss = {1:"summer",2:"summer",3:"fall",4:"fall",5:"fall",6:"winter",7:"winter",8:"winter",9:"spring",10:"spring",11:"spring",12:"summer"} as const;
+  return (north ? sn[m] : ss[m]);
+}
+
+export async function registerIncidentMatchRoute(app: import("express").Express) {
+  app.get("/api/incidents/match", async (req: Request, res: Response) => {
+    try {
+      const q: MatchReq = {
+        query: typeof req.query.q === "string" ? req.query.q : undefined,
+        location: typeof req.query.location === "string" ? req.query.location : undefined,
+        lat: req.query.lat ? Number(req.query.lat) : undefined,
+        lon: req.query.lon ? Number(req.query.lon) : undefined,
+        whenUtc: typeof req.query.whenUtc === "string" ? req.query.whenUtc : undefined,
+        phase: typeof req.query.phase === "string" ? req.query.phase as any : undefined,
+      };
+
+      const locIntel = lookupLocationIntel(q.location);
+      const lat = q.lat ?? locIntel?.latitude ?? 0;
+      const lon = q.lon ?? locIntel?.longitude ?? 0;
+      const when = q.whenUtc ?? new Date().toISOString();
+      const season = seasonFrom(lat, when);
+
+      // Optional: pull live env snapshot for subtle boosts (wind, waves)
+      // keep timeouts small and fail-soft
+      let env: any = null;
+      try { env = await getEnvContext(lat, lon); } catch {}
+
+      const vecResults = await storage.searchVectors({
+        namespace: "fire_incident:v0",
+        query: q.query ?? "offshore fire explosion lessons barriers",
+        k: 8
+      });
+
+      // Re-rank with **transparent boosts**:
+      const boosted = vecResults.map((r: any) => {
+        let score = r.score; // base vector similarity (higher is better)
+        if (q.phase && r.metadata?.phase === q.phase) score += 0.15;
+        if (r.metadata?.latBand && Math.abs(Math.abs(lat) - Math.abs(r.metadata.latitude||0)) < 10) score += 0.1;
+        if (r.metadata?.basin && r.metadata.basin.includes("Atlantic") && Math.abs(lon) < 100) score += 0.05;
+        if (r.metadata?.season === season) score += 0.05;
+        // wind-driven spread: if current wind > 12 m/s, prefer incidents with big escalation
+        if (env?.wind?.currentSpeed && env.wind.currentSpeed > 12 && r.metadata?.tags?.includes("explosion")) score += 0.05;
+        return { ...r, boostedScore: score };
+      })
+      .sort((a: any, b: any) => b.boostedScore - a.boostedScore)
+      .slice(0, 2);
+
+      // Return minimal, auditable payload
+      const items = await Promise.all(boosted.map(async (r: any) => {
+        const item = await storage.getKnowledgeByExternalId("fire_incident", r.externalId);
+        return {
+          id: r.externalId,
+          title: item?.title ?? r.externalId,
+          location: item?.payload?.location,
+          dateUtc: item?.payload?.dateUtc,
+          operationPhase: item?.payload?.operationPhase,
+          lessons: item?.payload?.lessons ?? [],
+          officialFindings: item?.payload?.officialFindings ?? [],
+          sources: item?.payload?.sources ?? [],
+          score: r.boostedScore,
+        };
+      }));
+
+      res.json({
+        context: { lat, lon, season, whenUtc: when, phase: q.phase ?? "unknown" },
+        matches: items
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ message: "Failed to compute incident matches" });
+    }
+  });
+}
+
+Register this route in your server bootstrap (where you add other routes):
+
+// src/server/index.ts (or where registerRoutes is)
+import { registerIncidentMatchRoute } from "./routes/incidents-match";
+await registerIncidentMatchRoute(app);
+
+3) Prepend the “one-liner” to your /api/erp/ask-ai answer
+
+After you compute fireContextDocs (as in my prior message), call the new matcher and prefix the assistant answer:
+
+// inside /api/erp/ask-ai after you collect qnaResults/scenarioResults/knowledgeContext
+const activePhase = projectContext?.operationPhase || "production";
+const locationName = projectContext?.location || (typeof projectContext?.project === "object" ? projectContext.project.location : undefined);
+const nowIso = new Date().toISOString();
+
+let top2: any[] = [];
+try {
+  const params = new URLSearchParams({
+    q: question,
+    location: locationName ?? "",
+    whenUtc: nowIso,
+    phase: activePhase
+  });
+  const resp = await fetch(`${process.env.INTERNAL_BASE_URL || "http://localhost:3000"}/api/incidents/match?${params.toString()}`);
+  if (resp.ok) {
+    const data = await resp.json();
+    top2 = data.matches || [];
+  }
+} catch {}
+
+const oneLiner = top2[0]?.title
+  ? `Because your context resembles **${top2[0].title}** conditions (${activePhase}${top2[0].lessons?.length ? `; key lesson: ${top2[0].lessons[0]}` : ""}), apply the following controls first.`
+  : `Applying fire best-practice controls for ${activePhase} phase first.`;
+
+// Then include this in the prompt (right after USER QUESTION)
+const prompt = `You are HydroSafe's AI Emergency Response Assistant...
+
+USER QUESTION: ${question}
+
+CONTEXT-BASED PREFACE:
+${oneLiner}
+
+${context ? `ADDITIONAL CONTEXT:\n${context}` : ""}
+
+FIRE INCIDENT INTELLIGENCE (retrieved):
+${fireSnippets}
+
+... (rest unchanged)`;
+
+Also, append an auditable block to the model output you return to the UI:
+
+// after you get aiAnswer from OpenAI
+res.json({
+  answer: `${oneLiner}\n\n${aiAnswer}`,
+  relatedQuestions: qnaResults.map(qa => qa.question),
+  relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
+  confidence: "high",
+  matchedIncidents: top2 // <-- include for UI strip
+});
+
+
+⸻
+
+Frontend
+
+1) “Matched Past Incidents” strip (top-2, with lessons & sources)
+
+In your EmergencyProtocols page, extend the AI Response section to render a new card row. You already store aiResponse. We’ll show a tight, auditable strip.
+
+// In EmergencyProtocols.tsx, inside the AI Response CardContent where aiResponse is shown:
+
+{(aiResponse as any)?.matchedIncidents?.length > 0 && (
+  <div className="space-y-2">
+    <h4 className="font-medium text-sm text-gray-700">Matched Past Incidents:</h4>
+    <div className="grid grid-cols-1 gap-2">
+      {(aiResponse as any).matchedIncidents.map((m: any) => (
+        <div key={m.id} className="rounded border border-amber-200 bg-amber-50/60 p-3">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-amber-900">{m.title}</div>
+              <div className="text-xs text-amber-800">
+                {m.location} — {new Date(m.dateUtc).toUTCString().slice(5, 16)} — Phase: {m.operationPhase}
+              </div>
+            </div>
+            <div className="mt-2 sm:mt-0 text-xs text-amber-700">Similarity: {(m.score ?? 0).toFixed(2)}</div>
+          </div>
+          {m.lessons?.length > 0 && (
+            <ul className="mt-2 list-disc pl-5 text-xs text-amber-900">
+              {m.lessons.slice(0,2).map((l:string, idx:number) => <li key={idx}>{l}</li>)}
+            </ul>
+          )}
+          {m.sources?.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {m.sources.slice(0,3).map((s:any, idx:number) => (
+                <a key={idx} href={s.url} target="_blank" rel="noreferrer"
+                   className="text-[11px] underline text-amber-900 hover:text-amber-700">
+                  {s.title.length > 42 ? s.title.slice(0,42)+"…" : s.title}
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+You don’t need extra fetches here because the backend now returns matchedIncidents with ask-ai.
+
+2) Feed date/location/env into the ask call
+
+You’re already compiling a compiledContext. Add project date, resolved lat/lon, and a season/env summary:
+
+// EmergencyProtocols.tsx (inside handleAskAI, where you build contextSegments)
+if (activeProject?.name) {
+  contextSegments.push(`Project: ${activeProject.name} (${activeProject.number ?? 'no project number assigned'})`);
+}
+if (activeProject?.location) {
+  contextSegments.push(`Location: ${activeProject.location} [${resolvedLatitude.toFixed(3)}, ${resolvedLongitude.toFixed(3)}]`);
+}
+contextSegments.push(`Planning date (UTC): ${new Date().toISOString()}`);
+
+if (locationIntel) {
+  contextSegments.push(`Regional risk profile: ${locationIntel.riskLevel.toUpperCase()} (${locationIntel.confidence.toUpperCase()} confidence). Factors: ${(locationIntel.riskFactors||[]).slice(0,3).join('; ') || 'n/a'}`);
+}
+
+if (environmentContext) {
+  const wind = environmentContext.wind?.currentSpeed ?? environmentContext.marine?.currentSpeed;
+  const waves = environmentContext.marine?.waveHeights?.[0]?.height;
+  contextSegments.push(`Env snapshot: wind=${wind ?? 'n/a'} m/s; waveHeight=${waves ?? 'n/a'} m; season=${(() => {
+    const m = new Date().getUTCMonth()+1;
+    const north = resolvedLatitude >= 0;
+    const sn = {1:"winter",2:"winter",3:"spring",4:"spring",5:"spring",6:"summer",7:"summer",8:"summer",9:"fall",10:"fall",11:"fall",12:"winter"} as const;
+    const ss = {1:"summer",2:"summer",3:"fall",4:"fall",5:"fall",6:"winter",7:"winter",8:"winter",9:"spring",10:"spring",11:"spring",12:"summer"} as const;
+    return (north ? sn[m] : ss[m]);
+  })()}`);
+}
+
+This ensures the backend matcher and the prompt both see the same geo/season hints.
+
+⸻
+
+Governance (auditable recommendations)
+
+You asked that official findings & sources be stored and surfaced. The matcher already includes officialFindings and sources per incident. If you want them always visible under the AI text, add:
+
+{/* after AI answer block */}
+{(aiResponse as any)?.matchedIncidents?.[0]?.officialFindings?.length > 0 && (
+  <div className="mt-4 text-xs text-gray-700">
+    <div className="font-semibold">Official Findings referenced:</div>
+    <ul className="list-disc pl-5">
+      {(aiResponse as any).matchedIncidents[0].officialFindings.slice(0,3).map((f:string, i:number) => <li key={i}>{f}</li>)}
+    </ul>
+  </div>
+)}
+
+This gives regulators and investors click-to-evidence trail in every answer.
+
+⸻
+
+Result
+	•	UI: You now get a “Matched Past Incidents” strip (top-2), lessons, and sources.
+	•	Prompts: The model answer starts with a context-aware one-liner (e.g., “Because your context resembles Piper Alpha…”) and then the full guidance.
+	•	Governance: Findings and sources are embedded and shown.
+	•	Geo/Env Awareness: Matching respects date → season, location → basin/lat-band, and current environment (wind/waves) for small but meaningful boosts.
+
+If you want, I can also add a toggle in the UI to show why each match was chosen (the boost breakdown) for total transparency.
