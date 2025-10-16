@@ -63,6 +63,16 @@ app.use("/api/ai-erp-advisor", aiErpAdvisor);
   // Attach REST routes and all other project endpoints
   await registerRoutes(app);
 
+  // ===== Fire Intelligence: Load seed data on startup =====
+  try {
+    const { ensureFireIncidentSeeds } = await import('./fire-intel/ingest');
+    await ensureFireIncidentSeeds();
+    log('🔥 Fire Intelligence: Historical incident data loaded');
+  } catch (err) {
+    log('⚠️  Fire Intelligence: Failed to load seed data (non-fatal)');
+    console.error(err);
+  }
+
   // ===== ERROR HANDLER (never crash the server, log all issues) =====
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
