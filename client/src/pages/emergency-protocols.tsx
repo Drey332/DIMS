@@ -13,10 +13,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { lookupLocationIntel, DEFAULT_OPERATION_COORDINATES } from '@shared/environment/locationIntel';
 import { type AuroraEnvironmentalContext } from '@shared/environment/types';
 
+interface MatchedIncident {
+  id: string;
+  title: string;
+  score: number;
+  reasons: string[];
+  lessons?: string[];
+  ignitionSources?: string[];
+  failedBarriers?: string[];
+}
+
 interface AIResponse {
   answer: string;
   relatedQuestions: string[];
   relatedScenarios: { id: string; title: string; category: string; }[];
+  matchedIncidents?: MatchedIncident[];
   confidence: 'high' | 'medium' | 'low';
   source?: string;
 }
@@ -320,6 +331,69 @@ export default function EmergencyProtocols() {
                     </div>
                   </div>
                 </div>
+
+                {aiResponse.matchedIncidents && aiResponse.matchedIncidents.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm text-amber-900 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Matched Past Incidents (Fire Intelligence)
+                    </h4>
+                    <div className="space-y-2">
+                      {aiResponse.matchedIncidents.slice(0, 2).map((incident, index) => (
+                        <div
+                          key={index}
+                          className="p-3 bg-amber-50 rounded-lg border border-amber-300"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <span className="font-semibold text-sm text-amber-900">{incident.title}</span>
+                            <Badge variant="outline" className="text-xs bg-amber-100 border-amber-400 text-amber-800">
+                              {Math.round(incident.score * 100)}% match
+                            </Badge>
+                          </div>
+                          {incident.reasons && incident.reasons.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-amber-800 font-medium mb-1">Why this matches:</p>
+                              <ul className="text-xs text-amber-700 space-y-0.5">
+                                {incident.reasons.map((reason, idx) => (
+                                  <li key={idx} className="flex items-start gap-1">
+                                    <span className="text-amber-500">•</span>
+                                    <span>{reason}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {incident.lessons && incident.lessons.length > 0 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-amber-800 font-medium mb-1">Key lessons:</p>
+                              <ul className="text-xs text-amber-700 space-y-0.5">
+                                {incident.lessons.slice(0, 2).map((lesson, idx) => (
+                                  <li key={idx} className="flex items-start gap-1">
+                                    <span className="text-amber-500">•</span>
+                                    <span>{lesson}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {incident.failedBarriers && incident.failedBarriers.length > 0 && (
+                            <div>
+                              <p className="text-xs text-red-800 font-medium mb-1">Failed barriers to prevent:</p>
+                              <ul className="text-xs text-red-700 space-y-0.5">
+                                {incident.failedBarriers.slice(0, 2).map((barrier, idx) => (
+                                  <li key={idx} className="flex items-start gap-1">
+                                    <span className="text-red-500">•</span>
+                                    <span>{barrier}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {aiResponse.relatedQuestions.length > 0 && (
                   <div className="space-y-2">
