@@ -15,6 +15,7 @@ HydroSafe utilizes a modern web application architecture. The **Frontend** is bu
 Key functional components include:
 - **Emergency Response System**: Implements a Bronze-Silver-Gold command hierarchy, AI-powered dynamic checklist generation, real-time WebSocket communication, and timestamped photo documentation with GPS metadata.
 - **AI Integration**: Leverages OpenAI GPT-4o for intelligent response generation, dynamic checklist creation, automated risk assessment, and decision support following the IAPOAR model.
+- **Fire Intelligence System** (Fire Aladdin): Geo/environment-aware incident matching engine that learns from historical offshore fire disasters (Piper Alpha 1988, Deepwater Horizon 2010). Uses vector similarity, geographic proximity, seasonal alignment, and wind direction scoring to surface relevant historical lessons during emergency response. Provides one-liner prefaces like "Because your context resembles Piper Alpha conditions..." and displays matched incidents with lessons learned, ignition sources, and failed barriers in the Emergency Protocols UI.
 - **User Management**: Features role-based access control (Bronze, Silver, Gold), project assignment, and activity tracking.
 - **Project Management**: Supports multi-project operations, client integration (e.g., Shell SPDC), emergency contact management, and asset tracking.
 - **Data Flow**: Manages the incident lifecycle from detection to resolution, real-time communication via WebSockets, and secure file handling with metadata extraction.
