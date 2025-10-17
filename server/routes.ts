@@ -1550,6 +1550,18 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
+  // Fire Intelligence - Get all historical fire incidents
+  app.get('/api/fire-incidents', authenticateUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { fireIntelStorage } = await import('./fire-intel/storage');
+      const incidents = await fireIntelStorage.getAllIncidents();
+      res.json(incidents);
+    } catch (error) {
+      console.error("Error fetching fire incidents:", error);
+      res.status(500).json({ message: "Failed to fetch fire incidents" });
+    }
+  });
+
   // Fire Intelligence - Geo-aware incident matching
   app.get('/api/incidents/match', authenticateUser, async (req: AuthenticatedRequest, res) => {
     try {
