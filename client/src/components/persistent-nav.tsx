@@ -34,6 +34,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/incidents", label: "Incidents", icon: AlertTriangle },
+  { href: "/fire-guard", label: "Fire Guard", icon: Flame },
   { href: "/team", label: "Team Management", icon: Users },
   { href: "/clients", label: "Client Management", icon: Users },
   { href: "/assets", label: "Asset Management", icon: Package },
