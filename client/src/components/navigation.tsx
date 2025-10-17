@@ -10,7 +10,8 @@ import {
   Menu,
   X,
   UserCircle,
-  LogOut
+  LogOut,
+  Flame
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -46,6 +47,7 @@ const navItems: NavItem[] = [
     ]
   },
   { href: "/incidents", label: "Incidents", icon: AlertTriangle },
+  { href: "/fire-guard", label: "Fire Guard (Fire Aladdin)", icon: Flame },
   { href: "/team", label: "Team Management", icon: Users },
   { href: "/clients", label: "Client Management", icon: Users },
   { href: "/setup", label: "Project Setup", icon: Settings },
