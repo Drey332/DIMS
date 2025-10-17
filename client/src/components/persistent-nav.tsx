@@ -10,7 +10,8 @@ import {
   X,
   UserCircle,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Flame
 } from "lucide-react";
 import ProfileMenu from './profile-menu';
 import { cn } from "@/lib/utils";
