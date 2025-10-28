@@ -10,6 +10,7 @@ import {
   fileUploads,
   assetVerifications,
   clients,
+  fireIncidents,
   type User,
   type InsertUser,
   type Project,
@@ -30,6 +31,8 @@ import {
   type InsertAssetVerification,
   type Client,
   type InsertClient,
+  type FireIncident,
+  type InsertFireIncident,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, or, sql } from "drizzle-orm";
@@ -104,6 +107,12 @@ export interface IStorage {
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: number, updates: Partial<InsertClient>): Promise<Client>;
   deleteClient(id: number): Promise<void>;
+  
+  // Fire incident operations
+  createFireIncident(incident: InsertFireIncident): Promise<FireIncident>;
+  getFireIncident(id: string): Promise<FireIncident | undefined>;
+  getAllFireIncidents(): Promise<FireIncident[]>;
+  searchFireIncidents(filters?: { tags?: string[]; operationPhase?: string; limit?: number }): Promise<FireIncident[]>;
   
   // Dashboard analytics
   getDashboardStats(projectId?: number): Promise<{
@@ -586,6 +595,40 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(users)
       .where(eq(users.id, id));
+  }
+
+  // Fire incident operations
+  async createFireIncident(incident: InsertFireIncident): Promise<FireIncident> {
+    const [fireIncident] = await db.insert(fireIncidents).values(incident).returning();
+    return fireIncident;
+  }
+
+  async getFireIncident(id: string): Promise<FireIncident | undefined> {
+    const [incident] = await db.select().from(fireIncidents).where(eq(fireIncidents.id, id));
+    return incident;
+  }
+
+  async getAllFireIncidents(): Promise<FireIncident[]> {
+    return await db.select().from(fireIncidents).orderBy(desc(fireIncidents.dateUtc));
+  }
+
+  async searchFireIncidents(filters?: { tags?: string[]; operationPhase?: string; limit?: number }): Promise<FireIncident[]> {
+    let query = db.select().from(fireIncidents);
+    
+    if (filters?.operationPhase) {
+      query = query.where(eq(fireIncidents.operationPhase, filters.operationPhase)) as any;
+    }
+    
+    // Note: Array filtering for tags would require more complex SQL
+    // For now, we'll return all and filter in the application layer if needed
+    
+    let results = await query.orderBy(desc(fireIncidents.dateUtc));
+    
+    if (filters?.limit) {
+      results = results.slice(0, filters.limit);
+    }
+    
+    return results;
   }
 }
 

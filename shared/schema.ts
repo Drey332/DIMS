@@ -192,6 +192,35 @@ export const assetVerifications = pgTable("asset_verifications", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Fire incidents for historical disaster intelligence
+export const fireIncidents = pgTable("fire_incidents", {
+  id: text("id").primaryKey(), // e.g., "PIPER-ALPHA-1988"
+  name: text("name").notNull(),
+  dateUtc: timestamp("date_utc").notNull(),
+  industry: text("industry").notNull(),
+  location: text("location").notNull(),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
+  operationPhase: text("operation_phase").notNull(),
+  initiatingEvent: text("initiating_event").notNull(),
+  ignitionSource: text("ignition_source"),
+  fuel: text("fuel").array().notNull(),
+  detection: text("detection").array().notNull(),
+  protectionSystems: jsonb("protection_systems").notNull(),
+  humanFactors: text("human_factors").array().notNull(),
+  barriersFailed: text("barriers_failed").array().notNull(),
+  fatalities: integer("fatalities").notNull().default(0),
+  injuries: integer("injuries"),
+  assetLossUSD: integer("asset_loss_usd"),
+  releaseVolume: text("release_volume"),
+  timeline: jsonb("timeline").notNull(),
+  officialFindings: text("official_findings").array().notNull(),
+  sources: jsonb("sources").notNull(),
+  lessons: text("lessons").array().notNull(),
+  tags: text("tags").array().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   projectAssignments: many(projectAssignments),
@@ -292,6 +321,10 @@ export const insertClientSchema = createInsertSchema(clients).omit({
   updatedAt: true,
 });
 
+export const insertFireIncidentSchema = createInsertSchema(fireIncidents).omit({
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -313,3 +346,5 @@ export type AssetVerification = typeof assetVerifications.$inferSelect;
 export type InsertAssetVerification = z.infer<typeof insertAssetVerificationSchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
+export type FireIncident = typeof fireIncidents.$inferSelect;
+export type InsertFireIncident = z.infer<typeof insertFireIncidentSchema>;

@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { storage } from "./storage";
 
 // ===== AI ERP Advisor (JS, CJS) =====
 // TypeScript will whine, but this is industry-standard when mixing JS/TS
@@ -63,11 +64,17 @@ app.use("/api/ai-erp-advisor", aiErpAdvisor);
   // Attach REST routes and all other project endpoints
   await registerRoutes(app);
 
-  // ===== Fire Intelligence: Load seed data on startup =====
+  // ===== Fire Intelligence: Load seed data into PostgreSQL on startup =====
   try {
-    const { ensureFireIncidentSeeds } = await import('./fire-intel/ingest');
-    await ensureFireIncidentSeeds();
-    log('🔥 Fire Intelligence: Historical incident data loaded');
+    const { seedFireIncidents } = await import('./fire-intel/seed-db');
+    // Check if data already exists
+    const existingIncidents = await storage.getAllFireIncidents();
+    if (existingIncidents.length === 0) {
+      await seedFireIncidents();
+      log('🔥 Fire Intelligence: Historical incidents loaded into PostgreSQL');
+    } else {
+      log(`🔥 Fire Intelligence: ${existingIncidents.length} incidents already in database`);
+    }
   } catch (err) {
     log('⚠️  Fire Intelligence: Failed to load seed data (non-fatal)');
     console.error(err);
