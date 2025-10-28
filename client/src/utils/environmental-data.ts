@@ -6,8 +6,12 @@
  * - Marine current and wave data from Open-Meteo Marine API: https://open-meteo.com/en/docs/marine-weather-api
  */
 
-const NOAA_AURORA_URL = "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json";
-const NOAA_SOLAR_WIND_URL = "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json";
+import { abortSafe } from "@/lib/abort";
+
+const NOAA_AURORA_URL =
+  "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json";
+const NOAA_SOLAR_WIND_URL =
+  "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json";
 const OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 const OPEN_METEO_MARINE_URL = "https://marine-api.open-meteo.com/v1/marine";
 
@@ -17,9 +21,7 @@ function toNumber(value: unknown): number | undefined {
 }
 
 function normaliseTimestamp(value: unknown): string | undefined {
-  if (typeof value === "string" && value.trim().length > 0) {
-    return value;
-  }
+  if (typeof value === "string" && value.trim().length > 0) return value;
   return undefined;
 }
 
@@ -56,6 +58,43 @@ export interface MarineConditions {
   waveHeights?: Array<{ time: string; height: number }>;
 }
 
+/** Safe defaults so the UI/stream never crashes if feeds fail */
+function defaultAuroraForecast(): AuroraForecastResult {
+  return {
+    probability: undefined,
+    nearestPoint: undefined,
+    maxProbability: undefined,
+    kpIndex: undefined,
+    observationTime: undefined,
+    forecastTime: undefined,
+    severity: "quiet",
+  };
+}
+function defaultSolarWind(): SolarWindMetrics {
+  return {
+    speedKmPerSec: undefined,
+    densityPerCubicCm: undefined,
+    temperatureKelvin: undefined,
+    observationTime: undefined,
+  };
+}
+function defaultWindConditions(): WindConditions {
+  return {
+    updatedAt: undefined,
+    currentSpeed: undefined,
+    currentDirection: undefined,
+    hourlySpeeds: [],
+  };
+}
+function defaultMarineConditions(): MarineConditions {
+  return {
+    updatedAt: undefined,
+    currentSpeed: undefined,
+    currentDirection: undefined,
+    waveHeights: [],
+  };
+}
+
 interface AuroraPoint {
   latitude: number;
   longitude: number;
@@ -63,9 +102,7 @@ interface AuroraPoint {
 }
 
 function classifyKp(value: number | undefined): AuroraSeverity {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return "quiet";
-  }
+  if (typeof value !== "number" || Number.isNaN(value)) return "quiet";
   if (value >= 5) return "storm";
   if (value >= 4) return "active";
   return "quiet";
@@ -87,6 +124,7 @@ function extractAuroraPoints(payload: any): AuroraPoint[] {
     }
   };
 
+  // Common variants seen in OVATION responses
   if (Array.isArray(payload?.coordinates)) {
     for (const entry of payload.coordinates) {
       if (Array.isArray(entry) && entry.length >= 3) {
@@ -107,6 +145,7 @@ function extractAuroraPoints(payload: any): AuroraPoint[] {
     for (const feature of payload.features) {
       const geometry = feature?.geometry;
       const properties = feature?.properties;
+
       if (Array.isArray(geometry?.coordinates)) {
         for (const entry of geometry.coordinates) {
           if (Array.isArray(entry) && entry.length >= 3) {
@@ -114,9 +153,14 @@ function extractAuroraPoints(payload: any): AuroraPoint[] {
           }
         }
       }
+
       if (Array.isArray(properties?.Points)) {
         for (const entry of properties.Points) {
-          pushPoint(entry?.Longitude ?? entry?.lon, entry?.Latitude ?? entry?.lat, entry?.Probability ?? entry?.probability);
+          pushPoint(
+            entry?.Longitude ?? entry?.lon,
+            entry?.Latitude ?? entry?.lat,
+            entry?.Probability ?? entry?.probability
+          );
         }
       }
     }
@@ -124,14 +168,22 @@ function extractAuroraPoints(payload: any): AuroraPoint[] {
 
   if (Array.isArray(payload?.Points)) {
     for (const entry of payload.Points) {
-      pushPoint(entry?.Longitude ?? entry?.lon, entry?.Latitude ?? entry?.lat, entry?.Probability ?? entry?.probability);
+      pushPoint(
+        entry?.Longitude ?? entry?.lon,
+        entry?.Latitude ?? entry?.lat,
+        entry?.Probability ?? entry?.probability
+      );
     }
   }
 
   return points;
 }
 
-function findNearestPoint(points: AuroraPoint[], latitude: number, longitude: number): AuroraPoint | undefined {
+function findNearestPoint(
+  points: AuroraPoint[],
+  latitude: number,
+  longitude: number
+): AuroraPoint | undefined {
   if (!points.length) return undefined;
   let nearest: AuroraPoint | undefined;
   let bestDistance = Number.POSITIVE_INFINITY;
@@ -143,7 +195,6 @@ function findNearestPoint(points: AuroraPoint[], latitude: number, longitude: nu
       nearest = point;
     }
   }
-
   return nearest;
 }
 
@@ -161,6 +212,7 @@ function extractAuroraMetadata(payload: any) {
   const candidates = [payload?.properties, payload];
   for (const source of candidates) {
     if (!source) continue;
+
     const observationTime =
       normaliseTimestamp(source?.["Observation Time"]) ||
       normaliseTimestamp(source?.ObservationTime) ||
@@ -186,29 +238,36 @@ function extractAuroraMetadata(payload: any) {
       return { observationTime, forecastTime, kpIndex };
     }
   }
-
   return { observationTime: undefined, forecastTime: undefined, kpIndex: undefined };
 }
 
-export async function fetchAuroraForecast(latitude: number, longitude: number): Promise<AuroraForecastResult> {
-  const response = await fetch(NOAA_AURORA_URL, {
-    headers: {
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-
+/**
+ * Fetch OVATION aurora grid and return nearest probability + metadata for a lat/lon.
+ * Resilient to payload shape differences and network aborts.
+ */
+export async function fetchAuroraForecast(
+  latitude: number,
+  longitude: number
+): Promise<AuroraForecastResult> {
+  const response = await abortSafe(
+    fetch(NOAA_AURORA_URL, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+  );
+  if (!response) return defaultAuroraForecast();
   if (!response.ok) {
     throw new Error(`Aurora forecast request failed: ${response.status}`);
   }
 
-  const payload = await response.json();
+  const payload = await abortSafe(response.json() as Promise<any>);
+  if (!payload) return defaultAuroraForecast();
 
-  const primaryFeature = Array.isArray(payload?.features) ? payload.features[0] : payload;
-  const points = extractAuroraPoints(primaryFeature ?? payload);
+  const primary = Array.isArray(payload?.features) ? payload.features[0] : payload;
+  const points = extractAuroraPoints(primary ?? payload);
   const nearestPoint = findNearestPoint(points, latitude, longitude);
   const maxProbability = extractMaxProbability(points);
-  const metadata = extractAuroraMetadata(primaryFeature ?? payload);
+  const metadata = extractAuroraMetadata(primary ?? payload);
   const severity = classifyKp(metadata.kpIndex);
 
   return {
@@ -222,20 +281,29 @@ export async function fetchAuroraForecast(latitude: number, longitude: number): 
   };
 }
 
+/**
+ * Fetch NOAA real-time solar wind (1-minute) metrics.
+ */
 export async function fetchSolarWind(): Promise<SolarWindMetrics> {
-  const response = await fetch(NOAA_SOLAR_WIND_URL, {
-    headers: {
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-
+  const response = await abortSafe(
+    fetch(NOAA_SOLAR_WIND_URL, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+  );
+  if (!response) return defaultSolarWind();
   if (!response.ok) {
     throw new Error(`Solar wind request failed: ${response.status}`);
   }
 
-  const payload = await response.json();
-  const records: any[] = Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : [];
+  const payload = await abortSafe(response.json() as Promise<any>);
+  if (!payload) return defaultSolarWind();
+
+  const records: any[] = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+    ? payload.data
+    : [];
   const latest = records[0] ?? {};
 
   return {
@@ -248,7 +316,13 @@ export async function fetchSolarWind(): Promise<SolarWindMetrics> {
   };
 }
 
-export async function fetchWindConditions(latitude: number, longitude: number): Promise<WindConditions> {
+/**
+ * Fetch atmospheric wind (current + next 24h hourly) from Open-Meteo.
+ */
+export async function fetchWindConditions(
+  latitude: number,
+  longitude: number
+): Promise<WindConditions> {
   const params = new URLSearchParams({
     latitude: latitude.toString(),
     longitude: longitude.toString(),
@@ -257,26 +331,28 @@ export async function fetchWindConditions(latitude: number, longitude: number): 
     timezone: "UTC",
   });
 
-  const response = await fetch(`${OPEN_METEO_FORECAST_URL}?${params.toString()}`, {
-    headers: {
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-
+  const response = await abortSafe(
+    fetch(`${OPEN_METEO_FORECAST_URL}?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+  );
+  if (!response) return defaultWindConditions();
   if (!response.ok) {
     throw new Error(`Wind forecast request failed: ${response.status}`);
   }
 
-  const payload = await response.json();
+  const payload = await abortSafe(response.json() as Promise<any>);
+  if (!payload) return defaultWindConditions();
+
   const hourlyTimes: string[] = payload?.hourly?.time ?? [];
   const hourlySpeedsRaw: number[] = payload?.hourly?.wind_speed_10m ?? [];
   const hourlySpeeds: Array<{ time: string; speed: number }> = [];
 
   if (Array.isArray(hourlyTimes) && Array.isArray(hourlySpeedsRaw)) {
-    for (let index = 0; index < Math.min(hourlyTimes.length, hourlySpeedsRaw.length, 24); index += 1) {
-      const time = hourlyTimes[index];
-      const speed = toNumber(hourlySpeedsRaw[index]);
+    for (let i = 0; i < Math.min(hourlyTimes.length, hourlySpeedsRaw.length, 24); i++) {
+      const time = hourlyTimes[i];
+      const speed = toNumber(hourlySpeedsRaw[i]);
       if (typeof time === "string" && typeof speed === "number") {
         hourlySpeeds.push({ time, speed });
       }
@@ -291,7 +367,13 @@ export async function fetchWindConditions(latitude: number, longitude: number): 
   };
 }
 
-export async function fetchMarineConditions(latitude: number, longitude: number): Promise<MarineConditions> {
+/**
+ * Fetch marine currents and wave heights (next 24h) from Open-Meteo Marine.
+ */
+export async function fetchMarineConditions(
+  latitude: number,
+  longitude: number
+): Promise<MarineConditions> {
   const params = new URLSearchParams({
     latitude: latitude.toString(),
     longitude: longitude.toString(),
@@ -299,18 +381,20 @@ export async function fetchMarineConditions(latitude: number, longitude: number)
     timezone: "UTC",
   });
 
-  const response = await fetch(`${OPEN_METEO_MARINE_URL}?${params.toString()}`, {
-    headers: {
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
-
+  const response = await abortSafe(
+    fetch(`${OPEN_METEO_MARINE_URL}?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+    })
+  );
+  if (!response) return defaultMarineConditions();
   if (!response.ok) {
     throw new Error(`Marine conditions request failed: ${response.status}`);
   }
 
-  const payload = await response.json();
+  const payload = await abortSafe(response.json() as Promise<any>);
+  if (!payload) return defaultMarineConditions();
+
   const times: string[] = payload?.hourly?.time ?? [];
   const speeds: number[] = payload?.hourly?.ocean_current_speed ?? [];
   const directions: number[] = payload?.hourly?.ocean_current_direction ?? [];

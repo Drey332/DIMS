@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Globe2, MapPin, RotateCcw, Settings, Share2 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,10 @@ interface EarthNullschoolGlobeProps {
 function formatCoordinate(value: number, type: "lat" | "lon") {
   const suffix = type === "lat" ? (value >= 0 ? "N" : "S") : value >= 0 ? "E" : "W";
   return `${Math.abs(value).toFixed(2)}°${suffix}`;
+}
+
+function isValidCoordinate(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 type AnimationSetting = "on" | "off";
@@ -137,6 +142,9 @@ const DEFAULT_LATITUDE = 40.793;
 const DEFAULT_LONGITUDE = -77.863;
 
 export function EarthNullschoolGlobe({ latitude, longitude, locationName }: EarthNullschoolGlobeProps) {
+  const hasCoordinates = isValidCoordinate(latitude) && isValidCoordinate(longitude);
+
+  // Controls
   const [locale, setLocale] = useState<LocaleSetting>("en");
   const [animation, setAnimation] = useState<AnimationSetting>("off");
   const [domain, setDomain] = useState<DomainSetting>("space");
@@ -148,22 +156,18 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
   const [customDate, setCustomDate] = useState("2023-09-12");
   const [customTime, setCustomTime] = useState("18:00");
   const [latitudeInput, setLatitudeInput] = useState<string>(
-    Number.isFinite(latitude) ? latitude!.toFixed(3) : DEFAULT_LATITUDE.toFixed(3)
+    hasCoordinates ? latitude!.toFixed(3) : DEFAULT_LATITUDE.toFixed(3)
   );
   const [longitudeInput, setLongitudeInput] = useState<string>(
-    Number.isFinite(longitude) ? longitude!.toFixed(3) : DEFAULT_LONGITUDE.toFixed(3)
+    hasCoordinates ? longitude!.toFixed(3) : DEFAULT_LONGITUDE.toFixed(3)
   );
 
   useEffect(() => {
-    if (typeof latitude === "number" && Number.isFinite(latitude)) {
-      setLatitudeInput(latitude.toFixed(3));
-    }
+    if (isValidCoordinate(latitude)) setLatitudeInput(latitude.toFixed(3));
   }, [latitude]);
 
   useEffect(() => {
-    if (typeof longitude === "number" && Number.isFinite(longitude)) {
-      setLongitudeInput(longitude.toFixed(3));
-    }
+    if (isValidCoordinate(longitude)) setLongitudeInput(longitude.toFixed(3));
   }, [longitude]);
 
   const parsedLatitude = useMemo(() => {
@@ -177,14 +181,11 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
   }, [longitudeInput]);
 
   const timestampSegment = useMemo(() => {
-    if (dateMode === "current") {
-      return "current";
-    }
+    if (dateMode === "current") return "current";
     const [year, month, day] = customDate.split("-");
     if (!year || !month || !day) return "current";
-    const time = customTime || "00:00";
-    const numericTime = time.replace(":", "");
-    return `${year}/${month}/${day}/${numericTime}Z`;
+    const time = (customTime || "00:00").replace(":", "");
+    return `${year}/${month}/${day}/${time}Z`;
   }, [dateMode, customDate, customTime]);
 
   const baseUrl = useMemo(() => {
@@ -227,8 +228,8 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
     setDateMode("current");
     setCustomDate("2023-09-12");
     setCustomTime("18:00");
-    setLatitudeInput(DEFAULT_LATITUDE.toFixed(3));
-    setLongitudeInput(DEFAULT_LONGITUDE.toFixed(3));
+    setLatitudeInput(hasCoordinates ? latitude!.toFixed(3) : DEFAULT_LATITUDE.toFixed(3));
+    setLongitudeInput(hasCoordinates ? longitude!.toFixed(3) : DEFAULT_LONGITUDE.toFixed(3));
   };
 
   const coordinateBadge = `${formatCoordinate(parsedLatitude, "lat")} · ${formatCoordinate(
@@ -246,7 +247,7 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
               Live Environmental Globe
             </CardTitle>
             <CardDescription className="text-sm text-blue-800">
-              Explore the full Earth Nullschool visualization directly in HydroSafe with live controls.
+              Interactive auroral, wind, and ocean overlays from earth.nullschool.net—centered on your site.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -254,7 +255,7 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
               <RotateCcw className="h-4 w-4" />
               Reset view
             </Button>
-            <Button asChild size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700">
+            <Button asChild size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
               <a href={mapSrc} target="_blank" rel="noreferrer">
                 <Share2 className="h-4 w-4" />
                 Open in new tab
@@ -262,6 +263,7 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
             </Button>
           </div>
         </div>
+
         <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-blue-900">
           {locationName && (
             <span className="inline-flex items-center gap-1">
@@ -269,18 +271,27 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
               {locationName}
             </span>
           )}
-          <span className="rounded border border-blue-200 bg-blue-50/60 px-2 py-0.5 uppercase tracking-wide">
+          <Badge variant="outline" className="border-blue-200 bg-blue-50/60 uppercase tracking-wide">
             {coordinateBadge}
-          </span>
+          </Badge>
         </div>
+
+        {!hasCoordinates && (
+          <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+            Tip: Save project latitude/longitude to auto-center the globe on your worksite. Using defaults for now.
+          </div>
+        )}
       </CardHeader>
+
       <CardContent className="space-y-6">
         <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          {/* Controls */}
           <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50/70 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-blue-900">
               <Settings className="h-4 w-4" />
               Map controls
             </div>
+
             <div className="grid gap-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -289,7 +300,7 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
                     id="nullschool-lat"
                     value={latitudeInput}
                     inputMode="decimal"
-                    onChange={(event) => setLatitudeInput(event.target.value)}
+                    onChange={(e) => setLatitudeInput(e.target.value)}
                   />
                 </div>
                 <div className="space-y-1">
@@ -298,16 +309,15 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
                     id="nullschool-lon"
                     value={longitudeInput}
                     inputMode="decimal"
-                    onChange={(event) => setLongitudeInput(event.target.value)}
+                    onChange={(e) => setLongitudeInput(e.target.value)}
                   />
                 </div>
               </div>
+
               <div className="space-y-1">
                 <Label>Locale</Label>
-                <Select value={locale} onValueChange={(value) => setLocale(value as LocaleSetting)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={locale} onValueChange={(v) => setLocale(v as LocaleSetting)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="en">English</SelectItem>
                     <SelectItem value="fr">Français</SelectItem>
@@ -317,25 +327,23 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label>Domain</Label>
-                  <Select value={domain} onValueChange={(value) => setDomain(value as DomainSetting)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={domain} onValueChange={(v) => setDomain(v as DomainSetting)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="space">Space</SelectItem>
                       <SelectItem value="earth">Earth</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-1">
                   <Label>Surface</Label>
-                  <Select value={surface} onValueChange={(value) => setSurface(value as SurfaceSetting)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={surface} onValueChange={(v) => setSurface(v as SurfaceSetting)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="primary">Primary</SelectItem>
                       <SelectItem value="secondary">Secondary</SelectItem>
@@ -345,60 +353,50 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
                   </Select>
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label>Field</Label>
-                  <Select value={field} onValueChange={(value) => setField(value as FieldSetting)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose field" />
-                    </SelectTrigger>
+                  <Select value={field} onValueChange={(v) => setField(v as FieldSetting)}>
+                    <SelectTrigger><SelectValue placeholder="Choose field" /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(fieldLabels).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-1">
                   <Label>Overlay</Label>
-                  <Select value={overlay} onValueChange={(value) => setOverlay(value as OverlaySetting)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose overlay" />
-                    </SelectTrigger>
+                  <Select value={overlay} onValueChange={(v) => setOverlay(v as OverlaySetting)}>
+                    <SelectTrigger><SelectValue placeholder="Choose overlay" /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(overlayLabels).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label>Projection</Label>
-                  <Select value={projection} onValueChange={(value) => setProjection(value as ProjectionSetting)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={projection} onValueChange={(v) => setProjection(v as ProjectionSetting)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(projectionLabels).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-1">
                   <Label>Animation</Label>
-                  <Select value={animation} onValueChange={(value) => setAnimation(value as AnimationSetting)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={animation} onValueChange={(v) => setAnimation(v as AnimationSetting)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="off">Off</SelectItem>
                       <SelectItem value="on">On</SelectItem>
@@ -406,19 +404,19 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
                   </Select>
                 </div>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label>Date mode</Label>
-                  <Select value={dateMode} onValueChange={(value) => setDateMode(value as "current" | "archived")}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                  <Select value={dateMode} onValueChange={(v) => setDateMode(v as "current" | "archived")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="current">Current</SelectItem>
                       <SelectItem value="archived">Archived</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-1">
                   {dateMode === "archived" ? (
                     <div className="grid grid-cols-2 gap-3">
@@ -428,7 +426,7 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
                           id="nullschool-date"
                           type="date"
                           value={customDate}
-                          onChange={(event) => setCustomDate(event.target.value)}
+                          onChange={(e) => setCustomDate(e.target.value)}
                         />
                       </div>
                       <div className="space-y-1">
@@ -438,7 +436,7 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
                           type="time"
                           step={900}
                           value={customTime}
-                          onChange={(event) => setCustomTime(event.target.value)}
+                          onChange={(e) => setCustomTime(e.target.value)}
                         />
                       </div>
                     </div>
@@ -447,6 +445,7 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
                   )}
                 </div>
               </div>
+
               <div className="space-y-2">
                 <Label>Operational presets</Label>
                 <div className="flex flex-wrap gap-2">
@@ -474,6 +473,8 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
               </div>
             </div>
           </div>
+
+          {/* Map */}
           <div className="overflow-hidden rounded-xl border border-blue-200 bg-slate-900 shadow-inner">
             <div className="relative pb-[66%]">
               <iframe
@@ -492,4 +493,3 @@ export function EarthNullschoolGlobe({ latitude, longitude, locationName }: Eart
 }
 
 export default EarthNullschoolGlobe;
-
