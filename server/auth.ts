@@ -13,6 +13,7 @@ export interface AuthRequest extends Request {
     email: string;
     role: string;
   };
+  sessionRole?: 'BRONZE' | 'SILVER' | 'GOLD' | null;
 }
 
 export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -285,4 +286,127 @@ export const handleFirebaseOAuth = async (req: Request, res: Response) => {
     console.error('Firebase OAuth error:', error);
     res.status(500).json({ error: 'Authentication failed' });
   }
+};
+
+// Secure role codes (server-side only)
+const ROLE_CODES = {
+  BRONZE: process.env.BRONZE_CODE || '000',
+  SILVER: process.env.SILVER_CODE || '001',
+  GOLD: process.env.GOLD_CODE || '100',
+} as const;
+
+// Validate role access code and issue signed role token
+export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
+  try {
+    const { role, code } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    if (!role || !code) {
+      return res.status(400).json({ message: 'Role and code are required' });
+    }
+
+    // Validate role
+    const validRoles = ['BRONZE', 'SILVER', 'GOLD'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ message: 'Invalid role' });
+    }
+
+    // Verify code
+    const expectedCode = ROLE_CODES[role as keyof typeof ROLE_CODES];
+    if (code !== expectedCode) {
+      // Log failed attempt
+      await storage.createAuditLog({
+        userId: req.user.id,
+        actionType: 'ROLE_ACCESS_DENIED',
+        description: `Failed attempt to access ${role} role with incorrect code`,
+        oldData: { currentRole: req.user.role },
+        newData: { attemptedRole: role, success: false }
+      });
+
+      return res.status(403).json({ message: 'Invalid access code' });
+    }
+
+    // Generate role token (JWT with role claim)
+    const roleToken = jwt.sign(
+      { 
+        userId: req.user.id,
+        email: req.user.email,
+        sessionRole: role,
+        grantedAt: new Date().toISOString()
+      },
+      JWT_SECRET,
+      { expiresIn: '8h' } // Role session expires after 8 hours
+    );
+
+    // Log successful role escalation
+    await storage.createAuditLog({
+      userId: req.user.id,
+      actionType: 'ROLE_ESCALATION',
+      description: `User escalated to ${role} command level`,
+      oldData: { baseRole: req.user.role },
+      newData: { sessionRole: role, success: true }
+    });
+
+    res.json({
+      roleToken,
+      role,
+      expiresIn: '8h',
+      grantedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Role validation error:', error);
+    res.status(500).json({ message: 'Role validation failed' });
+  }
+};
+
+// Middleware to verify role token and attach session role to request
+export const verifyRoleToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  const roleTokenHeader = req.headers['x-role-token'] as string;
+
+  if (!roleTokenHeader) {
+    // No role token provided - continue without session role
+    req.sessionRole = null;
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(roleTokenHeader, JWT_SECRET) as any;
+    req.sessionRole = decoded.sessionRole;
+    next();
+  } catch (error) {
+    // Invalid or expired role token
+    req.sessionRole = null;
+    next();
+  }
+};
+
+// Middleware to require specific role for protected routes
+export const requireRole = (requiredRole: 'BRONZE' | 'SILVER' | 'GOLD') => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (!req.sessionRole) {
+      return res.status(403).json({ message: 'Role selection required' });
+    }
+
+    const roleHierarchy = { BRONZE: 1, SILVER: 2, GOLD: 3 };
+    const userLevel = roleHierarchy[req.sessionRole];
+    const requiredLevel = roleHierarchy[requiredRole];
+
+    if (userLevel < requiredLevel) {
+      return res.status(403).json({ 
+        message: `${requiredRole} role required for this action`,
+        currentRole: req.sessionRole,
+        requiredRole
+      });
+    }
+
+    next();
+  };
 };

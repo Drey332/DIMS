@@ -27,6 +27,9 @@ import {
   handleGoogleCallback,
   handleAppleCallback,
   handleFirebaseOAuth,
+  validateRoleAccess,
+  verifyRoleToken,
+  requireRole,
   type AuthRequest
 } from "./auth";
 import { getDoc, doc } from "firebase/firestore";
@@ -139,9 +142,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/auth/google/callback', handleGoogleCallback);
   app.post('/auth/apple/callback', handleAppleCallback);
   app.post('/api/auth/firebase-oauth', handleFirebaseOAuth);
+  
+  // Role-based access control
+  app.post('/api/auth/validate-role', authenticateToken, validateRoleAccess);
 
-  // Apply authentication middleware to protected API routes
+  // Apply authentication and role verification middleware to protected API routes
   app.use('/api', authenticateUser);
+  app.use('/api', verifyRoleToken);
 
   // Environmental context routes
   app.get('/api/environment/aurora', async (req, res) => {
