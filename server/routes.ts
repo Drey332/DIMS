@@ -747,11 +747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-<<<<<<< HEAD
   app.post('/api/ai/decision-analysis', async (req: AuthRequest, res) => {
-=======
-  app.post("/api/ai/decision-analysis", async (req: AuthenticatedRequest, res) => {
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
     try {
       const { decisionData, projectContext } = req.body;
       const userRole = req.sessionRole || 'BRONZE';
@@ -763,7 +759,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-<<<<<<< HEAD
   app.post('/api/fire-intelligence/query', async (req: AuthenticatedRequest, res) => {
     try {
       const { question } = req.body;
@@ -831,9 +826,6 @@ ${JSON.stringify(fireContext, null, 2)}`
   });
 
   app.get('/api/ai/recommendations', async (req, res) => {
-=======
-  app.get("/api/ai/recommendations", async (req, res) => {
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
 
@@ -1635,11 +1627,7 @@ ${JSON.stringify(fireContext, null, 2)}`
   });
 
   // ERP Knowledge Base API endpoints
-<<<<<<< HEAD
   app.get('/api/erp/search', async (req: AuthRequest, res) => {
-=======
-  app.get("/api/erp/search", authenticateUser, async (req: AuthenticatedRequest, res) => {
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
     try {
       const { query, limit } = req.query;
       const { ERPKnowledgeService } = await import("./erpKnowledge");
@@ -1654,13 +1642,8 @@ ${JSON.stringify(fireContext, null, 2)}`
     }
   });
 
-<<<<<<< HEAD
   // ERP Scenarios API endpoints
   app.get('/api/erp/scenarios', async (req: AuthRequest, res) => {
-=======
-  // ERP Scenarios API endpoints (consolidated)
-  app.get("/api/erp/scenarios", authenticateUser, async (req: AuthenticatedRequest, res) => {
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
     try {
       const { q, query, category, severity } = req.query;
       const search = (q as string) || (query as string) || "";
@@ -1687,7 +1670,6 @@ ${JSON.stringify(fireContext, null, 2)}`
     }
   });
 
-<<<<<<< HEAD
   // AI Q&A API endpoint for emergency response questions
   app.post('/api/erp/ask-ai', async (req: AuthRequest, res) => {
     try {
@@ -1869,33 +1851,9 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  // ERP Scenarios API endpoints for live search
-  app.get('/api/erp/scenarios', async (req: AuthRequest, res) => {
-    try {
-      const { q, category, severity } = req.query;
-      const { ERPScenariosService } = await import('./erpScenarios');
-      
-      let scenarios = ERPScenariosService.searchScenarios(q as string || '');
-      
-      if (category) {
-        scenarios = scenarios.filter(s => s.category === category);
-      }
-      
-      if (severity) {
-        scenarios = scenarios.filter(s => s.severity === severity);
-      }
-      
-      res.json(scenarios);
-    } catch (error) {
-      console.error("Error searching ERP scenarios:", error);
-      res.status(500).json({ message: "Failed to search ERP scenarios" });
-    }
-  });
+  // Removed duplicate /api/erp/scenarios route (already exists above)
 
   app.get('/api/erp/scenarios/:id', async (req: AuthRequest, res) => {
-=======
-  app.get("/api/erp/scenarios/:id", authenticateUser, async (req: AuthenticatedRequest, res) => {
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
     try {
       const { id } = req.params;
       const { ERPScenariosService } = await import("./erpScenarios");
