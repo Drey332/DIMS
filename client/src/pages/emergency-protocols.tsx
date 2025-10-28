@@ -52,20 +52,6 @@ interface BoostContribution {
 interface MatchedIncident {
   id: string;
   title: string;
-  location?: string;
-  dateUtc?: string;
-  operationPhase?: string;
-  lessons: string[];
-  officialFindings?: string[];
-  sources?: IncidentSource[];
-  score?: number;
-  similarity?: number;
-  boosts?: BoostContribution[];
-}
-
-interface MatchedIncident {
-  id: string;
-  title: string;
   score: number;
   reasons: string[];
   lessons?: string[];
@@ -75,16 +61,9 @@ interface MatchedIncident {
 
 interface AIResponse {
   answer: string;
-<<<<<<< HEAD
-  relatedQuestions: string[];
-  relatedScenarios: { id: string; title: string; category: string; }[];
-  matchedIncidents?: MatchedIncident[];
-  confidence: 'high' | 'medium' | 'low';
-=======
   relatedQuestions?: string[];
   relatedScenarios?: { id: string; title: string; category: string }[];
   confidence: "high" | "medium" | "low";
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
   source?: string;
   matchedIncidents?: MatchedIncident[];
 }
@@ -563,7 +542,6 @@ export default function EmergencyProtocols() {
                 </div>
 
                 {aiResponse.matchedIncidents && aiResponse.matchedIncidents.length > 0 && (
-<<<<<<< HEAD
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-amber-900 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
@@ -625,110 +603,6 @@ export default function EmergencyProtocols() {
                     </div>
                   </div>
                 )}
-
-                {aiResponse.relatedQuestions.length > 0 && (
-=======
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm text-gray-700">
-                      Matched Past Incidents:
-                    </h4>
-                    <div className="grid grid-cols-1 gap-2">
-                      {aiResponse.matchedIncidents.map((match) => (
-                        <div
-                          key={match.id}
-                          className="rounded border border-amber-200 bg-amber-50/60 p-3"
-                        >
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                              <div className="text-sm font-semibold text-amber-900">
-                                {match.title}
-                              </div>
-                              <div className="text-xs text-amber-800">
-                                {match.location ?? "Location unknown"} — {" "}
-                                {match.dateUtc
-                                  ? new Date(match.dateUtc).toUTCString().slice(5, 16)
-                                  : "Date unknown"}
-                                {" "}- Phase: {match.operationPhase ?? "n/a"}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="text-xs text-amber-700">
-                                Similarity: {(
-                                  match.score ?? match.similarity ?? 0
-                                ).toFixed(2)}
-                              </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-amber-900 hover:text-amber-700"
-                                onClick={() => toggleMatchDetails(match.id)}
-                              >
-                                {expandedMatches[match.id] ? "Hide reasoning" : "Show reasoning"}
-                              </Button>
-                            </div>
-                          </div>
-                          {match.lessons && match.lessons.length > 0 && (
-                            <ul className="mt-2 list-disc pl-5 text-xs text-amber-900">
-                              {match.lessons.slice(0, 2).map((lesson, idx) => (
-                                <li key={idx}>{lesson}</li>
-                              ))}
-                            </ul>
-                          )}
-                          {match.sources && match.sources.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {match.sources.slice(0, 3).map((source, idx) => (
-                                <a
-                                  key={idx}
-                                  href={source.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[11px] underline text-amber-900 hover:text-amber-700"
-                                >
-                                  {source.title.length > 42
-                                    ? `${source.title.slice(0, 42)}…`
-                                    : source.title}
-                                </a>
-                              ))}
-                            </div>
-                          )}
-                          {expandedMatches[match.id] && match.boosts && match.boosts.length > 0 && (
-                            <div className="mt-3 rounded border border-amber-200 bg-white/70 p-2 text-[11px] text-amber-900">
-                              <div className="font-semibold uppercase tracking-wide text-amber-800">
-                                Why this match
-                              </div>
-                              <ul className="mt-1 space-y-1">
-                                {match.boosts.map((boost, idx) => (
-                                  <li key={idx}>
-                                    {boost.reason}
-                                    {typeof boost.delta === "number"
-                                      ? ` (+${boost.delta.toFixed(2)})`
-                                      : ""}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {aiResponse.matchedIncidents &&
-                  aiResponse.matchedIncidents[0]?.officialFindings &&
-                  aiResponse.matchedIncidents[0].officialFindings.length > 0 && (
-                    <div className="mt-4 text-xs text-gray-700">
-                      <div className="font-semibold">Official Findings referenced:</div>
-                      <ul className="list-disc pl-5">
-                        {aiResponse.matchedIncidents[0].officialFindings
-                          .slice(0, 3)
-                          .map((finding, idx) => (
-                            <li key={idx}>{finding}</li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
 
                 {aiResponse.relatedQuestions && aiResponse.relatedQuestions.length > 0 && (
                   <div className="space-y-2">
