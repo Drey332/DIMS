@@ -175,9 +175,31 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
       title: user.title,
       isActive: user.isActive,
       lastSeen: user.lastSeen,
+      sessionRole: user.sessionRole,
     });
   } catch (error) {
     console.error('Get current user error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Get user's current session role from database
+export const getUserRole = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const user = await storage.getUser(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({
+      role: user.sessionRole || null
+    });
+  } catch (error) {
+    console.error('Get user role error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -315,7 +337,7 @@ if (!ROLE_CODES.BRONZE || !ROLE_CODES.SILVER || !ROLE_CODES.GOLD) {
   }
 }
 
-// Validate role access code and issue signed role token
+// Validate role access code and save to database
 export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
   try {
     const { role, code } = req.body;
@@ -349,17 +371,10 @@ export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Invalid access code' });
     }
 
-    // Generate role token (JWT with role claim)
-    const roleToken = jwt.sign(
-      { 
-        userId: req.user.id,
-        email: req.user.email,
-        sessionRole: role,
-        grantedAt: new Date().toISOString()
-      },
-      JWT_SECRET,
-      { expiresIn: '8h' } // Role session expires after 8 hours
-    );
+    // Update user's session role in database
+    await storage.updateUser(req.user.id, {
+      sessionRole: role as 'BRONZE' | 'SILVER' | 'GOLD'
+    });
 
     // Log successful role escalation
     await storage.createAuditLog({
@@ -371,9 +386,8 @@ export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({
-      roleToken,
+      success: true,
       role,
-      expiresIn: '8h',
       grantedAt: new Date().toISOString()
     });
 

@@ -1,67 +1,40 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 
 export type UserRole = 'BRONZE' | 'SILVER' | 'GOLD' | null;
 
-const STORAGE_KEY = 'selectedRole';
-const ROLE_TOKEN_KEY = 'roleToken';
-
 export function useRole() {
-  const [role, setRoleState] = useState<UserRole>(() => {
-    if (typeof window !== 'undefined') {
-      return (sessionStorage.getItem(STORAGE_KEY) as UserRole) || null;
-    }
-    return null;
+  // Fetch role from database
+  const { data, isLoading } = useQuery<{ role: UserRole }>({
+    queryKey: ['/api/user/role'],
+    retry: false,
+    staleTime: 0, // Always fetch fresh role
+    refetchOnWindowFocus: true,
   });
 
-  const setRole = (newRole: UserRole) => {
-    if (newRole) {
-      sessionStorage.setItem(STORAGE_KEY, newRole);
-    } else {
-      sessionStorage.removeItem(STORAGE_KEY);
-      sessionStorage.removeItem(ROLE_TOKEN_KEY);
-    }
-    setRoleState(newRole);
-  };
+  const role = data?.role || null;
 
   const validateCode = async (role: UserRole, code: string): Promise<boolean> => {
     if (!role || !code) return false;
 
     try {
-      // Get auth token from localStorage (set by Firebase login)
-      const authToken = localStorage.getItem('token');
       console.log('[useRole] Validating role:', role);
-      console.log('[useRole] Auth token exists:', !!authToken);
-      console.log('[useRole] Auth token length:', authToken?.length);
       
-      if (!authToken) {
-        console.error('[useRole] No auth token found in localStorage');
-        return false;
-      }
-
-      console.log('[useRole] Sending validation request to /api/auth/validate-role');
-      const response = await fetch('/api/auth/validate-role', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`,
-        },
-        body: JSON.stringify({ role, code }),
+      const response = await apiRequest('POST', '/api/auth/validate-role', {
+        role,
+        code
       });
 
-      console.log('[useRole] Response status:', response.status);
-      
       if (!response.ok) {
         const error = await response.json();
         console.error('[useRole] Role validation failed:', error);
         return false;
       }
 
-      const data = await response.json();
-      console.log('[useRole] Validation successful, storing role token');
+      console.log('[useRole] Validation successful, role saved to database');
       
-      // Store role token for API requests
-      sessionStorage.setItem(ROLE_TOKEN_KEY, data.roleToken);
-      sessionStorage.setItem(STORAGE_KEY, role);
+      // Invalidate the role query to refetch from database
+      await queryClient.invalidateQueries({ queryKey: ['/api/user/role'] });
       
       return true;
     } catch (error) {
@@ -70,21 +43,26 @@ export function useRole() {
     }
   };
 
-  const clearRole = () => {
-    sessionStorage.removeItem(STORAGE_KEY);
-    sessionStorage.removeItem(ROLE_TOKEN_KEY);
-    setRoleState(null);
+  const clearRole = async () => {
+    try {
+      // Update user's sessionRole to null in database
+      await apiRequest('POST', '/api/auth/validate-role', {
+        role: null,
+        code: '' 
+      });
+      
+      // Invalidate query to refetch
+      await queryClient.invalidateQueries({ queryKey: ['/api/user/role'] });
+    } catch (error) {
+      console.error('[useRole] Error clearing role:', error);
+    }
   };
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const storedRole = sessionStorage.getItem(STORAGE_KEY) as UserRole;
-      setRoleState(storedRole || null);
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  const setRole = async (newRole: UserRole) => {
+    if (!newRole) return;
+    // Optimistically update the cache
+    queryClient.setQueryData(['/api/user/role'], { role: newRole });
+  };
 
   return {
     role,
@@ -92,12 +70,8 @@ export function useRole() {
     validateCode,
     clearRole,
     hasRole: !!role,
+    isLoading,
   };
-}
-
-export function getRoleToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return sessionStorage.getItem(ROLE_TOKEN_KEY);
 }
 
 export function getRoleColor(role: UserRole): string {

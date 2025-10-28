@@ -176,6 +176,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's current session role
+  app.get('/api/user/role', async (req: AuthenticatedRequest, res) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({ role: user.sessionRole || null });
+    } catch (error) {
+      console.error("Error fetching user role:", error);
+      res.status(500).json({ message: "Failed to fetch user role" });
+    }
+  });
+
   // Get user's assigned projects
   app.get('/api/user/projects', async (req: AuthenticatedRequest, res) => {
     try {
