@@ -33,14 +33,10 @@ import {
   handleGoogleCallback,
   handleAppleCallback,
   handleFirebaseOAuth,
-<<<<<<< HEAD
   validateRoleAccess,
   verifyRoleToken,
   requireRole,
-  type AuthRequest
-=======
   type AuthRequest,
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
 } from "./auth";
 import { getDoc, doc } from "firebase/firestore";
 import { askAssetAI } from "./ai-asset-agent";
@@ -142,23 +138,7 @@ function extractStringQueryParam(value: unknown): string | undefined {
   return undefined;
 }
 
-<<<<<<< HEAD
 // Removed stub authenticateUser - using real JWT auth from auth.ts
-=======
-// Simple session-based authentication middleware (replace with proper auth)
-const authenticateUser = async (req: AuthenticatedRequest, res: Response, next: Function) => {
-  // For demo purposes, we'll set a default user
-  // In production, implement proper session/JWT authentication
-  req.user = {
-    id: 1,
-    username: "david.mooney",
-    role: "GOLD",
-    firstName: "David",
-    lastName: "Mooney",
-  };
-  next();
-};
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
 
 export async function registerRoutes(app: Express): Promise<Server> {
   await ensureFireIncidentSeeds().catch((error) => {
@@ -171,7 +151,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/user", authenticateToken, getCurrentUser);
 
   // OAuth routes
-<<<<<<< HEAD
   app.get('/auth/google', initiateGoogleAuth);
   app.get('/auth/apple', initiateAppleAuth);
   app.get('/auth/google/callback', handleGoogleCallback);
@@ -184,18 +163,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply authentication and role verification middleware to all protected API routes
   app.use('/api', authenticateToken);
   app.use('/api', verifyRoleToken);
-=======
-  app.get("/auth/google", initiateGoogleAuth);
-  app.get("/auth/apple", initiateAppleAuth);
-  app.get("/auth/google/callback", handleGoogleCallback);
-  app.post("/auth/apple/callback", handleAppleCallback);
-  app.post("/api/auth/firebase-oauth", handleFirebaseOAuth);
-
-  // Apply authentication middleware to protected API routes
-  app.use("/api", authenticateUser);
 
   registerIncidentMatchRoute(app);
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
 
   // Environmental context routes
   app.get("/api/environment/aurora", async (req, res) => {
@@ -372,16 +341,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new project (Gold only)
-<<<<<<< HEAD
   app.post('/api/projects', requireRole('GOLD'), async (req: AuthRequest, res) => {
-    
-=======
-  app.post("/api/projects", async (req: AuthenticatedRequest, res) => {
-    if (req.user!.role !== "GOLD") {
-      return res.status(403).json({ message: "Only Gold users can create projects" });
-    }
-
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
     try {
       const projectData = {
         ...req.body,
@@ -650,19 +610,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI-powered routes
-<<<<<<< HEAD
   app.post('/api/ai/checklist', async (req: AuthRequest, res) => {
     try {
       const { scenarioType, projectDetails } = req.body;
       const userRole = req.sessionRole || 'BRONZE';
       
-=======
-  app.post("/api/ai/checklist", async (req: AuthenticatedRequest, res) => {
-    try {
-      const { scenarioType, projectDetails } = req.body;
-      const userRole = req.user!.role as "BRONZE" | "SILVER" | "GOLD";
-
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
       const checklist = await generateDynamicChecklist(scenarioType, projectDetails, userRole);
       res.json({ checklist });
     } catch (error) {
@@ -1960,7 +1912,6 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-<<<<<<< HEAD
   app.get('/api/erp/scenarios/category/:category', async (req: AuthRequest, res) => {
     try {
       const { category } = req.params;
@@ -1970,25 +1921,9 @@ Be specific, practical, and safety-focused in your response.`;
     } catch (error) {
       console.error("Error fetching scenarios by category:", error);
       res.status(500).json({ message: "Failed to fetch scenarios by category" });
-=======
-  app.get(
-    "/api/erp/scenarios/category/:category",
-    authenticateUser,
-    async (req: AuthenticatedRequest, res) => {
-      try {
-        const { category } = req.params;
-        const { ERPScenariosService } = await import("./erpScenarios");
-        const scenarios = ERPScenariosService.getScenariosByCategory(category as any);
-        res.json(scenarios);
-      } catch (error) {
-        console.error("Error fetching scenarios by category:", error);
-        res.status(500).json({ message: "Failed to fetch scenarios by category" });
-      }
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
     }
-  );
+  });
 
-<<<<<<< HEAD
   app.get('/api/erp/scenarios/critical', async (req: AuthRequest, res) => {
     try {
       const { ERPScenariosService } = await import('./erpScenarios');
@@ -1997,22 +1932,8 @@ Be specific, practical, and safety-focused in your response.`;
     } catch (error) {
       console.error("Error fetching critical scenarios:", error);
       res.status(500).json({ message: "Failed to fetch critical scenarios" });
-=======
-  app.get(
-    "/api/erp/scenarios/critical",
-    authenticateUser,
-    async (req: AuthenticatedRequest, res) => {
-      try {
-        const { ERPScenariosService } = await import("./erpScenarios");
-        const criticalScenarios = ERPScenariosService.getCriticalScenarios();
-        res.json(criticalScenarios);
-      } catch (error) {
-        console.error("Error fetching critical scenarios:", error);
-        res.status(500).json({ message: "Failed to fetch critical scenarios" });
-      }
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
     }
-  );
+  });
 
   // Fire Intelligence - Get all historical fire incidents
   app.get('/api/fire-incidents', async (req: AuthRequest, res) => {
@@ -2242,12 +2163,7 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // AI Asset Management Routes (protected with authentication middleware)
-<<<<<<< HEAD
   // Protected by global authenticateToken middleware
-=======
-  // Make sure protected with your authenticateUser middleware
-  app.use("/api/ai-asset", authenticateUser);
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
 
   // 1. Get asset status
   app.get("/api/ai-asset/status/:assetId", async (req: AuthenticatedRequest, res: Response) => {
@@ -2349,53 +2265,40 @@ Be specific, practical, and safety-focused in your response.`;
   );
 
   // AI PROJECT ANALYTICS - Comprehensive Safety Data Analysis
-<<<<<<< HEAD
   app.post('/api/ai-project-analytics', async (req: AuthRequest, res: Response) => {
     try {
       const { projectId } = req.body;
       
       if (!projectId) {
         return res.status(400).json({ error: "Missing projectId in request body" });
-=======
-  app.post(
-    "/api/ai-project-analytics",
-    authenticateUser,
-    async (req: AuthenticatedRequest, res: Response) => {
-      try {
-        const { projectId } = req.body;
-
-        if (!projectId) {
-          return res.status(400).json({ error: "Missing projectId in request body" });
-        }
-
-        if (!req.user) {
-          return res.status(401).json({ error: "User not authenticated" });
-        }
-
-        console.log(`🤖 Starting AI analytics for project ${projectId}`);
-
-        // Generate comprehensive AI analytics
-        const analyticsResult = await aiAnalyticsService.generateAnalytics(projectId);
-
-        console.log(`✅ AI analytics completed for project ${projectId}`);
-
-        res.json({
-          status: "success",
-          message: "AI project analytics generated successfully",
-          timestamp: new Date().toISOString(),
-          projectId,
-          analytics: analyticsResult,
-        });
-      } catch (error) {
-        console.error("❌ Error in AI project analytics:", error);
-        res.status(500).json({
-          error: "Failed to generate AI project analytics",
-          details: error instanceof Error ? error.message : "Unknown error",
-        });
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
       }
+
+      if (!req.user) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      console.log(`🤖 Starting AI analytics for project ${projectId}`);
+
+      // Generate comprehensive AI analytics
+      const analyticsResult = await aiAnalyticsService.generateAnalytics(projectId);
+
+      console.log(`✅ AI analytics completed for project ${projectId}`);
+
+      res.json({
+        status: "success",
+        message: "AI project analytics generated successfully",
+        timestamp: new Date().toISOString(),
+        projectId,
+        analytics: analyticsResult,
+      });
+    } catch (error) {
+      console.error("❌ Error in AI project analytics:", error);
+      res.status(500).json({
+        error: "Failed to generate AI project analytics",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
     }
-  );
+  });
 
   // GLOBAL EMERGENCY SYSTEM ENDPOINTS
   // Create emergency for global real-time notifications
