@@ -116,19 +116,7 @@ function extractStringQueryParam(value: unknown): string | undefined {
   return undefined;
 }
 
-// Simple session-based authentication middleware (replace with proper auth)
-const authenticateUser = async (req: AuthenticatedRequest, res: Response, next: Function) => {
-  // For demo purposes, we'll set a default user
-  // In production, implement proper session/JWT authentication
-  req.user = {
-    id: 1,
-    username: 'david.mooney',
-    role: 'GOLD',
-    firstName: 'David',
-    lastName: 'Mooney'
-  };
-  next();
-};
+// Removed stub authenticateUser - using real JWT auth from auth.ts
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes (no auth middleware required)
@@ -146,8 +134,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Role-based access control
   app.post('/api/auth/validate-role', authenticateToken, validateRoleAccess);
 
-  // Apply authentication and role verification middleware to protected API routes
-  app.use('/api', authenticateUser);
+  // Apply authentication and role verification middleware to all protected API routes
+  app.use('/api', authenticateToken);
   app.use('/api', verifyRoleToken);
 
   // Environmental context routes
@@ -200,10 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new project (Gold only)
-  app.post('/api/projects', async (req: AuthenticatedRequest, res) => {
-    if (req.user!.role !== 'GOLD') {
-      return res.status(403).json({ message: 'Only Gold users can create projects' });
-    }
+  app.post('/api/projects', requireRole('GOLD'), async (req: AuthRequest, res) => {
     
     try {
       const projectData = {
@@ -472,10 +457,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI-powered routes
-  app.post('/api/ai/checklist', async (req: AuthenticatedRequest, res) => {
+  app.post('/api/ai/checklist', async (req: AuthRequest, res) => {
     try {
       const { scenarioType, projectDetails } = req.body;
-      const userRole = req.user!.role as 'BRONZE' | 'SILVER' | 'GOLD';
+      const userRole = req.sessionRole || 'BRONZE';
       
       const checklist = await generateDynamicChecklist(scenarioType, projectDetails, userRole);
       res.json({ checklist });
@@ -496,10 +481,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/decision-analysis', async (req: AuthenticatedRequest, res) => {
+  app.post('/api/ai/decision-analysis', async (req: AuthRequest, res) => {
     try {
       const { decisionData, projectContext } = req.body;
-      const analysis = await analyzeDecisionContext(decisionData, req.user!.role, projectContext);
+      const userRole = req.sessionRole || 'BRONZE';
+      const analysis = await analyzeDecisionContext(decisionData, userRole, projectContext);
       res.json(analysis);
     } catch (error) {
       console.error("Error analyzing decision context:", error);
@@ -1341,7 +1327,7 @@ ${JSON.stringify(fireContext, null, 2)}`
   });
 
   // ERP Knowledge Base API endpoints
-  app.get('/api/erp/search', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/erp/search', async (req: AuthRequest, res) => {
     try {
       const { query, limit } = req.query;
       const { ERPKnowledgeService } = await import('./erpKnowledge');
@@ -1357,7 +1343,7 @@ ${JSON.stringify(fireContext, null, 2)}`
   });
 
   // ERP Scenarios API endpoints
-  app.get('/api/erp/scenarios', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/erp/scenarios', async (req: AuthRequest, res) => {
     try {
       const { query, category, severity } = req.query;
       
@@ -1380,7 +1366,7 @@ ${JSON.stringify(fireContext, null, 2)}`
   });
 
   // AI Q&A API endpoint for emergency response questions
-  app.post('/api/erp/ask-ai', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/erp/ask-ai', async (req: AuthRequest, res) => {
     try {
       const { question, context, projectContext } = req.body;
       
@@ -1535,7 +1521,7 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  app.get('/api/erp/critical', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/erp/critical', async (req: AuthRequest, res) => {
     try {
       const { ERPKnowledgeService } = await import('./erpKnowledge');
       const criticalSections = ERPKnowledgeService.getCriticalSections();
@@ -1546,7 +1532,7 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  app.get('/api/erp/category/:category', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/erp/category/:category', async (req: AuthRequest, res) => {
     try {
       const { category } = req.params;
       const { ERPKnowledgeService } = await import('./erpKnowledge');
@@ -1561,7 +1547,7 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // ERP Scenarios API endpoints for live search
-  app.get('/api/erp/scenarios', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/erp/scenarios', async (req: AuthRequest, res) => {
     try {
       const { q, category, severity } = req.query;
       const { ERPScenariosService } = await import('./erpScenarios');
@@ -1583,7 +1569,7 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  app.get('/api/erp/scenarios/:id', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/erp/scenarios/:id', async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const { ERPScenariosService } = await import('./erpScenarios');
@@ -1600,7 +1586,7 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  app.get('/api/erp/scenarios/category/:category', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/erp/scenarios/category/:category', async (req: AuthRequest, res) => {
     try {
       const { category } = req.params;
       const { ERPScenariosService } = await import('./erpScenarios');
@@ -1612,7 +1598,7 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  app.get('/api/erp/scenarios/critical', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/erp/scenarios/critical', async (req: AuthRequest, res) => {
     try {
       const { ERPScenariosService } = await import('./erpScenarios');
       const criticalScenarios = ERPScenariosService.getCriticalScenarios();
@@ -1624,7 +1610,7 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // Fire Intelligence - Get all historical fire incidents
-  app.get('/api/fire-incidents', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/fire-incidents', async (req: AuthRequest, res) => {
     try {
       const { fireIntelStorage } = await import('./fire-intel/storage');
       const incidents = await fireIntelStorage.getAllIncidents();
@@ -1636,7 +1622,7 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // Fire Intelligence - Geo-aware incident matching
-  app.get('/api/incidents/match', authenticateUser, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/incidents/match', async (req: AuthRequest, res) => {
     try {
       const { computeIncidentMatches } = await import('./fire-intel/matcher');
       
@@ -1851,8 +1837,7 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // AI Asset Management Routes (protected with authentication middleware)
-  // Make sure protected with your authenticateUser middleware
-  app.use('/api/ai-asset', authenticateUser);
+  // Protected by global authenticateToken middleware
 
   // 1. Get asset status
   app.get('/api/ai-asset/status/:assetId', async (req: AuthenticatedRequest, res: Response) => {
@@ -1928,7 +1913,7 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // AI PROJECT ANALYTICS - Comprehensive Safety Data Analysis
-  app.post('/api/ai-project-analytics', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
+  app.post('/api/ai-project-analytics', async (req: AuthRequest, res: Response) => {
     try {
       const { projectId } = req.body;
       
