@@ -1,0 +1,95 @@
+Prompt: Role-Based Emergency Access Gate with Tiered Authentication
+
+As the CTO of a mission-critical offshore emergency management platform (HydroSafe), I want to implement a Role-Based Access Entry Point that enforces immediate contextual UX while aligning with the Bronze–Silver–Gold (BSG) incident command protocol used in offshore/marine safety standards (IOGP, IMCA).
+
+🎯 Objective
+
+Upon application launch, all users are presented with a Role Selection Prompt:
+
+🟠 Bronze: Frontline responders (must act within seconds)
+
+🔵 Silver: Tactical leads (resource coordination)
+
+🟡 Gold: Strategic command (oversight, compliance)
+
+Each role requires tier-specific access code input to prevent unauthorized escalation:
+
+Bronze → 000
+
+Silver → 001
+
+Gold → 100
+
+This enforces tier separation, prevents accidental privilege elevation, and supports drill-mode training without email/password logins.
+
+✨ UX Requirements
+
+Step 1: Role Selection UI
+
+Bold card-style role tiles with color-coded indicators
+
+Tooltip/description: e.g., “Bronze – Emergency Responder”
+
+Step 2: Access Code Prompt
+
+Modal input with numeric keypad
+
+Soft vibration/haptic feedback on mobile
+
+Masked input (●●●) with "show" toggle
+
+Feedback on incorrect code (e.g., shake + toast: “Incorrect code for this role.”)
+
+Step 3: Role Initialization
+
+On success: store role in client state (e.g., sessionStorage.role = 'Bronze')
+
+Route user to role-specific dashboard and lock until logout
+
+🧱 Tech Constraints & Defaults
+
+No email/password required at this stage
+
+Session expires on tab close or manual logout
+
+Firebase Auth fallback available for full login in future phases
+
+🔐 Codes & Role Map (Environment Safe)
+// Role codes (hardcoded for MVP, later replace with env secrets or Remote Config)
+const ROLE_CODES = {
+  Bronze: '000',
+  Silver: '001',
+  Gold:   '100',
+} as const;
+
+🧪 Engineering Plan
+
+pages/login.tsx → Landing with RolePicker
+
+components/RolePicker.tsx → 3 role cards
+
+components/RoleCodeModal.tsx → code input
+
+Upon correct match → set Firebase custom claims (if using Auth) or local storage
+
+Add role guard (useRole()) to route based on tier
+
+🔒 Security Enhancements (Later Phases)
+
+🔑 Replace codes with Firebase custom claims or Google Identity Platform PIN auth
+
+🔒 Add audit logs: who accessed what role, when
+
+⏱️ Optional: set maxSessionDuration per role (e.g., 60min for Bronze)
+
+🚀 Outcome
+
+This role-based entry pattern:
+
+Mirrors real-world command hierarchy (IMCA/IOGP)
+
+Reduces UI noise by scoping tools to role relevance
+
+Enables rapid response UX while maintaining separation of powers
+
+Sets the foundation for deeper permission scoping (task creation, asset control, audit exports)
