@@ -17,13 +17,14 @@ interface RoleCodeModalProps {
   role: UserRole;
   onClose: () => void;
   onSuccess: () => void;
-  validateCode: (role: UserRole, code: string) => boolean;
+  validateCode: (role: UserRole, code: string) => Promise<boolean>;
 }
 
 export function RoleCodeModal({ open, role, onClose, onSuccess, validateCode }: RoleCodeModalProps) {
   const [code, setCode] = useState('');
   const [showCode, setShowCode] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,28 +35,46 @@ export function RoleCodeModal({ open, role, onClose, onSuccess, validateCode }: 
     }
   }, [open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (validateCode(role, code)) {
+    if (isValidating) return;
+    
+    setIsValidating(true);
+    
+    try {
+      const isValid = await validateCode(role, code);
+      
+      if (isValid) {
+        toast({
+          title: 'Access Granted',
+          description: `${role} role activated`,
+        });
+        onSuccess();
+      } else {
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 500);
+        toast({
+          title: 'Access Denied',
+          description: `Incorrect code for ${role} role`,
+          variant: 'destructive',
+        });
+        setCode('');
+        
+        if (navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]);
+        }
+      }
+    } catch (error) {
+      console.error('Validation error:', error);
       toast({
-        title: 'Access Granted',
-        description: `${role} role activated`,
-      });
-      onSuccess();
-    } else {
-      setIsShaking(true);
-      setTimeout(() => setIsShaking(false), 500);
-      toast({
-        title: 'Access Denied',
-        description: `Incorrect code for ${role} role`,
+        title: 'Validation Error',
+        description: 'Failed to validate access code. Please try again.',
         variant: 'destructive',
       });
       setCode('');
-      
-      if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]);
-      }
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -167,10 +186,10 @@ export function RoleCodeModal({ open, role, onClose, onSuccess, validateCode }: 
             <Button
               type="submit"
               className="flex-1"
-              disabled={code.length !== 3}
+              disabled={code.length !== 3 || isValidating}
               data-testid="button-submit"
             >
-              Submit
+              {isValidating ? 'Validating...' : 'Submit'}
             </Button>
           </div>
         </form>
