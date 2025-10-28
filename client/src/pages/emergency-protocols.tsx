@@ -55,38 +55,24 @@ interface MatchedIncident {
   location?: string;
   dateUtc?: string;
   operationPhase?: string;
-  lessons: string[];
+  lessons?: string[];
   officialFindings?: string[];
   sources?: IncidentSource[];
   score?: number;
   similarity?: number;
   boosts?: BoostContribution[];
-}
-
-interface MatchedIncident {
-  id: string;
-  title: string;
-  score: number;
-  reasons: string[];
-  lessons?: string[];
+  reasons?: string[];
   ignitionSources?: string[];
   failedBarriers?: string[];
 }
 
 interface AIResponse {
   answer: string;
-<<<<<<< HEAD
   relatedQuestions: string[];
-  relatedScenarios: { id: string; title: string; category: string; }[];
-  matchedIncidents?: MatchedIncident[];
-  confidence: 'high' | 'medium' | 'low';
-=======
-  relatedQuestions?: string[];
-  relatedScenarios?: { id: string; title: string; category: string }[];
-  confidence: "high" | "medium" | "low";
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
+  relatedScenarios: { id: string; title: string; category: string }[];
   source?: string;
   matchedIncidents?: MatchedIncident[];
+  confidence: "high" | "medium" | "low";
 }
 
 interface ProjectSummary {
@@ -563,72 +549,6 @@ export default function EmergencyProtocols() {
                 </div>
 
                 {aiResponse.matchedIncidents && aiResponse.matchedIncidents.length > 0 && (
-<<<<<<< HEAD
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm text-amber-900 flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      Matched Past Incidents (Fire Intelligence)
-                    </h4>
-                    <div className="space-y-2">
-                      {aiResponse.matchedIncidents.slice(0, 2).map((incident, index) => (
-                        <div
-                          key={index}
-                          className="p-3 bg-amber-50 rounded-lg border border-amber-300"
-                        >
-                          <div className="flex items-start justify-between mb-2">
-                            <span className="font-semibold text-sm text-amber-900">{incident.title}</span>
-                            <Badge variant="outline" className="text-xs bg-amber-100 border-amber-400 text-amber-800">
-                              {Math.round(incident.score * 100)}% match
-                            </Badge>
-                          </div>
-                          {incident.reasons && incident.reasons.length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-xs text-amber-800 font-medium mb-1">Why this matches:</p>
-                              <ul className="text-xs text-amber-700 space-y-0.5">
-                                {incident.reasons.map((reason, idx) => (
-                                  <li key={idx} className="flex items-start gap-1">
-                                    <span className="text-amber-500">•</span>
-                                    <span>{reason}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {incident.lessons && incident.lessons.length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-xs text-amber-800 font-medium mb-1">Key lessons:</p>
-                              <ul className="text-xs text-amber-700 space-y-0.5">
-                                {incident.lessons.slice(0, 2).map((lesson, idx) => (
-                                  <li key={idx} className="flex items-start gap-1">
-                                    <span className="text-amber-500">•</span>
-                                    <span>{lesson}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          {incident.failedBarriers && incident.failedBarriers.length > 0 && (
-                            <div>
-                              <p className="text-xs text-red-800 font-medium mb-1">Failed barriers to prevent:</p>
-                              <ul className="text-xs text-red-700 space-y-0.5">
-                                {incident.failedBarriers.slice(0, 2).map((barrier, idx) => (
-                                  <li key={idx} className="flex items-start gap-1">
-                                    <span className="text-red-500">•</span>
-                                    <span>{barrier}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {aiResponse.relatedQuestions.length > 0 && (
-=======
->>>>>>> ceab5c49337fa390438c7c68c470aacb7fa72450
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-gray-700">
                       Matched Past Incidents:
@@ -654,9 +574,7 @@ export default function EmergencyProtocols() {
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="text-xs text-amber-700">
-                                Similarity: {(
-                                  match.score ?? match.similarity ?? 0
-                                ).toFixed(2)}
+                                Similarity: {(match.score ?? match.similarity ?? 0).toFixed(2)}
                               </div>
                               <Button
                                 variant="ghost"
@@ -699,12 +617,7 @@ export default function EmergencyProtocols() {
                               </div>
                               <ul className="mt-1 space-y-1">
                                 {match.boosts.map((boost, idx) => (
-                                  <li key={idx}>
-                                    {boost.reason}
-                                    {typeof boost.delta === "number"
-                                      ? ` (+${boost.delta.toFixed(2)})`
-                                      : ""}
-                                  </li>
+                                  <li key={idx}>{`${boost.reason} (+${(boost.delta * 100).toFixed(0)}%)`}</li>
                                 ))}
                               </ul>
                             </div>
@@ -715,20 +628,7 @@ export default function EmergencyProtocols() {
                   </div>
                 )}
 
-                {aiResponse.matchedIncidents &&
-                  aiResponse.matchedIncidents[0]?.officialFindings &&
-                  aiResponse.matchedIncidents[0].officialFindings.length > 0 && (
-                    <div className="mt-4 text-xs text-gray-700">
-                      <div className="font-semibold">Official Findings referenced:</div>
-                      <ul className="list-disc pl-5">
-                        {aiResponse.matchedIncidents[0].officialFindings
-                          .slice(0, 3)
-                          .map((finding, idx) => (
-                            <li key={idx}>{finding}</li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
+
 
                 {aiResponse.relatedQuestions && aiResponse.relatedQuestions.length > 0 && (
                   <div className="space-y-2">
