@@ -288,12 +288,26 @@ export const handleFirebaseOAuth = async (req: Request, res: Response) => {
   }
 };
 
-// Secure role codes (server-side only)
+// Secure role codes (server-side only - MUST be set via environment variables)
 const ROLE_CODES = {
-  BRONZE: process.env.BRONZE_CODE || '000',
-  SILVER: process.env.SILVER_CODE || '001',
-  GOLD: process.env.GOLD_CODE || '100',
+  BRONZE: process.env.BRONZE_CODE,
+  SILVER: process.env.SILVER_CODE,
+  GOLD: process.env.GOLD_CODE,
 } as const;
+
+// Validate that role codes are configured
+if (!ROLE_CODES.BRONZE || !ROLE_CODES.SILVER || !ROLE_CODES.GOLD) {
+  console.error('CRITICAL: Role access codes not configured! Set BRONZE_CODE, SILVER_CODE, and GOLD_CODE environment variables.');
+  console.error('Using fallback codes for development only - DO NOT USE IN PRODUCTION');
+  // Only use fallbacks in development
+  if (process.env.NODE_ENV === 'development') {
+    ROLE_CODES.BRONZE = ROLE_CODES.BRONZE || '000';
+    ROLE_CODES.SILVER = ROLE_CODES.SILVER || '001';
+    ROLE_CODES.GOLD = ROLE_CODES.GOLD || '100';
+  } else {
+    throw new Error('Role access codes must be configured in production via environment variables');
+  }
+}
 
 // Validate role access code and issue signed role token
 export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
@@ -375,6 +389,26 @@ export const verifyRoleToken = async (req: AuthRequest, res: Response, next: Nex
 
   try {
     const decoded = jwt.verify(roleTokenHeader, JWT_SECRET) as any;
+    
+    // CRITICAL SECURITY CHECK: Verify token belongs to current authenticated user
+    if (!req.user || decoded.userId !== req.user.id) {
+      // Log potential privilege escalation attempt
+      await storage.createAuditLog({
+        userId: req.user?.id || 0,
+        actionType: 'SECURITY_VIOLATION',
+        description: 'Attempted to use role token from different user',
+        oldData: { 
+          authenticatedUser: req.user?.id,
+          tokenUserId: decoded.userId,
+          tokenRole: decoded.sessionRole 
+        },
+        newData: { blocked: true }
+      });
+      
+      req.sessionRole = null;
+      return next();
+    }
+    
     req.sessionRole = decoded.sessionRole;
     next();
   } catch (error) {
