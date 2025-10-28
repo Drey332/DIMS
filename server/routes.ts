@@ -500,6 +500,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/fire-intelligence/query', async (req: AuthenticatedRequest, res) => {
+    try {
+      const { question } = req.body;
+      
+      if (!question || typeof question !== 'string') {
+        return res.status(400).json({ message: "Question is required" });
+      }
+
+      // Get all fire incidents from database
+      const fireIncidents = await storage.getAllFireIncidents();
+      
+      // Prepare context from fire incidents
+      const fireContext = fireIncidents.map(incident => ({
+        name: incident.name,
+        date: incident.dateUtc,
+        location: incident.location,
+        fatalities: incident.fatalities,
+        initiatingEvent: incident.initiatingEvent,
+        ignitionSource: incident.ignitionSource,
+        protectionSystems: incident.protectionSystems,
+        humanFactors: incident.humanFactors,
+        barriersFailed: incident.barriersFailed,
+        lessons: incident.lessons,
+        officialFindings: incident.officialFindings
+      }));
+
+      // Use OpenAI to generate answer
+      const { OpenAI } = await import("openai");
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "system",
+            content: `You are a Fire Intelligence Assistant specializing in offshore fire safety. You have access to detailed historical data from major offshore disasters including Piper Alpha (1988) and Deepwater Horizon (2010).
+
+Your role is to:
+1. Answer questions about fire risks in offshore operations
+2. Provide lessons learned from historical incidents
+3. Suggest prevention strategies based on past failures
+4. Explain ignition sources, protection systems, and barriers that failed
+
+Always reference specific incidents when relevant. Be concise but informative. Focus on practical safety insights.
+
+Historical Fire Incidents Database:
+${JSON.stringify(fireContext, null, 2)}`
+          },
+          {
+            role: "user",
+            content: question
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      });
+
+      const answer = completion.choices[0]?.message?.content || "I couldn't generate a response.";
+
+      res.json({ answer });
+    } catch (error) {
+      console.error("Error querying fire intelligence:", error);
+      res.status(500).json({ message: "Failed to query fire intelligence" });
+    }
+  });
+
   app.get('/api/ai/recommendations', async (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;

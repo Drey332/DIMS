@@ -40,6 +40,12 @@ const incidentSchema = z.object({
   projectId: z.number().default(1),
 });
 
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+}
+
 export default function Incidents() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -47,6 +53,9 @@ export default function Incidents() {
   const [aiAnalysis, setAiAnalysis] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
+  const [fireIntelMessages, setFireIntelMessages] = useState<ChatMessage[]>([]);
+  const [fireIntelInput, setFireIntelInput] = useState("");
+  const [isFireIntelQuerying, setIsFireIntelQuerying] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -119,6 +128,55 @@ export default function Incidents() {
       });
     }
     setIsAnalyzing(false);
+  };
+
+  const askFireIntelligence = async (question: string) => {
+    if (!question.trim()) return;
+    
+    setIsFireIntelQuerying(true);
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: question,
+      timestamp: new Date()
+    };
+    
+    setFireIntelMessages(prev => [...prev, userMessage]);
+    setFireIntelInput("");
+    
+    try {
+      const response = await fetch("/api/fire-intelligence/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question })
+      });
+      
+      if (!response.ok) throw new Error("Failed to query fire intelligence");
+      
+      const data = await response.json();
+      
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: data.answer || "I couldn't find relevant information about that.",
+        timestamp: new Date()
+      };
+      
+      setFireIntelMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      toast({
+        title: "Query Error",
+        description: "Failed to query fire intelligence system",
+        variant: "destructive"
+      });
+      
+      const errorMessage: ChatMessage = {
+        role: "assistant",
+        content: "Sorry, I encountered an error processing your question. Please try again.",
+        timestamp: new Date()
+      };
+      setFireIntelMessages(prev => [...prev, errorMessage]);
+    }
+    
+    setIsFireIntelQuerying(false);
   };
 
   const onSubmit = (data: z.infer<typeof incidentSchema>) => {
@@ -505,7 +563,134 @@ export default function Incidents() {
                   </div>
                 </CardContent>
               </Card>
-            ) : (
+            ) : null}
+
+            {/* Fire Intelligence Chat Box - Always visible when showAiPanel is true */}
+            {showAiPanel && (
+              <Card className="hydro-card border-l-4 border-l-orange-500 mt-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 mr-2 text-orange-600" />
+                    Fire Intelligence Assistant
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                      Ask questions about fire risks, historical incidents (Piper Alpha, Deepwater Horizon), 
+                      and prevention strategies relevant to your operations.
+                    </p>
+                    
+                    {/* Chat messages */}
+                    <div 
+                      className="border rounded-lg p-4 bg-gray-50 min-h-[200px] max-h-[400px] overflow-y-auto space-y-3"
+                      data-testid="fire-intel-chat-messages"
+                    >
+                      {fireIntelMessages.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic" data-testid="fire-intel-welcome-message">
+                          Fire intelligence chat powered by historical disaster data. 
+                          Start a conversation by typing your question below.
+                        </p>
+                      ) : (
+                        fireIntelMessages.map((msg, index) => (
+                          <div
+                            key={index}
+                            className={cn(
+                              "p-3 rounded-lg",
+                              msg.role === "user" ? "bg-blue-100 ml-8" : "bg-white mr-8 border"
+                            )}
+                            data-testid={`fire-intel-message-${msg.role}-${index}`}
+                          >
+                            <div className="flex items-start gap-2">
+                              {msg.role === "assistant" && (
+                                <AlertTriangle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                              )}
+                              <div className="flex-1">
+                                <p className="text-sm text-gray-800">{msg.content}</p>
+                                <p className="text-xs text-gray-400 mt-1">
+                                  {msg.timestamp.toLocaleTimeString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      {isFireIntelQuerying && (
+                        <div className="flex items-center gap-2 text-sm text-gray-500" data-testid="fire-intel-loading">
+                          <Brain className="w-4 h-4 animate-pulse" />
+                          <span>Analyzing fire intelligence data...</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Chat input */}
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="Ask about fire risks, historical incidents, or prevention measures..."
+                        className="flex-1"
+                        value={fireIntelInput}
+                        onChange={(e) => setFireIntelInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !isFireIntelQuerying) {
+                            askFireIntelligence(fireIntelInput);
+                          }
+                        }}
+                        disabled={isFireIntelQuerying}
+                        data-testid="input-fire-intel-question"
+                      />
+                      <Button 
+                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                        onClick={() => askFireIntelligence(fireIntelInput)}
+                        disabled={isFireIntelQuerying || !fireIntelInput.trim()}
+                        data-testid="button-fire-intel-ask"
+                      >
+                        <Brain className="w-4 h-4 mr-2" />
+                        {isFireIntelQuerying ? "Asking..." : "Ask"}
+                      </Button>
+                    </div>
+
+                    {/* Quick questions */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-500 font-medium">Quick Questions:</p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => askFireIntelligence("What fire risks should I watch for in offshore operations?")}
+                          disabled={isFireIntelQuerying}
+                          data-testid="button-quick-fire-risks"
+                        >
+                          What fire risks should I watch for?
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => askFireIntelligence("What are the key lessons learned from Piper Alpha?")}
+                          disabled={isFireIntelQuerying}
+                          data-testid="button-quick-piper-alpha"
+                        >
+                          Show Piper Alpha lessons
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs"
+                          onClick={() => askFireIntelligence("How can I prevent BOP failure like Deepwater Horizon?")}
+                          disabled={isFireIntelQuerying}
+                          data-testid="button-quick-bop-prevention"
+                        >
+                          BOP failure prevention
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {!showAiPanel && (
               <Card className="hydro-card">
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">
