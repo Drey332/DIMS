@@ -10,12 +10,15 @@ import {
   X,
   UserCircle,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Shield,
+  Crown
 } from "lucide-react";
 import ProfileMenu from './profile-menu';
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -23,6 +26,9 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { RoleCodeModal } from './RoleCodeModal';
+import { useRole, UserRole } from '@/hooks/useRole';
+import { useToast } from '@/hooks/use-toast';
 
 interface NavItem {
   href: string;
@@ -43,12 +49,64 @@ const navItems: NavItem[] = [
 export function PersistentNav() {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { role, setRole, validateCode, clearRole } = useRole();
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>(null);
+  const { toast } = useToast();
 
   const isActiveLink = (href: string) => {
     if (href === "/") {
       return location === "/";
     }
     return location.startsWith(href);
+  };
+
+  const getRoleBadgeColor = (currentRole: UserRole) => {
+    switch (currentRole) {
+      case 'BRONZE':
+        return 'bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-200';
+      case 'SILVER':
+        return 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200';
+      case 'GOLD':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300 hover:bg-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200';
+    }
+  };
+
+  const getRoleIcon = (currentRole: UserRole) => {
+    switch (currentRole) {
+      case 'BRONZE':
+        return Shield;
+      case 'SILVER':
+        return Users;
+      case 'GOLD':
+        return Crown;
+      default:
+        return ShieldCheck;
+    }
+  };
+
+  const handleRoleSwitch = (newRole: UserRole) => {
+    setSelectedRole(newRole);
+    setShowRoleSwitcher(true);
+  };
+
+  const handleCodeSuccess = () => {
+    if (selectedRole) {
+      setRole(selectedRole);
+      setShowRoleSwitcher(false);
+      toast({
+        title: 'Role Switched',
+        description: `${selectedRole} command level activated`,
+      });
+      window.location.reload(); // Reload to apply new role context
+    }
+  };
+
+  const handleCodeCancel = () => {
+    setShowRoleSwitcher(false);
+    setSelectedRole(null);
   };
 
   return (
@@ -91,8 +149,59 @@ export function PersistentNav() {
               </div>
             </div>
 
-            {/* User Menu */}
-            <div className="hidden md:block">
+            {/* Role Badge & User Menu */}
+            <div className="hidden md:flex items-center space-x-3">
+              {/* Role Switcher Badge */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "flex items-center space-x-2 border",
+                      getRoleBadgeColor(role)
+                    )}
+                    data-testid="role-badge"
+                  >
+                    {(() => {
+                      const RoleIcon = getRoleIcon(role);
+                      return <RoleIcon className="h-4 w-4" />;
+                    })()}
+                    <span className="font-semibold">{role || 'No Role'}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5 text-sm font-semibold text-gray-700">
+                    Switch Role
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => handleRoleSwitch('BRONZE')}
+                    className="cursor-pointer"
+                    data-testid="switch-to-bronze"
+                  >
+                    <Shield className="mr-2 h-4 w-4 text-orange-600" />
+                    <span>Bronze - Frontline</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleRoleSwitch('SILVER')}
+                    className="cursor-pointer"
+                    data-testid="switch-to-silver"
+                  >
+                    <Users className="mr-2 h-4 w-4 text-blue-600" />
+                    <span>Silver - Tactical</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleRoleSwitch('GOLD')}
+                    className="cursor-pointer"
+                    data-testid="switch-to-gold"
+                  >
+                    <Crown className="mr-2 h-4 w-4 text-yellow-600" />
+                    <span>Gold - Strategic</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <ProfileMenu />
             </div>
 
@@ -140,8 +249,75 @@ export function PersistentNav() {
                 );
               })}
               
-              {/* Mobile User Menu */}
+              {/* Mobile Role & User Menu */}
               <div className="border-t border-gray-200 pt-3 mt-3">
+                {/* Mobile Role Badge */}
+                <div className="px-3 mb-2">
+                  <Badge
+                    className={cn(
+                      "w-full justify-center py-2 text-sm font-semibold cursor-pointer",
+                      getRoleBadgeColor(role)
+                    )}
+                    data-testid="mobile-role-badge"
+                  >
+                    {(() => {
+                      const RoleIcon = getRoleIcon(role);
+                      return (
+                        <div className="flex items-center space-x-2">
+                          <RoleIcon className="h-4 w-4" />
+                          <span>Role: {role || 'Not Selected'}</span>
+                        </div>
+                      );
+                    })()}
+                  </Badge>
+                </div>
+                
+                {/* Mobile Role Switcher Options */}
+                <div className="space-y-1 px-3 mb-3">
+                  <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                    Switch Role
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      handleRoleSwitch('BRONZE');
+                      setMobileMenuOpen(false);
+                    }}
+                    data-testid="mobile-switch-bronze"
+                  >
+                    <Shield className="mr-2 h-4 w-4 text-orange-600" />
+                    Bronze - Frontline
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      handleRoleSwitch('SILVER');
+                      setMobileMenuOpen(false);
+                    }}
+                    data-testid="mobile-switch-silver"
+                  >
+                    <Users className="mr-2 h-4 w-4 text-blue-600" />
+                    Silver - Tactical
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      handleRoleSwitch('GOLD');
+                      setMobileMenuOpen(false);
+                    }}
+                    data-testid="mobile-switch-gold"
+                  >
+                    <Crown className="mr-2 h-4 w-4 text-yellow-600" />
+                    Gold - Strategic
+                  </Button>
+                </div>
+
                 <Link href="/profile">
                   <div 
                     className="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50"
@@ -162,6 +338,15 @@ export function PersistentNav() {
 
       {/* Spacer to prevent content from being hidden under fixed nav */}
       <div className="h-16"></div>
+
+      {/* Role Switcher Modal */}
+      <RoleCodeModal
+        open={showRoleSwitcher}
+        role={selectedRole}
+        onClose={handleCodeCancel}
+        onSuccess={handleCodeSuccess}
+        validateCode={validateCode}
+      />
     </>
   );
 }
