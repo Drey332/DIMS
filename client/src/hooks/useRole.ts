@@ -28,7 +28,7 @@ export function useRole() {
 
     try {
       // Get auth token from localStorage (set by Firebase login)
-      const authToken = localStorage.getItem('authToken');
+      const authToken = localStorage.getItem('token');
       if (!authToken) {
         console.error('No auth token found');
         return false;

@@ -182,6 +182,7 @@ export default function LoginPage() {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       sessionStorage.removeItem('selectedRole');
+      sessionStorage.removeItem('roleToken');
       broadcastAuthStateChange();
       setFirebaseUser(null);
       setSelectedRole(null);
