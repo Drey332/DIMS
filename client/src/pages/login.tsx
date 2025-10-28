@@ -17,6 +17,9 @@ import {
 import { auth, googleProvider } from '../firebase';
 import { broadcastAuthStateChange } from '@/lib/auth-events';
 import { Shield, Anchor, Chrome, Mail, Lock, User as UserIcon, UserPlus, LogOut } from 'lucide-react';
+import { RolePicker } from '@/components/RolePicker';
+import { RoleCodeModal } from '@/components/RoleCodeModal';
+import { useRole, UserRole } from '@/hooks/useRole';
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -24,6 +27,9 @@ export default function LoginPage() {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const { role, setRole, validateCode, hasRole } = useRole();
+  const [selectedRole, setSelectedRole] = useState<UserRole>(null);
+  const [showCodeModal, setShowCodeModal] = useState(false);
 
   // Form states
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
@@ -71,7 +77,7 @@ export default function LoginPage() {
           title: 'Success',
           description: 'Successfully authenticated'
         });
-        setLocation('/dashboard');
+        // Don't redirect yet - let user select role first
         return;
       }
 
@@ -175,8 +181,10 @@ export default function LoginPage() {
       await signOut(auth);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      sessionStorage.removeItem('selectedRole');
       broadcastAuthStateChange();
       setFirebaseUser(null);
+      setSelectedRole(null);
       toast({
         title: 'Success',
         description: 'Successfully logged out'
@@ -190,54 +198,42 @@ export default function LoginPage() {
     }
   };
 
-  // If user is logged in, show user info
+  // Role selection handlers
+  const handleRoleSelect = (role: UserRole) => {
+    setSelectedRole(role);
+    setShowCodeModal(true);
+  };
+
+  const handleCodeSuccess = () => {
+    if (selectedRole) {
+      setRole(selectedRole);
+      setShowCodeModal(false);
+      toast({
+        title: 'Role Activated',
+        description: `${selectedRole} command level activated`,
+      });
+      setLocation('/dashboard');
+    }
+  };
+
+  const handleCodeCancel = () => {
+    setShowCodeModal(false);
+    setSelectedRole(null);
+  };
+
+  // If user is logged in, show role selection
   if (firebaseUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-700 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-lg border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center space-x-2 mb-4">
-              <div className="p-2 bg-blue-600 rounded-lg">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <div className="p-2 bg-orange-500 rounded-lg">
-                <Anchor className="h-6 w-6 text-white" />
-              </div>
-            </div>
-            <CardTitle>Welcome to HydroSafe</CardTitle>
-            <CardDescription>AI Emergency Response Co-Pilot</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center space-y-2">
-              {firebaseUser.photoURL && (
-                <img 
-                  src={firebaseUser.photoURL} 
-                  alt="Profile" 
-                  className="w-16 h-16 rounded-full mx-auto border-2 border-blue-200"
-                />
-              )}
-              <h3 className="text-lg font-semibold">{firebaseUser.displayName || firebaseUser.email}</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{firebaseUser.email}</p>
-            </div>
-            <div className="space-y-2">
-              <Button 
-                onClick={() => setLocation('/dashboard')}
-                className="w-full bg-blue-600 hover:bg-blue-700"
-              >
-                Go to Dashboard
-              </Button>
-              <Button 
-                onClick={handleLogout}
-                variant="outline"
-                className="w-full"
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <>
+        <RolePicker onSelectRole={handleRoleSelect} />
+        <RoleCodeModal
+          open={showCodeModal}
+          role={selectedRole}
+          onClose={handleCodeCancel}
+          onSuccess={handleCodeSuccess}
+          validateCode={validateCode}
+        />
+      </>
     );
   }
 
