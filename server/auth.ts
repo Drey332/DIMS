@@ -21,15 +21,19 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
+    console.log('[Auth] No token provided');
     return res.status(401).json({ message: 'Access token required' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
+    console.log('[Auth] Token decoded, userId:', decoded.userId);
+    
     const user = await storage.getUser(decoded.userId);
     
     if (!user) {
-      return res.status(401).json({ message: 'Invalid token' });
+      console.log('[Auth] User not found for userId:', decoded.userId);
+      return res.status(401).json({ message: 'Invalid token - user not found' });
     }
 
     req.user = {
@@ -39,9 +43,11 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       role: user.role,
     };
     
+    console.log('[Auth] Authentication successful for user:', user.email);
     next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Invalid or expired token' });
+  } catch (error: any) {
+    console.log('[Auth] Token verification failed:', error.message);
+    return res.status(403).json({ message: 'Invalid or expired token', error: error.message });
   }
 };
 
@@ -289,11 +295,11 @@ export const handleFirebaseOAuth = async (req: Request, res: Response) => {
 };
 
 // Secure role codes (server-side only - MUST be set via environment variables)
-const ROLE_CODES = {
-  BRONZE: process.env.BRONZE_CODE,
-  SILVER: process.env.SILVER_CODE,
-  GOLD: process.env.GOLD_CODE,
-} as const;
+const ROLE_CODES: { BRONZE: string; SILVER: string; GOLD: string } = {
+  BRONZE: process.env.BRONZE_CODE || '',
+  SILVER: process.env.SILVER_CODE || '',
+  GOLD: process.env.GOLD_CODE || '',
+};
 
 // Validate that role codes are configured
 if (!ROLE_CODES.BRONZE || !ROLE_CODES.SILVER || !ROLE_CODES.GOLD) {

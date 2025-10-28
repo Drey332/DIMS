@@ -29,11 +29,16 @@ export function useRole() {
     try {
       // Get auth token from localStorage (set by Firebase login)
       const authToken = localStorage.getItem('token');
+      console.log('[useRole] Validating role:', role);
+      console.log('[useRole] Auth token exists:', !!authToken);
+      console.log('[useRole] Auth token length:', authToken?.length);
+      
       if (!authToken) {
-        console.error('No auth token found');
+        console.error('[useRole] No auth token found in localStorage');
         return false;
       }
 
+      console.log('[useRole] Sending validation request to /api/auth/validate-role');
       const response = await fetch('/api/auth/validate-role', {
         method: 'POST',
         headers: {
@@ -43,13 +48,16 @@ export function useRole() {
         body: JSON.stringify({ role, code }),
       });
 
+      console.log('[useRole] Response status:', response.status);
+      
       if (!response.ok) {
         const error = await response.json();
-        console.error('Role validation failed:', error.message);
+        console.error('[useRole] Role validation failed:', error);
         return false;
       }
 
       const data = await response.json();
+      console.log('[useRole] Validation successful, storing role token');
       
       // Store role token for API requests
       sessionStorage.setItem(ROLE_TOKEN_KEY, data.roleToken);
@@ -57,7 +65,7 @@ export function useRole() {
       
       return true;
     } catch (error) {
-      console.error('Error validating role code:', error);
+      console.error('[useRole] Error validating role code:', error);
       return false;
     }
   };
