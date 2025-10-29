@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Brain,
   MessageSquare,
@@ -22,7 +22,6 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { ERPScenarioSearch } from "@/components/erp-scenario-search";
 import { EnvironmentalContextCard } from "@/components/environmental-context-card";
-import { EnvIntelCard } from "@/components/env-intel-card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Select,
@@ -36,8 +35,6 @@ import {
   DEFAULT_OPERATION_COORDINATES,
 } from "@shared/environment/locationIntel";
 import { type AuroraEnvironmentalContext } from "@shared/environment/types";
-import type { EnvContext } from "@shared/types/env";
-import { useEnvIntelContext } from "@/hooks/use-env-intel";
 
 interface IncidentSource {
   title: string;
@@ -87,6 +84,7 @@ export default function EmergencyProtocols() {
   const [question, setQuestion] = useState('');
   const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [expandedMatches, setExpandedMatches] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -125,6 +123,13 @@ export default function EmergencyProtocols() {
     () => ['environmental-context', Number(resolvedLatitude.toFixed(3)), Number(resolvedLongitude.toFixed(3))] as const,
     [resolvedLatitude, resolvedLongitude]
   );
+
+  const toggleMatchDetails = useCallback((matchId: string) => {
+    setExpandedMatches((current) => ({
+      ...current,
+      [matchId]: !current[matchId],
+    }));
+  }, []);
 
   const handleAskAI = async () => {
     if (!question.trim()) {
