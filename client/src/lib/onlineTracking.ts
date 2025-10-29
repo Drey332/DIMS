@@ -2,6 +2,31 @@ import { useState, useEffect } from 'react';
 import { doc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import type { UserRole } from '../hooks/useRole';
+
+const validRoles: UserRole[] = ['BRONZE', 'SILVER', 'GOLD'];
+
+const toDateOrNull = (value: unknown): Date | null => {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  if (typeof value === 'object' && value && 'toDate' in value && typeof (value as any).toDate === 'function') {
+    try {
+      return (value as any).toDate();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+const toRoleOrNull = (value: unknown): UserRole => {
+  if (typeof value !== 'string') return null;
+  return validRoles.includes(value as UserRole) ? (value as UserRole) : null;
+};
 
 // --- Types ---
 export type OnlineStatus = 'ONLINE' | 'IDLE' | 'OFFLINE';
@@ -12,6 +37,11 @@ export interface UserPresence {
   lastSeen: Date;
   lastActivity: Date;
   isOnline: boolean;
+  sessionRole?: UserRole;
+  roleGrantedAt?: Date | null;
+  lastRoleAttempt?: Date | null;
+  lastRoleAttemptRole?: UserRole;
+  lastRoleAttemptSuccess?: boolean | null;
 }
 
 // --- Configurable options for the tracker ---
@@ -150,9 +180,14 @@ export function useUserOnlineStatus(userId: string) {
         setUser({
           userId,
           status: d.status ?? 'OFFLINE',
-          lastSeen: d.lastSeen?.toDate ? d.lastSeen.toDate() : new Date(),
-          lastActivity: d.lastActivity?.toDate ? d.lastActivity.toDate() : new Date(),
+          lastSeen: toDateOrNull(d.lastSeen) ?? new Date(),
+          lastActivity: toDateOrNull(d.lastActivity) ?? new Date(),
           isOnline: d.isOnline ?? false,
+          sessionRole: toRoleOrNull(d.sessionRole),
+          roleGrantedAt: toDateOrNull(d.roleGrantedAt),
+          lastRoleAttempt: toDateOrNull(d.lastRoleAttempt) ?? toDateOrNull(d.lastRoleAttemptRecordedAt),
+          lastRoleAttemptRole: toRoleOrNull(d.lastRoleAttemptRole),
+          lastRoleAttemptSuccess: typeof d.lastRoleAttemptSuccess === 'boolean' ? d.lastRoleAttemptSuccess : null,
         });
       }
     });
@@ -175,9 +210,14 @@ export function useTeamOnlineStatus(userIds: string[]) {
           [userId]: {
             userId,
             status: d.status ?? 'OFFLINE',
-            lastSeen: d.lastSeen?.toDate ? d.lastSeen.toDate() : new Date(),
-            lastActivity: d.lastActivity?.toDate ? d.lastActivity.toDate() : new Date(),
+            lastSeen: toDateOrNull(d.lastSeen) ?? new Date(),
+            lastActivity: toDateOrNull(d.lastActivity) ?? new Date(),
             isOnline: d.isOnline ?? false,
+            sessionRole: toRoleOrNull(d.sessionRole),
+            roleGrantedAt: toDateOrNull(d.roleGrantedAt),
+            lastRoleAttempt: toDateOrNull(d.lastRoleAttempt) ?? toDateOrNull(d.lastRoleAttemptRecordedAt),
+            lastRoleAttemptRole: toRoleOrNull(d.lastRoleAttemptRole),
+            lastRoleAttemptSuccess: typeof d.lastRoleAttemptSuccess === 'boolean' ? d.lastRoleAttemptSuccess : null,
           }
         }));
       })

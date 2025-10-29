@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Preserve existing behaviour for other collections by allowing the
+    // project's authenticated access patterns. Adjust as production policies
+    // evolve.
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
