@@ -7,5 +7,3 @@ build/
 .cache/
 coverage/
 .DS_Store
-data/fire-intel-knowledge.json
-data/fire-intel-vectors.json

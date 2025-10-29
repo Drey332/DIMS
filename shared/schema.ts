@@ -12,7 +12,6 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
   role: text("role").notNull().default("BRONZE"), // 'BRONZE', 'SILVER', 'GOLD'
-  sessionRole: text("session_role"), // Current active role (BRONZE, SILVER, GOLD) set via access codes
   phone: text("phone"),
   title: text("title"),
   isActive: boolean("is_active").default(true),

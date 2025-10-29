@@ -181,6 +181,8 @@ export default function LoginPage() {
       await signOut(auth);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      sessionStorage.removeItem('selectedRole');
+      sessionStorage.removeItem('roleToken');
       broadcastAuthStateChange();
       setFirebaseUser(null);
       setSelectedRole(null);
@@ -203,9 +205,9 @@ export default function LoginPage() {
     setShowCodeModal(true);
   };
 
-  const handleCodeSuccess = async () => {
+  const handleCodeSuccess = () => {
     if (selectedRole) {
-      await setRole(selectedRole);
+      setRole(selectedRole);
       setShowCodeModal(false);
       toast({
         title: 'Role Activated',

@@ -39,15 +39,12 @@ import {
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 import html2canvas from "html2canvas";
-
 import TeamHeadcountMap from "@/components/TeamHeadcountMap";
 import AIProjectAnalyticsTab from "@/components/AIProjectAnalyticsTab";
 import { EnvironmentalContextCard } from "@/components/environmental-context-card";
 import { EarthNullschoolGlobe } from "@/components/EarthNullschoolGlobe";
-import { EnvIntelCard } from "@/components/env-intel-card";
-import { SpaceWeatherWidget } from "@/components/space-weather-widget";
 
-// ---------- Types ----------
+// Incident type definition
 type Incident = {
   id: string;
   title: string;
@@ -63,6 +60,7 @@ type Incident = {
   projectId?: string;
 };
 
+// Observation type definition
 type Observation = {
   id: string;
   type: string[];
@@ -83,6 +81,7 @@ type Observation = {
   lng?: number;
 };
 
+// Team member type definition
 type TeamMember = {
   id: string;
   firstName: string;
@@ -92,13 +91,14 @@ type TeamMember = {
   status?: string;
 };
 
+// Acknowledgement type definition
 type Ack = {
   id: string;
   userId: string;
   name: string;
   email?: string;
   acknowledgedAt: string;
-  time?: number; // epoch ms (optional—fallback to acknowledgedAt)
+  time?: number;
   lat?: number;
   lng?: number;
   hasLocation?: boolean;
@@ -106,7 +106,7 @@ type Ack = {
   role?: string;
 };
 
-// ---------- Constants ----------
+// Colours used in charts
 const COLORS = [
   "#2563eb",
   "#0ea5e9",
@@ -116,8 +116,9 @@ const COLORS = [
   "#a21caf",
   "#eab308",
   "#3b82f6",
-] as const;
+];
 
+// Main analytics tabs: now includes "AI Analysis"
 const VIEWS = [
   { key: "live", label: "Live Analytics", icon: TrendingUp },
   { key: "history", label: "History", icon: Clock },
@@ -128,7 +129,6 @@ const VIEWS = [
 ] as const;
 type ViewType = (typeof VIEWS)[number]["key"];
 
-// ---------- Props ----------
 interface ProjectAnalyticsDashboardProps {
   projectId: string;
   projectName?: string;
@@ -136,28 +136,19 @@ interface ProjectAnalyticsDashboardProps {
   projectNumber?: string;
 }
 
-// ---------- Component ----------
 const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
   projectId,
   projectName,
   projectLocation,
   projectNumber,
 }) => {
-  // Data state
+  // --- Data State ---
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [acks, setAcks] = useState<Record<string, Ack[]>>({});
   const [loading, setLoading] = useState(true);
 
-  // UI state
-  const [selectedView, setSelectedView] = useState<ViewType>("live");
-  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
-  const [fastestResponders, setFastestResponders] = useState<
-    Record<string, { name: string; time: number; incident: string }>
-  >({});
-
-  // Derived: environmental display strings
   const environmentLocationName = useMemo(() => {
     if (projectLocation && projectLocation.trim().length > 0) {
       return projectLocation.trim();
@@ -168,8 +159,8 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
     return observationWithLocation?.location.trim();
   }, [projectLocation, observations]);
 
-  // Derived: choose first good lat/lng (observation first, then acks)
   const environmentCoordinates = useMemo(() => {
+    // Try observations first
     for (const obs of observations) {
       if (
         typeof obs.lat === "number" &&
@@ -180,6 +171,8 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
         return { latitude: obs.lat, longitude: obs.lng };
       }
     }
+
+    // Fall back to acknowledgements
     for (const ackList of Object.values(acks)) {
       for (const ack of ackList) {
         if (
@@ -192,85 +185,104 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
         }
       }
     }
+
     return undefined;
   }, [observations, acks]);
 
-  // ---------- Firestore listeners ----------
-  // Base collections (incidents, observations, team)
+  // --- UI State ---
+  const [selectedView, setSelectedView] = useState<ViewType>("live");
+  const [selectedIncident, setSelectedIncident] = useState<string | null>(null);
+  const [fastestResponders, setFastestResponders] = useState<
+    Record<string, { name: string; time: number; incident: string }>
+  >({});
+
+  // --- Fetch Data ---
   useEffect(() => {
     setLoading(true);
 
     const unsubIncidents = onSnapshot(
       query(collection(db, "emergencies"), orderBy("createdAt")),
       (snap) => {
-        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Incident));
-        setIncidents(data);
-        if (!selectedIncident && data.length > 0) {
-          setSelectedIncident(data[0].id);
+        const incidentData = snap.docs.map(
+          (doc) => ({ id: doc.id, ...doc.data() } as Incident)
+        );
+        setIncidents(incidentData);
+        if (!selectedIncident && incidentData.length > 0) {
+          setSelectedIncident(incidentData[0].id);
         }
-        setLoading(false);
       }
     );
 
     const unsubObservations = onSnapshot(
       query(collection(db, "observations"), orderBy("createdAt")),
-      (snap) => {
-        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Observation));
-        setObservations(data);
-      }
+      (snap) =>
+        setObservations(
+          snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Observation))
+        )
     );
 
     const unsubTeam = onSnapshot(
       query(collection(db, "projects", projectId, "teamMembers")),
-      (snap) => {
-        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as TeamMember));
-        setTeamMembers(data);
-      }
+      (snap) =>
+        setTeamMembers(
+          snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as TeamMember))
+        )
     );
 
+    let ackUnsubs: Array<() => void> = [];
+    function setupAckListeners() {
+      ackUnsubs.forEach((fn) => fn());
+      ackUnsubs = [];
+      incidents.forEach((inc) => {
+        const unsub = onSnapshot(
+          collection(db, "emergencies", inc.id, "acks"),
+          (snap) => {
+            const ackData = snap.docs.map(
+              (doc) => ({ id: doc.id, ...doc.data() } as Ack)
+            );
+            setAcks((prev) => ({
+              ...prev,
+              [inc.id]: ackData,
+            }));
+            // Calculate fastest responder for this incident
+            if (ackData.length > 0) {
+              const incidentStartTime = new Date(inc.startTime).getTime();
+              const fastest = ackData.reduce(
+                (curr, ack) => {
+                  const responseTime =
+                    (ack.time || new Date(ack.acknowledgedAt).getTime()) -
+                    incidentStartTime;
+                  return responseTime < curr.time
+                    ? { name: ack.name, time: responseTime, incident: inc.id }
+                    : curr;
+                },
+                { name: "", time: Infinity, incident: inc.id }
+              );
+              if (fastest.time !== Infinity) {
+                setFastestResponders((prev) => ({
+                  ...prev,
+                  [inc.id]: fastest,
+                }));
+              }
+            }
+          }
+        );
+        ackUnsubs.push(unsub);
+      });
+    }
+    setupAckListeners();
+
+    setTimeout(() => setLoading(false), 800);
     return () => {
       unsubIncidents();
       unsubObservations();
       unsubTeam();
+      ackUnsubs.forEach((fn) => fn());
     };
-  }, [projectId, selectedIncident]);
+    // eslint-disable-next-line
+  }, [projectId, incidents.length]);
 
-  // Per-incident acknowledgements (reattach when incidents change)
-  useEffect(() => {
-    const unsubs: Array<() => void> = [];
-
-    incidents.forEach((inc) => {
-      const unsub = onSnapshot(collection(db, "emergencies", inc.id, "acks"), (snap) => {
-        const ackData = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Ack));
-        setAcks((prev) => ({ ...prev, [inc.id]: ackData }));
-
-        // Track fastest responder for this incident
-        if (ackData.length > 0 && inc.startTime) {
-          const start = new Date(inc.startTime).getTime();
-          const fastest = ackData.reduce(
-            (curr, ack) => {
-              const ackMs = ack.time || new Date(ack.acknowledgedAt).getTime();
-              const delta = ackMs - start;
-              return delta < curr.time
-                ? { name: ack.name, time: delta, incident: inc.id }
-                : curr;
-            },
-            { name: "", time: Infinity, incident: inc.id }
-          );
-          if (fastest.time !== Infinity) {
-            setFastestResponders((prev) => ({ ...prev, [inc.id]: fastest }));
-          }
-        }
-      });
-      unsubs.push(unsub);
-    });
-
-    return () => {
-      unsubs.forEach((fn) => fn());
-    };
-  }, [incidents]);
-
-  // ---------- Metrics ----------
+  // --- Metrics ---
   const trendData = useMemo(() => {
     const map: Record<string, { date: string; incidents: number; observations: number }> = {};
     incidents.forEach((inc) => {
@@ -313,7 +325,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
 
   const teamPerf = useMemo(() => {
     const perf: Record<string, { responses: number }> = {};
-    Object.values(acks).forEach((ackList) => {
+    Object.entries(acks).forEach(([, ackList]) => {
       ackList.forEach((ack) => {
         perf[ack.userId] = perf[ack.userId] || { responses: 0 };
         perf[ack.userId].responses += 1;
@@ -348,18 +360,23 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
         const responses: { name: string; time: number; userId: string }[] = [];
 
         ackList.forEach((ack) => {
-          const ackMs = ack.time || new Date(ack.acknowledgedAt).getTime();
-          if (Number.isFinite(ackMs) && ackMs > start) {
-            const minutes = (ackMs - start) / 60000;
-            incidentTimes.push(minutes);
-            times.push(minutes);
-            responses.push({ name: ack.name, time: minutes, userId: ack.userId });
+          const ackTime = ack.time || new Date(ack.acknowledgedAt).getTime();
+          if (Number.isFinite(ackTime) && ackTime > start) {
+            const responseTime = (ackTime - start) / 60000; // minutes
+            incidentTimes.push(responseTime);
+            times.push(responseTime);
+            responses.push({
+              name: ack.name,
+              time: responseTime,
+              userId: ack.userId,
+            });
           }
         });
 
         if (incidentTimes.length > 0) {
           byIncident[incidentId] = {
-            average: incidentTimes.reduce((a, b) => a + b, 0) / incidentTimes.length,
+            average:
+              incidentTimes.reduce((a, b) => a + b, 0) / incidentTimes.length,
             fastest: Math.min(...incidentTimes),
             slowest: Math.max(...incidentTimes),
             count: incidentTimes.length,
@@ -369,11 +386,12 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
       }
     });
 
-    const avg = times.length ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+    const avg = times.length
+      ? times.reduce((a, b) => a + b, 0) / times.length
+      : 0;
     const med = times.length
       ? [...times].sort((a, b) => a - b)[Math.floor(times.length / 2)]
       : 0;
-
     return {
       average: avg,
       median: med,
@@ -384,26 +402,25 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
     };
   }, [acks, incidents]);
 
-  // Simple ROI placeholder (expand later)
+  // --- ROI: Improve/expand the math here later
   const roiMetrics = useMemo(() => {
     const active = incidents.filter((i) => i.status === "ACTIVE").length;
     const resolved = incidents.filter((i) => i.status === "RESOLVED").length;
     const prevented = Math.max(0, observations.length - active);
-    const avgCost = 50000; // placeholder per-incident cost
-    const estimatedSavings = prevented * avgCost * 0.3; // 30% savings proxy
+    const avgCost = 50000;
+    const estimatedSavings = prevented * avgCost * 0.3;
     return {
       active,
       resolved,
       prevented,
       estimatedSavings,
-      responseImprovement: resolved > 0 ? (resolved / Math.max(incidents.length, 1)) * 100 : 0,
+      responseImprovement: resolved > 0 ? (resolved / incidents.length) * 100 : 0,
     };
   }, [incidents, observations]);
 
-  // ---------- Helpers ----------
   function enrichAcksForMap(
-    list: Ack[],
-    members: TeamMember[]
+    acks: Ack[],
+    teamMembers: TeamMember[]
   ): {
     id: string;
     userId: string;
@@ -418,13 +435,13 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
     hasLocation: boolean;
     time?: number;
   }[] {
-    return list.map((ack) => {
-      const member = members.find((m) => m.id === ack.userId);
+    return acks.map((ack) => {
+      const member = teamMembers.find((m) => m.id === ack.userId);
       const lat = typeof ack.lat === "number" ? ack.lat : null;
       const lng = typeof ack.lng === "number" ? ack.lng : null;
       return {
         ...ack,
-        name: member ? `${member.firstName} ${member.lastName}` : ack.name || "Unknown",
+        name: member ? `${member.firstName} ${member.lastName}` : (ack as any).name || "Unknown",
         avatarUrl: (ack as any).avatarUrl || null,
         email: (ack as any).email || null,
         hasLocation: typeof lat === "number" && typeof lng === "number",
@@ -438,13 +455,12 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
     });
   }
 
-  // ---------- Export ----------
+  // --- Export Functions ---
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.text("HydroSafe Project Analytics Report", 10, 10);
     doc.save(`hydrosafe-analytics-${projectId}.pdf`);
   };
-
   const exportToExcel = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(incidents), "Incidents");
@@ -452,6 +468,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
     XLSX.writeFile(wb, `hydrosafe-analytics-${projectId}.xlsx`);
   };
 
+  // Export PDF of Map/Table (History tab)
   const exportMapTableToPDF = async () => {
     const input = document.getElementById("map-table-export");
     if (!input) return;
@@ -462,10 +479,10 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
     pdf.save(`hydrosafe-analytics-map-table-${projectId}.pdf`);
   };
 
-  // ---------- Render ----------
+  // --- Render ---
   return (
     <div className="w-full max-w-7xl mx-auto py-6 px-4 space-y-8">
-      {/* Header */}
+      {/* Header, Actions */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800">HydroSafe Analytics Dashboard</h1>
@@ -512,26 +529,15 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
         ))}
       </div>
 
-      {/* Loading */}
+      {/* Loading State */}
       {loading ? (
         <div className="text-center text-lg text-blue-500 py-12">Loading analytics…</div>
       ) : (
         <>
-          {/* LIVE */}
+          {/* --- LIVE TAB --- */}
           {selectedView === "live" && (
             <div className="space-y-8">
               <EnvironmentalContextCard
-                locationName={environmentLocationName}
-                latitude={environmentCoordinates?.latitude}
-                longitude={environmentCoordinates?.longitude}
-              />
-
-              <EnvIntelCard
-                latitude={environmentCoordinates?.latitude}
-                longitude={environmentCoordinates?.longitude}
-              />
-
-              <SpaceWeatherWidget
                 locationName={environmentLocationName}
                 latitude={environmentCoordinates?.latitude}
                 longitude={environmentCoordinates?.longitude}
@@ -555,7 +561,6 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                     <div className="text-xs text-slate-500">Total emergencies</div>
                   </CardContent>
                 </Card>
-
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-base font-medium">Observations</CardTitle>
@@ -566,7 +571,6 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                     <div className="text-xs text-slate-500">Safety observations</div>
                   </CardContent>
                 </Card>
-
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-base font-medium">Avg. Response Time</CardTitle>
@@ -579,7 +583,6 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                     <div className="text-xs text-slate-500">To first acknowledgment</div>
                   </CardContent>
                 </Card>
-
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
                     <CardTitle className="text-base font-medium">Closure Rate</CardTitle>
@@ -592,7 +595,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                 </Card>
               </div>
 
-              {/* Trends */}
+              {/* Trends Area Chart */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex gap-2 items-center text-lg font-bold">
@@ -620,12 +623,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                         <Tooltip />
                         <Legend />
                         <Area type="monotone" dataKey="incidents" stroke="#2563eb" fill="url(#c1)" />
-                        <Area
-                          type="monotone"
-                          dataKey="observations"
-                          stroke="#22d3ee"
-                          fill="url(#c2)"
-                        />
+                        <Area type="monotone" dataKey="observations" stroke="#22d3ee" fill="url(#c2)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -634,7 +632,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
             </div>
           )}
 
-          {/* HISTORY */}
+          {/* --- HISTORY TAB --- */}
           {selectedView === "history" && (
             <Card>
               <CardHeader>
@@ -680,7 +678,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
             </Card>
           )}
 
-          {/* REPLAY */}
+          {/* --- REPLAY TAB --- */}
           {selectedView === "replay" && (
             <Card>
               <CardHeader>
@@ -747,7 +745,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                           </div>
                         </div>
 
-                        {/* Response Performance */}
+                        {/* Response Performance for Selected Incident */}
                         {responseTimeMetrics.byIncident[selectedIncident] && (
                           <div className="bg-green-50 p-4 rounded-lg">
                             <h3 className="font-bold text-green-900">Response Performance</h3>
@@ -802,10 +800,10 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
             </Card>
           )}
 
-          {/* PERFORMANCE */}
+          {/* --- PERFORMANCE TAB --- */}
           {selectedView === "performance" && (
             <div className="space-y-6">
-              {/* Summary */}
+              {/* Performance Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card>
                   <CardHeader>
@@ -839,7 +837,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                     <div className="text-2xl font-bold text-purple-600">
                       {Math.round(
                         (responseTimeMetrics.total /
-                          (incidents.length * Math.max(teamMembers.length, 1))) *
+                          (incidents.length * teamMembers.length || 1)) *
                           100
                       )}
                       %
@@ -849,7 +847,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                 </Card>
               </div>
 
-              {/* Per-Incident Breakdown */}
+              {/* Per-Incident Performance Table */}
               <Card>
                 <CardHeader>
                   <CardTitle>Per-Incident Performance Breakdown</CardTitle>
@@ -879,9 +877,9 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                               </td>
                               <td className="p-2">{perf?.count || 0}</td>
                               <td className="p-2 text-green-600">
-                                {perf ? `${perf.fastest.toFixed(1)}m` : "—"}
+                                {perf?.fastest.toFixed(1) || "—"}m
                               </td>
-                              <td className="p-2">{perf ? `${perf.average.toFixed(1)}m` : "—"}</td>
+                              <td className="p-2">{perf?.average.toFixed(1) || "—"}m</td>
                               <td className="p-2">
                                 {fastest ? (
                                   <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
@@ -900,7 +898,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                 </CardContent>
               </Card>
 
-              {/* Team Stats */}
+              {/* Team Member Performance */}
               <Card>
                 <CardHeader>
                   <CardTitle>Team Response Statistics</CardTitle>
@@ -913,7 +911,9 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                           {member.firstName} {member.lastName}
                         </div>
                         <div className="text-sm text-gray-600">{member.role}</div>
-                        <div className="text-lg font-bold text-blue-600">{member.responses}</div>
+                        <div className="text-lg font-bold text-blue-600">
+                          {member.responses}
+                        </div>
                         <div className="text-xs text-gray-500">emergency responses</div>
                       </div>
                     ))}
@@ -923,7 +923,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
             </div>
           )}
 
-          {/* ROI */}
+          {/* --- ROI ANALYSIS --- */}
           {selectedView === "roi" && (
             <Card>
               <CardHeader>
@@ -963,10 +963,10 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
             </Card>
           )}
 
-          {/* AI Analysis */}
+          {/* --- AI ANALYSIS TAB --- */}
           {selectedView === "ai" && <AIProjectAnalyticsTab projectId={projectId} />}
 
-          {/* Additional Charts */}
+          {/* --- Additional Charts --- */}
           {selectedView !== "replay" && selectedView !== "ai" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
               {/* Observation Type Pie */}
@@ -986,7 +986,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                             data={obsTypeData}
                             cx="50%"
                             cy="50%"
-                            labelLine
+                            labelLine={true}
                             outerRadius={80}
                             fill="#2563eb"
                             dataKey="value"
@@ -1025,7 +1025,10 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
                   <div className="h-80">
                     {incTypeData.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={incTypeData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                        <BarChart
+                          data={incTypeData}
+                          margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                        >
                           <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
                           <XAxis
                             dataKey="name"

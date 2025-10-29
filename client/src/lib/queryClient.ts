@@ -1,5 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
-import { auth } from "@/firebase";
+import { getRoleToken } from "@/hooks/useRole";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -8,17 +8,17 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-async function getHeaders(includeContentType: boolean = false): Promise<Record<string, string>> {
+function getHeaders(includeContentType: boolean = false): Record<string, string> {
   const headers: Record<string, string> = {};
   
   if (includeContentType) {
     headers["Content-Type"] = "application/json";
   }
   
-  // Get backend JWT token from localStorage
-  const token = localStorage.getItem('token');
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  // Add role token if available
+  const roleToken = getRoleToken();
+  if (roleToken) {
+    headers["X-Role-Token"] = roleToken;
   }
   
   return headers;
@@ -29,10 +29,9 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const headers = await getHeaders(!!data);
   const res = await fetch(url, {
     method,
-    headers,
+    headers: getHeaders(!!data),
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });
@@ -47,10 +46,9 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const headers = await getHeaders();
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
-      headers,
+      headers: getHeaders(),
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {

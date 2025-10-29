@@ -92,14 +92,15 @@ export function PersistentNav() {
     setShowRoleSwitcher(true);
   };
 
-  const handleCodeSuccess = async () => {
+  const handleCodeSuccess = () => {
     if (selectedRole) {
-      await setRole(selectedRole);
+      setRole(selectedRole);
       setShowRoleSwitcher(false);
       toast({
         title: 'Role Switched',
         description: `${selectedRole} command level activated`,
       });
+      window.location.reload(); // Reload to apply new role context
     }
   };
 

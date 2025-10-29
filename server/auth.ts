@@ -21,19 +21,15 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    console.log('[Auth] No token provided');
     return res.status(401).json({ message: 'Access token required' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    console.log('[Auth] Token decoded, userId:', decoded.userId);
-    
     const user = await storage.getUser(decoded.userId);
     
     if (!user) {
-      console.log('[Auth] User not found for userId:', decoded.userId);
-      return res.status(401).json({ message: 'Invalid token - user not found' });
+      return res.status(401).json({ message: 'Invalid token' });
     }
 
     req.user = {
@@ -43,11 +39,9 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       role: user.role,
     };
     
-    console.log('[Auth] Authentication successful for user:', user.email);
     next();
-  } catch (error: any) {
-    console.log('[Auth] Token verification failed:', error.message);
-    return res.status(403).json({ message: 'Invalid or expired token', error: error.message });
+  } catch (error) {
+    return res.status(403).json({ message: 'Invalid or expired token' });
   }
 };
 
@@ -175,31 +169,9 @@ export const getCurrentUser = async (req: AuthRequest, res: Response) => {
       title: user.title,
       isActive: user.isActive,
       lastSeen: user.lastSeen,
-      sessionRole: user.sessionRole,
     });
   } catch (error) {
     console.error('Get current user error:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-
-// Get user's current session role from database
-export const getUserRole = async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-
-    const user = await storage.getUser(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json({
-      role: user.sessionRole || null
-    });
-  } catch (error) {
-    console.error('Get user role error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -317,11 +289,11 @@ export const handleFirebaseOAuth = async (req: Request, res: Response) => {
 };
 
 // Secure role codes (server-side only - MUST be set via environment variables)
-const ROLE_CODES: { BRONZE: string; SILVER: string; GOLD: string } = {
-  BRONZE: process.env.BRONZE_CODE || '',
-  SILVER: process.env.SILVER_CODE || '',
-  GOLD: process.env.GOLD_CODE || '',
-};
+const ROLE_CODES = {
+  BRONZE: process.env.BRONZE_CODE,
+  SILVER: process.env.SILVER_CODE,
+  GOLD: process.env.GOLD_CODE,
+} as const;
 
 // Validate that role codes are configured
 if (!ROLE_CODES.BRONZE || !ROLE_CODES.SILVER || !ROLE_CODES.GOLD) {
@@ -337,7 +309,7 @@ if (!ROLE_CODES.BRONZE || !ROLE_CODES.SILVER || !ROLE_CODES.GOLD) {
   }
 }
 
-// Validate role access code and save to database
+// Validate role access code and issue signed role token
 export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
   try {
     const { role, code } = req.body;
@@ -371,10 +343,17 @@ export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Invalid access code' });
     }
 
-    // Update user's session role in database
-    await storage.updateUser(req.user.id, {
-      sessionRole: role as 'BRONZE' | 'SILVER' | 'GOLD'
-    });
+    // Generate role token (JWT with role claim)
+    const roleToken = jwt.sign(
+      { 
+        userId: req.user.id,
+        email: req.user.email,
+        sessionRole: role,
+        grantedAt: new Date().toISOString()
+      },
+      JWT_SECRET,
+      { expiresIn: '8h' } // Role session expires after 8 hours
+    );
 
     // Log successful role escalation
     await storage.createAuditLog({
@@ -386,8 +365,9 @@ export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
     });
 
     res.json({
-      success: true,
+      roleToken,
       role,
+      expiresIn: '8h',
       grantedAt: new Date().toISOString()
     });
 
