@@ -1,20 +1,48 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { getRoleToken } from "@/hooks/useRole";
+import { broadcastAuthStateChange } from "@/lib/auth-events";
+
+function clearSessionState() {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.removeItem("token");
+    window.localStorage.removeItem("user");
+    window.sessionStorage.removeItem("selectedRole");
+    window.sessionStorage.removeItem("roleToken");
+  } finally {
+    broadcastAuthStateChange();
+  }
+}
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+
+    if (res.status === 401) {
+      clearSessionState();
+      const message = text || "Unauthorized. Please sign in again.";
+      throw new Error(`401: ${message}`);
+    }
+
     throw new Error(`${res.status}: ${text}`);
   }
 }
 
 function getHeaders(includeContentType: boolean = false): Record<string, string> {
   const headers: Record<string, string> = {};
-  
+
   if (includeContentType) {
     headers["Content-Type"] = "application/json";
   }
-  
+
+  if (typeof window !== "undefined") {
+    const token = window.localStorage.getItem("token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
   // Add role token if available
   const roleToken = getRoleToken();
   if (roleToken) {
