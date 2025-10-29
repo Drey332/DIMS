@@ -30,7 +30,7 @@ import {
   validateRoleAccess,
   verifyRoleToken,
   requireRole,
-  type AuthRequest
+  type AuthRequest,
 } from "./auth";
 import { getDoc, doc } from "firebase/firestore";
 import { askAssetAI } from "./ai-asset-agent";
@@ -116,7 +116,7 @@ function extractStringQueryParam(value: unknown): string | undefined {
   return undefined;
 }
 
-// Removed stub authenticateUser - using real JWT auth from auth.ts
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes (no auth middleware required)
@@ -125,18 +125,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', authenticateToken, getCurrentUser);
   
   // OAuth routes
-  app.get('/auth/google', initiateGoogleAuth);
-  app.get('/auth/apple', initiateAppleAuth);
-  app.get('/auth/google/callback', handleGoogleCallback);
-  app.post('/auth/apple/callback', handleAppleCallback);
-  app.post('/api/auth/firebase-oauth', handleFirebaseOAuth);
-  
+  app.get("/auth/google", initiateGoogleAuth);
+  app.get("/auth/apple", initiateAppleAuth);
+  app.get("/auth/google/callback", handleGoogleCallback);
+  app.post("/auth/apple/callback", handleAppleCallback);
+  app.post("/api/auth/firebase-oauth", handleFirebaseOAuth);
+
   // Role-based access control
-  app.post('/api/auth/validate-role', authenticateToken, validateRoleAccess);
+  app.post("/api/auth/validate-role", authenticateToken, validateRoleAccess);
 
   // Apply authentication and role verification middleware to all protected API routes
-  app.use('/api', authenticateToken);
-  app.use('/api', verifyRoleToken);
+  app.use("/api", authenticateToken);
+  app.use("/api", verifyRoleToken);
+
+  registerIncidentMatchRoute(app);
 
   // Environmental context routes
   app.get('/api/environment/aurora', async (req, res) => {
@@ -188,8 +190,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create new project (Gold only)
-  app.post('/api/projects', requireRole('GOLD'), async (req: AuthRequest, res) => {
-    
+  app.post("/api/projects", requireRole("GOLD"), async (req: AuthRequest, res) => {
     try {
       const projectData = {
         ...req.body,
@@ -457,11 +458,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI-powered routes
-  app.post('/api/ai/checklist', async (req: AuthRequest, res) => {
+  app.post("/api/ai/checklist", async (req: AuthRequest, res) => {
     try {
       const { scenarioType, projectDetails } = req.body;
-      const userRole = req.sessionRole || 'BRONZE';
-      
+      const userRole = (req.sessionRole || req.user?.role || "BRONZE") as
+        | "BRONZE"
+        | "SILVER"
+        | "GOLD";
       const checklist = await generateDynamicChecklist(scenarioType, projectDetails, userRole);
       res.json({ checklist });
     } catch (error) {
@@ -470,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/protocol-guidance', async (req, res) => {
+  app.post("/api/ai/protocol-guidance", async (req, res) => {
     try {
       const { emergencyType, projectContext, currentConditions } = req.body;
       const guidance = await getEmergencyProtocolGuidance(emergencyType, projectContext, currentConditions);
@@ -481,10 +484,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/decision-analysis', async (req: AuthRequest, res) => {
+  app.post("/api/ai/decision-analysis", async (req: AuthRequest, res) => {
     try {
       const { decisionData, projectContext } = req.body;
-      const userRole = req.sessionRole || 'BRONZE';
+      const userRole = (req.sessionRole || req.user?.role || "BRONZE") as
+        | "BRONZE"
+        | "SILVER"
+        | "GOLD";
       const analysis = await analyzeDecisionContext(decisionData, userRole, projectContext);
       res.json(analysis);
     } catch (error) {
@@ -493,19 +499,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/fire-intelligence/query', async (req: AuthenticatedRequest, res) => {
+  app.post("/api/fire-intelligence/query", async (req: AuthenticatedRequest, res) => {
     try {
       const { question } = req.body;
-      
-      if (!question || typeof question !== 'string') {
+
+      if (!question || typeof question !== "string") {
         return res.status(400).json({ message: "Question is required" });
       }
 
       // Get all fire incidents from database
       const fireIncidents = await storage.getAllFireIncidents();
-      
+
       // Prepare context from fire incidents
-      const fireContext = fireIncidents.map(incident => ({
+      const fireContext = fireIncidents.map((incident) => ({
         name: incident.name,
         date: incident.dateUtc,
         location: incident.location,
@@ -516,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         humanFactors: incident.humanFactors,
         barriersFailed: incident.barriersFailed,
         lessons: incident.lessons,
-        officialFindings: incident.officialFindings
+        officialFindings: incident.officialFindings,
       }));
 
       // Use OpenAI to generate answer
@@ -539,15 +545,15 @@ Your role is to:
 Always reference specific incidents when relevant. Be concise but informative. Focus on practical safety insights.
 
 Historical Fire Incidents Database:
-${JSON.stringify(fireContext, null, 2)}`
+${JSON.stringify(fireContext, null, 2)}`,
           },
           {
             role: "user",
-            content: question
-          }
+            content: question,
+          },
         ],
         temperature: 0.7,
-        max_tokens: 500
+        max_tokens: 500,
       });
 
       const answer = completion.choices[0]?.message?.content || "I couldn't generate a response.";
@@ -559,7 +565,7 @@ ${JSON.stringify(fireContext, null, 2)}`
     }
   });
 
-  app.get('/api/ai/recommendations', async (req, res) => {
+  app.get("/api/ai/recommendations", async (req, res) => {
     try {
       const projectId = req.query.projectId ? parseInt(req.query.projectId as string) : undefined;
       
@@ -1327,7 +1333,7 @@ ${JSON.stringify(fireContext, null, 2)}`
   });
 
   // ERP Knowledge Base API endpoints
-  app.get('/api/erp/search', async (req: AuthRequest, res) => {
+  app.get("/api/erp/search", async (req: AuthRequest, res) => {
     try {
       const { query, limit } = req.query;
       const { ERPKnowledgeService } = await import('./erpKnowledge');
@@ -1343,7 +1349,7 @@ ${JSON.stringify(fireContext, null, 2)}`
   });
 
   // ERP Scenarios API endpoints
-  app.get('/api/erp/scenarios', async (req: AuthRequest, res) => {
+  app.get("/api/erp/scenarios", async (req: AuthRequest, res) => {
     try {
       const { query, category, severity } = req.query;
       
@@ -1366,162 +1372,204 @@ ${JSON.stringify(fireContext, null, 2)}`
   });
 
   // AI Q&A API endpoint for emergency response questions
-  app.post('/api/erp/ask-ai', async (req: AuthRequest, res) => {
+  app.post("/api/erp/ask-ai", async (req: AuthRequest, res) => {
     try {
-      const { question, context, projectContext } = req.body;
-      
-      if (!question || typeof question !== 'string') {
+      const { question, context, projectContext } = req.body ?? {};
+
+      if (typeof question !== "string" || question.trim().length === 0) {
         return res.status(400).json({ message: "Question is required" });
       }
 
-      // Get comprehensive context from all knowledge sources
-      const qnaResults = ERPQnAService.searchQuestions(question, 3);
-      const scenarioResults = ERPScenariosService.searchScenarios(question).slice(0, 2);
-      const { ERPKnowledgeService } = await import('./erpKnowledge');
-      const knowledgeContext = ERPKnowledgeService.getContextForAI(question);
+      const normalizedQuestion = question.trim();
 
-      // Fire Intelligence: Get matched historical incidents
-      const { computeIncidentMatches } = await import('./fire-intel/matcher');
-      const { toKnowledgeText } = await import('./fire-intel/ingest');
-      const { fireIntelStorage } = await import('./fire-intel/storage');
-      
-      let matchedIncidents: any[] = [];
-      let oneLiner = "";
-      let fireIntelContext = "";
+      // Gather knowledge contexts
+      const qnaResults = ERPQnAService.searchQuestions(normalizedQuestion, 3);
+      const scenarioResults = ERPScenariosService.searchScenarios(normalizedQuestion).slice(0, 2);
+      const { ERPKnowledgeService } = await import("./erpKnowledge");
+      const knowledgeContext = ERPKnowledgeService.getContextForAI(normalizedQuestion);
 
+      // Fire intelligence search snippets
+      const fireContextDocs = await searchFireIncidentContext(normalizedQuestion, 4);
+      const fireSnippets = fireContextDocs
+        .map((doc) => {
+          const chunk = typeof doc.chunk === "string" ? doc.chunk : "";
+          if (!chunk) {
+            return undefined;
+          }
+          return chunk.length > 800 ? `${chunk.slice(0, 800)}…` : chunk;
+        })
+        .filter((value): value is string => Boolean(value))
+        .join("\n---\n");
+
+      const activePhase =
+        typeof projectContext?.operationPhase === "string"
+          ? projectContext.operationPhase
+          : "production";
+      const locationName =
+        typeof projectContext?.location === "string" ? projectContext.location : undefined;
+      const whenUtc = new Date().toISOString();
+
+      let matchedIncidents: IncidentMatch[] = [];
       try {
-        // Extract project info from context
-        const locationMatch = context?.match(/Location: ([^\n]+)/);
-        const phaseMatch = context?.match(/Phase: (\w+)/);
-        const location = locationMatch?.[1] || projectContext?.location;
-        const phase = phaseMatch?.[1] || projectContext?.operationPhase || "production";
-
-        const matchResult = await computeIncidentMatches({
-          query: question,
-          location,
-          phase: phase as any,
-          whenUtc: new Date().toISOString()
+        const matchResponse = await computeIncidentMatches({
+          query: normalizedQuestion,
+          location: locationName,
+          whenUtc,
+          phase: activePhase,
         });
+        matchedIncidents = matchResponse.matches;
+      } catch (matchError) {
+        console.warn("Failed to compute incident matches for ERP prompt", matchError);
+      }
 
-        matchedIncidents = matchResult.matches;
-
-        // Generate one-liner preface
-        if (matchedIncidents.length > 0 && matchedIncidents[0]) {
-          const topMatch = matchedIncidents[0];
-          const lessonPreview = topMatch.lessons?.[0] ? `; key lesson: ${topMatch.lessons[0]}` : "";
-          oneLiner = `⚠️ Because your context resembles **${topMatch.title}** conditions (${phase}${lessonPreview}), apply the following controls first.`;
-        } else {
-          oneLiner = `✓ Applying fire best-practice controls for ${phase} phase first.`;
-        }
-
-        // Build fire intelligence context
-        const topIncidents = matchedIncidents.slice(0, 2);
-        for (const match of topIncidents) {
+      let fireIntelContext = "";
+      try {
+        const { toKnowledgeText } = await import("./fire-intel/ingest");
+        const { fireIntelStorage } = await import("./fire-intel/storage");
+        for (const match of matchedIncidents.slice(0, 2)) {
           const incident = await fireIntelStorage.getIncident(match.id);
           if (incident) {
             fireIntelContext += `\n---\n${toKnowledgeText(incident)}`;
           }
         }
-      } catch (err) {
-        console.error("Fire intelligence matching failed (non-fatal):", err);
+      } catch (intelError) {
+        console.error("Fire intelligence context enrichment failed (non-fatal):", intelError);
       }
 
-      // Use OpenAI to provide intelligent response
-      if (process.env.OPENAI_API_KEY) {
-        const { OpenAI } = await import('openai');
-        const openai = new OpenAI({ 
-          apiKey: process.env.OPENAI_API_KEY 
-        });
+      const topMatches = matchedIncidents.slice(0, 2);
+      const leadingLesson = topMatches[0]?.lessons?.[0];
+      const oneLiner = topMatches[0]?.title
+        ? `⚠️ Because your context resembles **${topMatches[0].title}** conditions (${activePhase}${
+            leadingLesson ? `; key lesson: ${leadingLesson}` : ""
+          }), apply the following controls first.`
+        : `✓ Applying fire best-practice controls for ${activePhase} phase first.`;
 
-        const prompt = `You are HydroSafe's AI Emergency Response Assistant with comprehensive knowledge of offshore safety protocols.
+      const matchSummaries = topMatches
+        .map((match, index) => {
+          const lessons = Array.isArray(match.lessons)
+            ? match.lessons.slice(0, 2).join("; ")
+            : "";
+          const location = match.location ?? "location unknown";
+          const date = match.dateUtc
+            ? new Date(match.dateUtc).toISOString().slice(0, 10)
+            : "date unknown";
+          return `${index + 1}. ${match.title} — ${location} (${date})${
+            lessons ? ` | Lessons: ${lessons}` : ""
+          }`;
+        })
+        .join("\n");
 
-USER QUESTION: ${question}
+      const qnaContext = qnaResults
+        .map(
+          (qa) =>
+            `Q: ${qa.question}\nA: ${qa.answer}\n[Urgency: ${qa.urgency}, Command Level: ${qa.commandLevel}]`
+        )
+        .join("\n\n");
 
-CONTEXT-BASED PREFACE:
-${oneLiner}
+      const scenarioContext = scenarioResults
+        .map((scenario) => {
+          const personnel = Array.isArray(scenario.requiredPersonnel)
+            ? scenario.requiredPersonnel.join(", ")
+            : "";
+          const procedure = typeof scenario.content === "string"
+            ? scenario.content.substring(0, 300)
+            : "";
+          return `Scenario: ${scenario.title}\nCategory: ${scenario.category}, Severity: ${scenario.severity}\nResponse Time: ${scenario.timeToRespond}\nRequired Personnel: ${personnel}\nProcedure: ${procedure}...`;
+        })
+        .join("\n\n");
 
-${context ? `ADDITIONAL CONTEXT: ${context}` : ''}
+      const promptSections = [
+        `USER QUESTION: ${normalizedQuestion}`,
+        `CONTEXT-BASED PREFACE:\n${oneLiner}`,
+        context ? `ADDITIONAL CONTEXT:\n${context}` : null,
+        knowledgeContext ? `ERP KNOWLEDGE CONTEXT:\n${knowledgeContext}` : null,
+        qnaContext ? `RELEVANT Q&A FROM ERP DATABASE:\n${qnaContext}` : null,
+        scenarioContext ? `RELEVANT EMERGENCY SCENARIOS:\n${scenarioContext}` : null,
+        fireIntelContext ? `FIRE INCIDENT INTELLIGENCE (Historical Lessons):${fireIntelContext}` : null,
+        matchSummaries
+          ? `MATCHED INCIDENT SUMMARIES:\n${matchSummaries}`
+          : null,
+        fireSnippets ? `FIRE INCIDENT INTELLIGENCE (retrieved):\n${fireSnippets}` : null,
+      ].filter((section): section is string => Boolean(section));
 
-${fireIntelContext ? `FIRE INCIDENT INTELLIGENCE (Historical Lessons):${fireIntelContext}` : ''}
-
-RELEVANT Q&A FROM ERP DATABASE:
-${qnaResults.map(qa => `Q: ${qa.question}\nA: ${qa.answer}\n[Urgency: ${qa.urgency}, Command Level: ${qa.commandLevel}]`).join('\n\n')}
-
-RELEVANT EMERGENCY SCENARIOS:
-${scenarioResults.map(scenario => `Scenario: ${scenario.title}\nCategory: ${scenario.category}, Severity: ${scenario.severity}\nResponse Time: ${scenario.timeToRespond}\nRequired Personnel: ${scenario.requiredPersonnel.join(', ')}\nProcedure: ${scenario.content.substring(0, 300)}...`).join('\n\n')}
-
-ADDITIONAL PROTOCOL CONTEXT:
-${knowledgeContext}
-
-Provide a comprehensive, actionable answer following HydroDive's Bronze-Silver-Gold command structure. Include:
-1. Immediate actions required
-2. Appropriate command level for response
-3. Time-critical steps and deadlines
-4. Required personnel and resources
-5. Protocol references
-6. Escalation criteria if applicable
-
-Be specific, practical, and safety-focused in your response.`;
-
-        const response = await openai.chat.completions.create({
+      let aiAnswer = "";
+      if (erpAssistantOpenAI) {
+        const completion = await erpAssistantOpenAI.chat.completions.create({
           model: "gpt-4o",
+          temperature: 0.3,
+          max_tokens: 800,
           messages: [
             {
               role: "system",
-              content: "You are an expert in HydroDive emergency response protocols, IMCA guidelines, IOGP standards, and offshore safety procedures. Provide clear, actionable guidance following Bronze-Silver-Gold command hierarchy."
+              content:
+                "You are an expert in HydroDive emergency response protocols, IMCA guidelines, IOGP standards, and offshore safety procedures. Provide clear, actionable guidance following Bronze-Silver-Gold command hierarchy.",
             },
-            { role: "user", content: prompt }
+            {
+              role: "user",
+              content: promptSections.join("\n\n"),
+            },
           ],
-          temperature: 0.3,
-          max_tokens: 800,
         });
+        aiAnswer = completion.choices[0]?.message?.content?.trim() ?? "";
+      }
 
-        const aiAnswer = response.choices[0]?.message?.content || "Unable to generate response";
+      let responseConfidence: "high" | "medium" | "low" = aiAnswer ? "high" : "low";
+      let answerBody = aiAnswer;
 
-        // Log the question for audit purposes
-        await storage.createAuditLog({
-          userId: req.user!.id,
-          actionType: 'AI_QUESTION_ASKED',
-          description: `AI emergency response question: ${question.substring(0, 100)}...`,
-          newData: { question, aiAnswer: aiAnswer.substring(0, 200) + "..." },
-        });
-
-        res.json({
-          answer: `${oneLiner}\n\n${aiAnswer}`,
-          relatedQuestions: qnaResults.map(qa => qa.question),
-          relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
-          matchedIncidents,
-          confidence: "high"
-        });
-      } else {
-        // Fallback to knowledge base search results
-        const bestMatch = qnaResults[0];
-        if (bestMatch) {
-          res.json({
-            answer: bestMatch.answer,
-            relatedQuestions: qnaResults.slice(1).map(qa => qa.question),
-            relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
-            matchedIncidents,
-            confidence: "medium",
-            source: "Knowledge Base"
-          });
+      if (!answerBody) {
+        if (qnaResults.length > 0) {
+          answerBody = qnaResults[0].answer;
+          responseConfidence = "medium";
         } else {
-          res.json({
-            answer: "I don't have specific information about that question. Please refer to your Emergency Response Plan or contact your Emergency Coordinator for guidance.",
-            relatedQuestions: [],
-            relatedScenarios: scenarioResults.map(s => ({ id: s.id, title: s.title, category: s.category })),
-            matchedIncidents,
-            confidence: "low"
-          });
+          const fallbackLines = [
+            "Fire Guard insights leveraged from historic incidents:",
+            ...topMatches.map((match) => {
+              const lessons = Array.isArray(match.lessons)
+                ? match.lessons.slice(0, 2).join("; ")
+                : "Review official findings for lessons.";
+              return `- ${match.title} — Lessons: ${lessons}`;
+            }),
+          ];
+          if (fallbackLines.length === 1) {
+            fallbackLines.push(
+              "No indexed incidents matched; follow ERP protocols and log new learnings for ingestion."
+            );
+          }
+          answerBody = fallbackLines.join("\n");
         }
       }
+
+      const relatedScenarios = scenarioResults.map((scenario) => ({
+        id: scenario.id,
+        title: scenario.title,
+        category: scenario.category,
+      }));
+
+      if (req.user) {
+        await storage.createAuditLog({
+          userId: req.user.id,
+          actionType: "AI_QUESTION_ASKED",
+          description: `AI emergency response question: ${normalizedQuestion.substring(0, 100)}...`,
+          newData: { question: normalizedQuestion, aiAnswer: answerBody.substring(0, 200) + "..." },
+        });
+      }
+
+      res.json({
+        answer: `${oneLiner}\n\n${answerBody}`,
+        relatedQuestions: qnaResults.slice(1).map((qa) => qa.question),
+        relatedScenarios,
+        matchedIncidents,
+        confidence: responseConfidence,
+      });
     } catch (error) {
       console.error("Error processing AI question:", error);
       res.status(500).json({ message: "Failed to process AI question" });
     }
   });
 
-  app.get('/api/erp/critical', async (req: AuthRequest, res) => {
+
+
+  app.get("/api/erp/critical", async (req: AuthRequest, res) => {
     try {
       const { ERPKnowledgeService } = await import('./erpKnowledge');
       const criticalSections = ERPKnowledgeService.getCriticalSections();
@@ -1569,7 +1617,7 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  app.get('/api/erp/scenarios/:id', async (req: AuthRequest, res) => {
+  app.get("/api/erp/scenarios/:id", async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const { ERPScenariosService } = await import('./erpScenarios');
@@ -1586,10 +1634,10 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  app.get('/api/erp/scenarios/category/:category', async (req: AuthRequest, res) => {
+  app.get("/api/erp/scenarios/category/:category", async (req: AuthRequest, res) => {
     try {
       const { category } = req.params;
-      const { ERPScenariosService } = await import('./erpScenarios');
+      const { ERPScenariosService } = await import("./erpScenarios");
       const scenarios = ERPScenariosService.getScenariosByCategory(category as any);
       res.json(scenarios);
     } catch (error) {
@@ -1598,9 +1646,9 @@ Be specific, practical, and safety-focused in your response.`;
     }
   });
 
-  app.get('/api/erp/scenarios/critical', async (req: AuthRequest, res) => {
+  app.get("/api/erp/scenarios/critical", async (req: AuthRequest, res) => {
     try {
-      const { ERPScenariosService } = await import('./erpScenarios');
+      const { ERPScenariosService } = await import("./erpScenarios");
       const criticalScenarios = ERPScenariosService.getCriticalScenarios();
       res.json(criticalScenarios);
     } catch (error) {
@@ -1837,7 +1885,7 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // AI Asset Management Routes (protected with authentication middleware)
-  // Protected by global authenticateToken middleware
+
 
   // 1. Get asset status
   app.get('/api/ai-asset/status/:assetId', async (req: AuthenticatedRequest, res: Response) => {
@@ -1913,13 +1961,39 @@ Be specific, practical, and safety-focused in your response.`;
   });
 
   // AI PROJECT ANALYTICS - Comprehensive Safety Data Analysis
-  app.post('/api/ai-project-analytics', async (req: AuthRequest, res: Response) => {
+  app.post("/api/ai-project-analytics", async (req: AuthRequest, res: Response) => {
     try {
       const { projectId } = req.body;
-      
+
       if (!projectId) {
         return res.status(400).json({ error: "Missing projectId in request body" });
       }
+
+      if (!req.user) {
+        return res.status(401).json({ error: "User not authenticated" });
+      }
+
+      console.log(`🤖 Starting AI analytics for project ${projectId}`);
+
+      const analyticsResult = await aiAnalyticsService.generateAnalytics(projectId);
+
+      console.log(`✅ AI analytics completed for project ${projectId}`);
+
+      res.json({
+        status: "success",
+        message: "AI project analytics generated successfully",
+        timestamp: new Date().toISOString(),
+        projectId,
+        analytics: analyticsResult,
+      });
+    } catch (error) {
+      console.error("❌ Error in AI project analytics:", error);
+      res.status(500).json({
+        error: "Failed to generate AI project analytics",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
 
       if (!req.user) {
         return res.status(401).json({ error: "User not authenticated" });
