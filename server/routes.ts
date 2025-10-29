@@ -38,6 +38,8 @@ import { db } from "@/firebase"; // or wherever your Firestore instance is
 import { aiAnalyticsService } from "./ai-analytics";
 import { getAuroraEnvironmentalContext } from "./environment";
 import { lookupLocationIntel, DEFAULT_OPERATION_COORDINATES } from "@shared/environment/locationIntel";
+import { computeIncidentMatches, type MatchedIncident } from "./fire-intel/matcher";
+import { searchFireIncidentContext } from "./fire-intel/ingest";
 
 import * as aiAssetAgent from "./ai-asset-agent"; // Use unique, clear names // Import all your asset agent functions
 
@@ -137,8 +139,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Apply authentication and role verification middleware to all protected API routes
   app.use("/api", authenticateToken);
   app.use("/api", verifyRoleToken);
-
-  registerIncidentMatchRoute(app);
 
   // Environmental context routes
   app.get('/api/environment/aurora', async (req, res) => {
@@ -1409,7 +1409,7 @@ ${JSON.stringify(fireContext, null, 2)}`,
         typeof projectContext?.location === "string" ? projectContext.location : undefined;
       const whenUtc = new Date().toISOString();
 
-      let matchedIncidents: IncidentMatch[] = [];
+      let matchedIncidents: MatchedIncident[] = [];
       try {
         const matchResponse = await computeIncidentMatches({
           query: normalizedQuestion,
@@ -1493,24 +1493,31 @@ ${JSON.stringify(fireContext, null, 2)}`,
       ].filter((section): section is string => Boolean(section));
 
       let aiAnswer = "";
-      if (erpAssistantOpenAI) {
-        const completion = await erpAssistantOpenAI.chat.completions.create({
-          model: "gpt-4o",
-          temperature: 0.3,
-          max_tokens: 800,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are an expert in HydroDive emergency response protocols, IMCA guidelines, IOGP standards, and offshore safety procedures. Provide clear, actionable guidance following Bronze-Silver-Gold command hierarchy.",
-            },
-            {
-              role: "user",
-              content: promptSections.join("\n\n"),
-            },
-          ],
-        });
-        aiAnswer = completion.choices[0]?.message?.content?.trim() ?? "";
+      const openAiApiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR;
+      if (openAiApiKey) {
+        try {
+          const { OpenAI } = await import("openai");
+          const erpAssistantClient = new OpenAI({ apiKey: openAiApiKey });
+          const completion = await erpAssistantClient.chat.completions.create({
+            model: "gpt-4o",
+            temperature: 0.3,
+            max_tokens: 800,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are an expert in HydroDive emergency response protocols, IMCA guidelines, IOGP standards, and offshore safety procedures. Provide clear, actionable guidance following Bronze-Silver-Gold command hierarchy.",
+              },
+              {
+                role: "user",
+                content: promptSections.join("\n\n"),
+              },
+            ],
+          });
+          aiAnswer = completion.choices[0]?.message?.content?.trim() ?? "";
+        } catch (assistantError) {
+          console.warn("ERP assistant OpenAI completion failed, falling back to heuristics:", assistantError);
+        }
       }
 
       let responseConfidence: "high" | "medium" | "low" = aiAnswer ? "high" : "low";
@@ -1672,8 +1679,6 @@ ${JSON.stringify(fireContext, null, 2)}`,
   // Fire Intelligence - Geo-aware incident matching
   app.get('/api/incidents/match', async (req: AuthRequest, res) => {
     try {
-      const { computeIncidentMatches } = await import('./fire-intel/matcher');
-      
       const matchContext = {
         query: typeof req.query.q === 'string' ? req.query.q : undefined,
         location: typeof req.query.location === 'string' ? req.query.location : undefined,
@@ -1962,21 +1967,22 @@ ${JSON.stringify(fireContext, null, 2)}`,
 
   // AI PROJECT ANALYTICS - Comprehensive Safety Data Analysis
   app.post("/api/ai-project-analytics", async (req: AuthRequest, res: Response) => {
+    const { projectId } = req.body;
+
+    if (!projectId) {
+      res.status(400).json({ error: "Missing projectId in request body" });
+      return;
+    }
+
+    if (!req.user) {
+      res.status(401).json({ error: "User not authenticated" });
+      return;
+    }
+
+    console.log(`🤖 Starting AI analytics for project ${projectId}`);
+
     try {
-      const { projectId } = req.body;
-
-      if (!projectId) {
-        return res.status(400).json({ error: "Missing projectId in request body" });
-      }
-
-      if (!req.user) {
-        return res.status(401).json({ error: "User not authenticated" });
-      }
-
-      console.log(`🤖 Starting AI analytics for project ${projectId}`);
-
       const analyticsResult = await aiAnalyticsService.generateAnalytics(projectId);
-
       console.log(`✅ AI analytics completed for project ${projectId}`);
 
       res.json({
@@ -1986,39 +1992,11 @@ ${JSON.stringify(fireContext, null, 2)}`,
         projectId,
         analytics: analyticsResult,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("❌ Error in AI project analytics:", error);
       res.status(500).json({
         error: "Failed to generate AI project analytics",
         details: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
-
-      if (!req.user) {
-        return res.status(401).json({ error: "User not authenticated" });
-      }
-
-      console.log(`🤖 Starting AI analytics for project ${projectId}`);
-      
-      // Generate comprehensive AI analytics
-      const analyticsResult = await aiAnalyticsService.generateAnalytics(projectId);
-      
-      console.log(`✅ AI analytics completed for project ${projectId}`);
-      
-      res.json({
-        status: "success",
-        message: "AI project analytics generated successfully",
-        timestamp: new Date().toISOString(),
-        projectId,
-        analytics: analyticsResult
-      });
-
-    } catch (error) {
-      console.error("❌ Error in AI project analytics:", error);
-      res.status(500).json({ 
-        error: "Failed to generate AI project analytics",
-        details: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });

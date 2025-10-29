@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { FireIncidentZ, type FireIncident } from "@shared/fire-intel/schema";
-import { toSeason, latBand, basin } from "./geo";
+import { toSeason, latBand, basin } from "@shared/fire-intel/geo";
 import { fireIntelStorage } from "./storage";
 import {
   getKnowledgeItem,
