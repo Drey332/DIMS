@@ -289,21 +289,35 @@ export const handleFirebaseOAuth = async (req: Request, res: Response) => {
 };
 
 // Secure role codes (server-side only - MUST be set via environment variables)
-const ROLE_CODES = {
+type RoleTier = 'BRONZE' | 'SILVER' | 'GOLD';
+type RoleCodeConfig = Partial<Record<RoleTier, string>>;
+
+const configuredRoleCodes: RoleCodeConfig = {
   BRONZE: process.env.BRONZE_CODE,
   SILVER: process.env.SILVER_CODE,
   GOLD: process.env.GOLD_CODE,
-} as const;
+};
+
+const developmentFallbackRoleCodes: RoleCodeConfig =
+  process.env.NODE_ENV === 'development'
+    ? {
+        BRONZE: '000',
+        SILVER: '001',
+        GOLD: '100',
+      }
+    : {};
+
+const ROLE_CODES: Record<RoleTier, string | undefined> = {
+  BRONZE: configuredRoleCodes.BRONZE ?? developmentFallbackRoleCodes.BRONZE,
+  SILVER: configuredRoleCodes.SILVER ?? developmentFallbackRoleCodes.SILVER,
+  GOLD: configuredRoleCodes.GOLD ?? developmentFallbackRoleCodes.GOLD,
+};
 
 // Validate that role codes are configured
 if (!ROLE_CODES.BRONZE || !ROLE_CODES.SILVER || !ROLE_CODES.GOLD) {
   console.error('CRITICAL: Role access codes not configured! Set BRONZE_CODE, SILVER_CODE, and GOLD_CODE environment variables.');
-  console.error('Using fallback codes for development only - DO NOT USE IN PRODUCTION');
-  // Only use fallbacks in development
   if (process.env.NODE_ENV === 'development') {
-    ROLE_CODES.BRONZE = ROLE_CODES.BRONZE || '000';
-    ROLE_CODES.SILVER = ROLE_CODES.SILVER || '001';
-    ROLE_CODES.GOLD = ROLE_CODES.GOLD || '100';
+    console.error('Using fallback codes for development only - DO NOT USE IN PRODUCTION');
   } else {
     throw new Error('Role access codes must be configured in production via environment variables');
   }
@@ -329,7 +343,7 @@ export const validateRoleAccess = async (req: AuthRequest, res: Response) => {
     }
 
     // Verify code
-    const expectedCode = ROLE_CODES[role as keyof typeof ROLE_CODES];
+    const expectedCode = ROLE_CODES[role as RoleTier];
     if (code !== expectedCode) {
       // Log failed attempt
       await storage.createAuditLog({

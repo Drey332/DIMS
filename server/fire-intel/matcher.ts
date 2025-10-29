@@ -12,7 +12,7 @@ interface MatchContext {
   environmentalContext?: any;
 }
 
-interface MatchedIncident {
+export interface MatchedIncident {
   id: string;
   title: string;
   location?: string;

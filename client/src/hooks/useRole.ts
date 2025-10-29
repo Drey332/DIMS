@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { auth } from '../firebase';
+import { persistRoleAttempt } from '../lib/userRolePersistence';
 
 export type UserRole = 'BRONZE' | 'SILVER' | 'GOLD' | null;
 
@@ -46,18 +48,60 @@ export function useRole() {
       if (!response.ok) {
         const error = await response.json();
         console.error('Role validation failed:', error.message);
+
+        const userId = auth.currentUser?.uid;
+        if (userId) {
+          try {
+            await persistRoleAttempt({
+              userId,
+              requestedRole: role,
+              success: false,
+            });
+          } catch (persistError) {
+            console.error('Failed to record role validation attempt', persistError);
+          }
+        }
+
         return false;
       }
 
       const data = await response.json();
-      
+
       // Store role token for API requests
       sessionStorage.setItem(ROLE_TOKEN_KEY, data.roleToken);
       sessionStorage.setItem(STORAGE_KEY, role);
-      
+
+      const userId = auth.currentUser?.uid;
+      if (userId) {
+        try {
+          await persistRoleAttempt({
+            userId,
+            requestedRole: role,
+            success: true,
+            grantedAt: data.grantedAt,
+          });
+        } catch (persistError) {
+          console.error('Failed to record role validation attempt', persistError);
+        }
+      }
+
       return true;
     } catch (error) {
       console.error('Error validating role code:', error);
+
+      const userId = auth.currentUser?.uid;
+      if (userId && role) {
+        try {
+          await persistRoleAttempt({
+            userId,
+            requestedRole: role,
+            success: false,
+          });
+        } catch (persistError) {
+          console.error('Failed to record role validation attempt', persistError);
+        }
+      }
+
       return false;
     }
   };
