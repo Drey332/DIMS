@@ -1966,7 +1966,7 @@ ${JSON.stringify(fireContext, null, 2)}`,
   });
 
   // AI PROJECT ANALYTICS - Comprehensive Safety Data Analysis
-  app.post("/api/ai-project-analytics", async (req: AuthRequest, res: Response) => {
+  app.post("/api/ai-project-analytics", (req: AuthRequest, res: Response) => {
     const { projectId } = req.body;
 
     if (!projectId) {
@@ -1981,24 +1981,26 @@ ${JSON.stringify(fireContext, null, 2)}`,
 
     console.log(`🤖 Starting AI analytics for project ${projectId}`);
 
-    try {
-      const analyticsResult = await aiAnalyticsService.generateAnalytics(projectId);
-      console.log(`✅ AI analytics completed for project ${projectId}`);
+    aiAnalyticsService
+      .generateAnalytics(projectId)
+      .then((analyticsResult) => {
+        console.log(`✅ AI analytics completed for project ${projectId}`);
 
-      res.json({
-        status: "success",
-        message: "AI project analytics generated successfully",
-        timestamp: new Date().toISOString(),
-        projectId,
-        analytics: analyticsResult,
+        res.json({
+          status: "success",
+          message: "AI project analytics generated successfully",
+          timestamp: new Date().toISOString(),
+          projectId,
+          analytics: analyticsResult,
+        });
+      })
+      .catch((error: unknown) => {
+        console.error("❌ Error in AI project analytics:", error);
+        res.status(500).json({
+          error: "Failed to generate AI project analytics",
+          details: error instanceof Error ? error.message : "Unknown error",
+        });
       });
-    } catch (error: unknown) {
-      console.error("❌ Error in AI project analytics:", error);
-      res.status(500).json({
-        error: "Failed to generate AI project analytics",
-        details: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
   });
   
   // GLOBAL EMERGENCY SYSTEM ENDPOINTS
