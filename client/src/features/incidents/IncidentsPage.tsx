@@ -612,11 +612,11 @@ export default function Incidents() {
                     </div>
                   </div>
 
-                  {/* Scientific Risk Index */}
+                  {/* Evidence-informed Risk Index */}
                   <div>
                     <h4 className="font-medium text-hydro-dark mb-2 flex items-center">
                       <Activity className="w-4 h-4 mr-2" />
-                      Scientific Risk Index
+                      Evidence-Informed Risk Index
                     </h4>
                     <div className={cn(
                       "p-3 rounded-lg border",
@@ -979,7 +979,7 @@ export default function Incidents() {
 
                     {selectedIncident.scientificAnalysis && (
                       <div>
-                        <h4 className="font-medium text-hydro-dark mb-2">Scientific Analysis</h4>
+                        <h4 className="font-medium text-hydro-dark mb-2">Risk Analysis</h4>
                         <div className="space-y-2 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm">
                           <div className="flex items-center justify-between">
                             <span className="text-gray-600">Risk:</span>

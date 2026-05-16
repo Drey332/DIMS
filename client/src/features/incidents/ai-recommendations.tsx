@@ -82,7 +82,7 @@ export function AIRecommendationsPanel({ incident, title }: AIRecommendationsPro
       </div>
 
       <div>
-        <h4 className="font-medium text-foreground">Scientific Risk Index</h4>
+        <h4 className="font-medium text-foreground">Evidence-Informed Risk Index</h4>
         <div className="mt-2 rounded-md border border-border bg-muted/30 p-3">
           <div className="flex items-center justify-between gap-3">
             <span className="text-sm font-semibold text-foreground">{risk.band}</span>

@@ -41,7 +41,7 @@ const criticalFieldIncident: Incident = {
   },
 };
 
-describe("scientific incident analysis", () => {
+describe("evidence-informed incident analysis", () => {
   it("bands low and critical incidents using deterministic risk scoring", () => {
     const lowRisk = calculateScientificRiskAssessment({ ...lowRiskObservation });
     const criticalRisk = calculateScientificRiskAssessment({ ...criticalFieldIncident });

@@ -1,14 +1,18 @@
 # DIMS: Dynamic Incident Management System
 
-DIMS, currently branded in the UI as HydroSafe, is a scientific incident management and emergency response platform for offshore, industrial, marine, construction, mining, and other high-risk field operations.
+DIMS, currently branded in the UI as HydroSafe, is an evidence-informed incident management and emergency response platform for offshore, industrial, marine, construction, mining, and other high-risk field operations.
 
 The project is built for teams that need fast command decisions, auditable incident evidence, and resilient operation in low-connectivity environments. It combines deterministic risk scoring, ERP retrieval, emergency mustering, field observations, project analytics, and offline write replay.
+
+## What Evidence-Informed Means
+
+Evidence-informed means DIMS does not treat AI output as a black-box decision. Incident analysis uses explicit, measurable, and repeatable risk logic across severity, likelihood, consequence, exposure, vulnerability, detectability gaps, and resource strain. Each analysis includes evidence cards, dominant risk drivers, confidence, uncertainty notes, low-resource constraints, and documentation checks so responders can audit why a recommendation was made.
 
 ## Target Users
 
 - Bronze/frontline responders who need simple field capture, emergency acknowledgments, and minimum-data reporting.
 - Silver/tactical controllers who need evidence cards, ERP steps, team status, and replayable incident timelines.
-- Gold/strategic leaders who need scientific escalation signals, audit trails, reports, and project-wide risk visibility.
+- Gold/strategic leaders who need evidence-informed escalation signals, audit trails, reports, and project-wide risk visibility.
 - HSE, compliance, and client representatives who need defensible documentation across incidents, observations, assets, and emergency drills.
 
 ## Core Capabilities
@@ -16,15 +20,15 @@ The project is built for teams that need fast command decisions, auditable incid
 | Domain | What it Does |
 | --- | --- |
 | Emergency response | Emergency submission, project-wide alarm, mustering acknowledgments, post-ack ERP guidance, live ack list. |
-| Scientific incident analysis | Shared deterministic scoring for severity, likelihood, consequence, exposure, vulnerability, detectability gap, and resource strain. |
+| Evidence-informed incident analysis | Shared deterministic scoring for severity, likelihood, consequence, exposure, vulnerability, detectability gap, and resource strain. |
 | Low-resource mode | Offline queue, local acknowledgment memory, queue banner, delayed Firestore replay, minimum-data field guidance. |
-| Incidents and observations | Incident creation, scientific analysis panel, photo workflow, near-miss and observation submission. |
+| Incidents and observations | Incident creation, risk analysis panel, photo workflow, near-miss and observation submission. |
 | ERP and Fire Intelligence | ERP protocol search, AI advisor surfaces, historical fire-incident matching, emergency protocol pages. |
 | Environment | Environmental context cards, space weather widget, Earth/operations globe, Fire Guard view. |
 | Analytics | Project analytics dashboard, incident history, response metrics, risk-aware Excel/PDF exports. |
 | Assets | Asset register, uploads, detail pages, and asset AI chat. |
 | Team and roles | Bronze/Silver/Gold role flows, team management, hierarchy, headcount/muster map, online tracking. |
-| Reports and compliance | Audit trail, scientific analysis audit entries, report generation surfaces, compliance placeholders. |
+| Reports and compliance | Audit trail, risk analysis audit entries, report generation surfaces, compliance placeholders. |
 
 ## Architecture
 
@@ -67,7 +71,7 @@ sequenceDiagram
   Firestore-->>Team: ACTIVE emergency snapshot
   Team->>Client: Acknowledge alarm
   Client->>Firestore: Write emergencies/{id}/acks/{userId}
-  Client-->>ERP: Show matched ERP and saved scientific analysis
+  Client-->>ERP: Show matched ERP and saved risk analysis
   Firestore-->>Reports: Feed analytics, history, and exports
 ```
 
@@ -96,12 +100,12 @@ Queued operation kinds:
 - `near_miss_submit`
 - `observation_submit`
 
-## Scientific Risk Engine
+## Evidence-Informed Risk Engine
 
 ```mermaid
 flowchart TB
   Input[IncidentAnalysisInput] --> Severity[Severity tier classification]
-  Input --> Risk[ScientificRiskAssessment]
+  Input --> Risk[Risk assessment]
   Risk --> Drivers[Dominant risk drivers]
   Risk --> Band[LOW / MODERATE / HIGH / CRITICAL]
   Input --> Actions[Corrective actions]
@@ -119,7 +123,7 @@ flowchart TB
 
 The engine is deterministic and shared by client and server through `shared/incident-analysis`. This keeps offline fallback behavior aligned with the server API.
 
-Scientific dimensions:
+Risk dimensions:
 
 - Consequence
 - Likelihood
@@ -197,7 +201,7 @@ flowchart TB
 
 | Store | Used For | Notes |
 | --- | --- | --- |
-| Firestore | Emergencies, acknowledgments, observations, ERP protocols, assets, team members, project data. | First persistence target for emergency scientific analysis and offline replay. |
+| Firestore | Emergencies, acknowledgments, observations, ERP protocols, assets, team members, project data. | First persistence target for emergency risk analysis and offline replay. |
 | Postgres/Drizzle | Users, projects, API incidents, audit logs, clients, structured backend records. | Used by Express routes in `server/routes.ts` and `server/storage.ts`. |
 | IndexedDB | Offline queue operations. | Database `dims-offline-queue`, store `operations`. |
 | localStorage | Auth token/user, selected role, queue summary, local acknowledged emergency IDs. | Queue summary powers the field-mode banner. |
@@ -251,7 +255,7 @@ Import policy:
 
 The current low-resource design is intentionally conservative: deterministic scoring, offline-first capture, minimum-data reporting, delayed sync, and auditability. It aligns with themes in recent emergency and low-resource digital systems research, including offline field capture, decision support, and resilient response workflows.
 
-Useful references for future scientific upgrades:
+Useful references for future risk-engine upgrades:
 
 - [FirstAidQA: A Data-Centric and Expert-Informed Benchmark for First Aid Question Answering](https://arxiv.org/abs/2511.01289)
 - [OPTIC-ER: An Open Dataset for Emergency Room Clinical Case Reports](https://arxiv.org/abs/2503.00687)
@@ -344,7 +348,7 @@ Recommended verification scenarios:
 - Emergency acknowledgment offline queues exactly once and does not re-trigger the alarm.
 - Reconnect replays queued acknowledgment and clears it from IndexedDB.
 - Emergency submission stores `resourceConstraints` and `scientificAnalysis`.
-- Post-ack ERP modal displays saved scientific risk context.
+- Post-ack ERP modal displays saved evidence-informed risk context.
 - Analytics history and Excel export include risk band, score, confidence, field mode, and analysis version.
 - README Mermaid diagrams render on GitHub.
 
@@ -359,8 +363,8 @@ Current automated tests cover:
 
 ## Known Limitations
 
-- The scientific risk engine is deterministic decision support, not a replacement for qualified command judgment.
-- Firestore remains the first persistence target for emergency scientific analysis; API incident records do not yet persist the full analysis payload in Postgres.
+- The evidence-informed risk engine is deterministic decision support, not a replacement for qualified command judgment.
+- Firestore remains the first persistence target for emergency risk analysis; API incident records do not yet persist the full analysis payload in Postgres.
 - Firebase client config is still hard-coded and should be moved to environment variables.
 - Some report-generation and compliance dashboard surfaces are still placeholders.
 - Photo/offline media sync is text-first; large evidence uploads need a dedicated resumable sync path.

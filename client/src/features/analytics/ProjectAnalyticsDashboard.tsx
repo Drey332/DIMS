@@ -466,7 +466,7 @@ const ProjectAnalyticsDashboard: React.FC<ProjectAnalyticsDashboardProps> = ({
     );
     doc.text("HydroSafe Project Analytics Report", 10, 10);
     doc.text(`Incidents: ${incidents.length}`, 10, 20);
-    doc.text(`Scientific analyses: ${analyzedIncidents.length}`, 10, 30);
+    doc.text(`Evidence-informed analyses: ${analyzedIncidents.length}`, 10, 30);
     doc.text(`High or critical risk: ${highRiskIncidents.length}`, 10, 40);
     doc.save(`hydrosafe-analytics-${projectId}.pdf`);
   };

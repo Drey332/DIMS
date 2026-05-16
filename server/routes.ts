@@ -311,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId: req.user.id,
           projectId: typeof body.projectId === "number" ? body.projectId : undefined,
           actionType: "SCIENTIFIC_INCIDENT_ANALYSIS",
-          description: `Scientific incident analysis generated: ${body.title}`,
+          description: `Evidence-informed risk analysis generated: ${body.title}`,
           newData: {
             incidentTitle: body.title,
             riskBand: analysis.risk.band,

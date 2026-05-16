@@ -199,7 +199,7 @@ export default function Reports() {
     return matchesType && matchesSearch;
   });
 
-  const getScientificAuditSummary = (log: AuditLogWithUser) => {
+  const getEvidenceAuditSummary = (log: AuditLogWithUser) => {
     if (log.actionType !== "SCIENTIFIC_INCIDENT_ANALYSIS" || !log.newData || typeof log.newData !== "object") {
       return null;
     }
@@ -302,7 +302,7 @@ export default function Reports() {
                       <SelectContent>
                         <SelectItem value="all">All Types</SelectItem>
                         <SelectItem value="incident">Incidents</SelectItem>
-                        <SelectItem value="scientific">Scientific</SelectItem>
+                        <SelectItem value="scientific">Evidence</SelectItem>
                         <SelectItem value="file">Files</SelectItem>
                         <SelectItem value="decision">Decisions</SelectItem>
                         <SelectItem value="contact">Contacts</SelectItem>
@@ -316,7 +316,7 @@ export default function Reports() {
                   <div className="space-y-3">
                     {filteredLogs.map((log) => {
                       const createdAt = log.createdAt ? new Date(log.createdAt) : null;
-                      const scientificSummary = getScientificAuditSummary(log);
+                      const evidenceSummary = getEvidenceAuditSummary(log);
                       return (
                         <div key={log.id} className={cn("p-3 rounded-lg border", getActionColor(log.actionType))}>
                           <div className="flex items-start justify-between">
@@ -324,13 +324,13 @@ export default function Reports() {
                               {getActionIcon(log.actionType)}
                               <div className="flex-1">
                                 <h4 className="font-medium text-sm">{log.description}</h4>
-                                {scientificSummary && (
+                                {evidenceSummary && (
                                   <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                                     <Badge variant="outline">
-                                      {scientificSummary.riskBand ?? "Risk"} {scientificSummary.riskScore !== undefined ? `${scientificSummary.riskScore}/100` : ""}
+                                      {evidenceSummary.riskBand ?? "Risk"} {evidenceSummary.riskScore !== undefined ? `${evidenceSummary.riskScore}/100` : ""}
                                     </Badge>
-                                    {scientificSummary.analysisVersion && (
-                                      <span className="text-gray-500">{scientificSummary.analysisVersion}</span>
+                                    {evidenceSummary.analysisVersion && (
+                                      <span className="text-gray-500">{evidenceSummary.analysisVersion}</span>
                                     )}
                                   </div>
                                 )}

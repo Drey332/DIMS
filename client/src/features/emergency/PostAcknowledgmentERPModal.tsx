@@ -138,7 +138,7 @@ export function PostAcknowledgmentERPModal({
             <div className="mb-8 rounded-lg border border-slate-200 bg-slate-50 p-5">
               <h3 className="mb-3 flex items-center text-lg font-bold text-slate-900">
                 <AlertTriangle className="mr-2 h-5 w-5 text-slate-700" />
-                Scientific Risk Context
+                Evidence-Informed Risk Context
               </h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-md bg-white p-3">
