@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { auth } from '../firebase';
+import { auth } from '@/firebase';
 import { persistRoleAttempt } from '../lib/userRolePersistence';
 
 export type UserRole = 'BRONZE' | 'SILVER' | 'GOLD' | null;

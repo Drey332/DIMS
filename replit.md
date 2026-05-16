@@ -15,11 +15,14 @@ HydroSafe utilizes a modern web application architecture. The **Frontend** is bu
 Key functional components include:
 - **Emergency Response System**: Implements a Bronze-Silver-Gold command hierarchy, AI-powered dynamic checklist generation, real-time WebSocket communication, and timestamped photo documentation with GPS metadata.
 - **AI Integration**: Leverages OpenAI GPT-4o for intelligent response generation, dynamic checklist creation, automated risk assessment, and decision support following the IAPOAR model.
+- **Scientific Decision Intelligence**: Shared client/server logic now lives in `shared/incident-analysis`. It adds deterministic risk scoring with likelihood, consequence, exposure, vulnerability, detectability gap, and resource-strain dimensions. Incident recommendations include evidence cards, uncertainty statements, action deadlines, verification requirements, low-resource plans, and report structures.
+- **Low-Resource Field Mode**: Tracks online/offline state, browser offline-storage readiness, queued field records, and degraded/offline-critical operating mode. `client/src/lib/offlineQueue.ts` queues emergency acknowledgments, emergency submissions, near misses, and observations in IndexedDB, mirrors queue counts to localStorage, and replays writes on startup/online events.
 - **Fire Intelligence System** (Fire Aladdin): Geo/environment-aware incident matching engine that learns from historical offshore fire disasters (Piper Alpha 1988, Deepwater Horizon 2010). Uses vector similarity, geographic proximity, seasonal alignment, and wind direction scoring to surface relevant historical lessons during emergency response. Provides one-liner prefaces like "Because your context resembles Piper Alpha conditions..." and displays matched incidents with lessons learned, ignition sources, and failed barriers in the Emergency Protocols UI.
 - **User Management**: Features role-based access control (Bronze, Silver, Gold), project assignment, and activity tracking.
 - **Project Management**: Supports multi-project operations, client integration (e.g., Shell SPDC), emergency contact management, and asset tracking.
 - **Data Flow**: Manages the incident lifecycle from detection to resolution, real-time communication via WebSockets, and secure file handling with metadata extraction.
 - **Visuals**: Incorporates a futuristic visual effects system with glassy backgrounds, neon borders, animated glows, and sci-fi styling, including role-based color coding (Gold: yellow, Silver: blue, Bronze: orange).
+- **Frontend Organization**: Feature code is now grouped under `client/src/features/<domain>`, app shell code under `client/src/app`, shared primitives under `client/src/components/ui`, cross-cutting frontend utilities under `client/src/lib`, and shared client/server domain logic under `shared`.
 
 ## External Dependencies
 

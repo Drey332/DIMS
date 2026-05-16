@@ -26,8 +26,14 @@ googleProvider.addScope('profile');
 
 // === ENABLE OFFLINE PERSISTENCE IMMEDIATELY ===
 if (typeof window !== "undefined") {
-  enableIndexedDbPersistence(db).catch((err) => {
-    // Optional: You can dispatch a custom event or handle error here
+  enableIndexedDbPersistence(db).then(() => {
+    window.localStorage.setItem("hydrosafe:offline-storage", "ready");
+    window.dispatchEvent(new CustomEvent("hydrosafe:offline-ready"));
+  }).catch((err) => {
+    window.localStorage.setItem("hydrosafe:offline-storage", "degraded");
+    window.dispatchEvent(new CustomEvent("hydrosafe:offline-fail", {
+      detail: err?.message ?? "Offline persistence is not available in this browser session."
+    }));
     if (err.code === 'failed-precondition') {
       // Multiple tabs open, can't enable offline
       console.warn("Offline sync not enabled (multiple tabs open)");

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { doc, setDoc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db, auth } from '@/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import type { UserRole } from '../hooks/useRole';
 

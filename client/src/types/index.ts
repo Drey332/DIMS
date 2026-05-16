@@ -1,3 +1,5 @@
+import type { IncidentAnalysisResult, ResourceConstraints } from "@shared/incident-analysis";
+
 export type UserRole = 'BRONZE' | 'SILVER' | 'GOLD';
 
 export interface User {
@@ -38,6 +40,11 @@ export interface Incident {
   bronzeController?: number;
   silverController?: number;
   goldController?: number;
+  resourceConstraints?: ResourceConstraints;
+  scientificAnalysis?: IncidentAnalysisResult & {
+    generatedBy?: string;
+    source?: "server" | "client-offline-fallback";
+  };
 }
 
 export interface IncidentAction {

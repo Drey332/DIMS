@@ -40,6 +40,7 @@ import { getAuroraEnvironmentalContext } from "./environment";
 import { lookupLocationIntel, DEFAULT_OPERATION_COORDINATES } from "@shared/environment/locationIntel";
 import { computeIncidentMatches, type MatchedIncident } from "./fire-intel/matcher";
 import { searchFireIncidentContext } from "./fire-intel/ingest";
+import { analyzeIncident, type IncidentAnalysisInput } from "@shared/incident-analysis";
 
 import * as aiAssetAgent from "./ai-asset-agent"; // Use unique, clear names // Import all your asset agent functions
 
@@ -283,6 +284,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating incident:", error);
       res.status(500).json({ message: "Failed to create incident" });
+    }
+  });
+
+  app.post('/api/incidents/analyze', async (req: AuthenticatedRequest, res) => {
+    try {
+      const body = req.body ?? {};
+      if (
+        typeof body.title !== "string" ||
+        typeof body.description !== "string" ||
+        !["Accident", "NearMiss", "Hazard", "Observation"].includes(body.category)
+      ) {
+        return res.status(400).json({
+          message: "title, description, and category are required for incident analysis",
+        });
+      }
+
+      const analysisInput: IncidentAnalysisInput = {
+        ...body,
+        attachments: Array.isArray(body.attachments) ? body.attachments : [],
+      };
+      const analysis = await analyzeIncident(analysisInput);
+
+      if (req.user) {
+        await storage.createAuditLog({
+          userId: req.user.id,
+          projectId: typeof body.projectId === "number" ? body.projectId : undefined,
+          actionType: "SCIENTIFIC_INCIDENT_ANALYSIS",
+          description: `Scientific incident analysis generated: ${body.title}`,
+          newData: {
+            incidentTitle: body.title,
+            riskBand: analysis.risk.band,
+            riskScore: analysis.risk.score,
+            analysisVersion: analysis.analysisVersion,
+          },
+        });
+      }
+
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error analyzing incident:", error);
+      res.status(500).json({ message: "Failed to analyze incident" });
     }
   });
 
@@ -2024,4 +2066,3 @@ ${JSON.stringify(fireContext, null, 2)}`,
 
   return httpServer;
 }
-
