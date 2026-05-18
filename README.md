@@ -1,4 +1,4 @@
-# DIMS: Dynamic Incident Management System
+# DIMS: Dynamic Incident Management System (HYDROSAFE)
 
 DIMS, currently branded in the UI as HydroSafe, is an evidence-informed incident management and emergency response platform for offshore, industrial, marine, construction, mining, and other high-risk field operations.
 
