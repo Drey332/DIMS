@@ -193,7 +193,7 @@ flowchart TB
   DirectMatch --> ERP[Matched ERP protocol]
   FuzzyMatch --> ERP
   Historical --> Advisor[AI/Fire Intelligence answer surfaces]
-  ERP --> EmergencyRecord[emergencies/{id}.matchedERP]
+  ERP --> EmergencyRecord["emergencies/{id}.matchedERP"]
   EmergencyRecord --> PostAck[Post-acknowledgment ERP modal]
 ```
 
